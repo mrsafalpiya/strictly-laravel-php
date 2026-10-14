@@ -4,9 +4,13 @@ namespace StrictlyLaravel\Testing;
 
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Http\Events\RequestHandled;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\MessageBag;
+use Illuminate\Support\ViewErrorBag;
 use Inertia\Inertia;
 use Inertia\Support\Header;
 use Inertia\Support\SessionKey;
@@ -16,6 +20,9 @@ use Spatie\LaravelData\Support\DataProperty;
 use stdClass;
 use StrictlyLaravel\Inertia\Page;
 use StrictlyLaravel\Inertia\PageLocations;
+use StrictlyLaravel\Routes\FormEndpoints;
+use StrictlyLaravel\Routes\RouteInput;
+use StrictlyLaravel\Routes\WayfinderTemplates;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -48,8 +55,19 @@ use Symfony\Component\HttpFoundation\Response;
  * component with no Page class fails `PageProps`' constraint. `Contract<T>` is T, except that a map may arrive as `[]`
  * (Problem P-076).
  *
- * Each Contract has a `.json` sidecar next to it describing what was recorded (`kind` is `page` or `flash`), which
- * Contract Coverage reads (records(), `strictly:coverage`).
+ * A request to a form endpoint (a route whose action takes an input Data class, RouteInput) is recorded as a `form`
+ * sidecar under resources/js/__contracts__/_forms, naming the endpoint, so Contract Coverage knows a test submitted to
+ * it. When it was refused with validation errors (a redirect that flashes them, or a 422 JSON response), they become
+ * a Contract (Problem P-029), checked against the input's fields, nested and list keys included:
+ *
+ *     // Recorded by Tests\Feature\ProjectTest > an invalid project is refused: POST /projects (validation errors)
+ *     import type { ErrorsOf } from '@mrsafalpiya/strictly-laravel/routes';
+ *
+ *     export const errors = { "tasks.0.title": "…" } satisfies ErrorsOf<import('@/generated').StoreProjectData>;
+ *
+ * Each Contract has a `.json` sidecar next to it describing what was recorded (`kind` is `page`, `flash` or `form`),
+ * which Contract Coverage reads (records(), `strictly:coverage`). A `form` record of an accepted request has only the
+ * sidecar.
  *
  * The directory is gitignored and type-checked by `tsc` (the tsconfig includes resources/js), which `ci:check` runs
  * after the tests. A test run that isn't parallel starts from an empty directory, so a Contract no test produces any more
@@ -62,6 +80,9 @@ final class ContractRecorder
 
     /** Where the flash data of redirects is recorded, under DIRECTORY. */
     private const string FLASH_DIRECTORY = '_flash';
+
+    /** Where the requests to form endpoints are recorded, under DIRECTORY. */
+    private const string FORMS_DIRECTORY = '_forms';
 
     /**
      * The shared props Inertia types itself rather than through the shared props Data class: the validation errors
@@ -78,7 +99,7 @@ final class ContractRecorder
 
     /**
      * Every recorded Contract's sidecar, decoded with objects as stdClass (so `{}` and `[]` stay apart), in no
-     * particular order: what Contract Coverage reads. Each has a `kind` (`page` or `flash`) and the payload it recorded.
+     * particular order: what Contract Coverage reads. Each has a `kind` (`page`, `flash` or `form`) and the payload it recorded.
      *
      * @return list<stdClass>
      */
@@ -136,6 +157,104 @@ final class ContractRecorder
         } elseif ($response->isRedirection()) {
             self::recordRedirectFlash($test, $request);
         }
+
+        $route = $request->route();
+        $input = $route instanceof Route ? RouteInput::ofRoute($route) : null;
+
+        if ($route instanceof Route && $input !== null) {
+            self::recordForm($test, $request, $response, FormEndpoints::name($route), $input);
+        }
+    }
+
+    /**
+     * A request to a form endpoint, and the validation errors it was refused with, if any.
+     *
+     * @param  class-string  $input
+     */
+    private static function recordForm(string $test, Request $request, Response $response, string $endpoint, string $input): void
+    {
+        $errors = self::validationErrors($request, $response);
+        $meta = [
+            'kind' => 'form',
+            'test' => $test,
+            'request' => $request->method().' '.$request->getRequestUri(),
+            'endpoint' => $endpoint,
+            'input' => $input,
+            'errors' => $errors === null ? null : array_keys($errors),
+        ];
+
+        if ($errors === null) {
+            self::write(self::FORMS_DIRECTORY, [], $meta);
+
+            return;
+        }
+
+        self::write(self::FORMS_DIRECTORY, [
+            sprintf('// Recorded by %s: %s %s (validation errors)', $test, $request->method(), $request->getRequestUri()),
+            "import type { ErrorsOf } from '".WayfinderTemplates::TYPES_MODULE."';",
+            '',
+            sprintf('export const errors = %s satisfies ErrorsOf<%s>;', self::json((object) $errors), WayfinderTemplates::generatedType($input)),
+        ], $meta);
+    }
+
+    /**
+     * The validation errors a response refused the request with, one message per key, as the client receives them:
+     * flashed to the session before a redirect (an Inertia or plain form request), or in a 422 JSON response.
+     *
+     * @return array<string, string>|null
+     */
+    private static function validationErrors(Request $request, Response $response): ?array
+    {
+        if ($response->getStatusCode() === 422 && $response instanceof JsonResponse) {
+            $errors = $response->getData(true)['errors'] ?? null;
+
+            return is_array($errors) ? self::firstMessages($errors) : null;
+        }
+
+        if (! $response->isRedirection() || ! $request->hasSession()) {
+            return null;
+        }
+
+        // Flashed by this request: still `new` until the session is saved, which ages it to `old` (the session
+        // middleware saves it before the response is handed back). Flash data of an earlier request is gone by then.
+        $session = $request->session();
+        $flashed = [...(array) $session->get('_flash.new', []), ...(array) $session->get('_flash.old', [])];
+        $bag = $session->get('errors');
+
+        if (! in_array('errors', $flashed, true)) {
+            return null;
+        }
+
+        $errors = [];
+
+        // A ViewErrorBag until the session is saved; then its serialized form, `{bag: {format, messages}}`.
+        $bags = match (true) {
+            $bag instanceof ViewErrorBag => array_map(fn (MessageBag $messages): array => $messages->toArray(), $bag->getBags()),
+            is_array($bag) => array_map(fn (mixed $messages): mixed => is_array($messages) ? ($messages['messages'] ?? []) : [], $bag),
+            default => [],
+        };
+
+        foreach ($bags as $messages) {
+            $errors = [...$errors, ...(is_array($messages) ? $messages : [])];
+        }
+
+        return $errors === [] ? null : self::firstMessages($errors);
+    }
+
+    /**
+     * @param  array<mixed>  $errors
+     * @return array<string, string>
+     */
+    private static function firstMessages(array $errors): array
+    {
+        $first = [];
+
+        foreach ($errors as $key => $messages) {
+            $message = is_array($messages) ? reset($messages) : $messages;
+            $first[(string) $key] = is_string($message) ? $message : '';
+        }
+
+        return $first;
     }
 
     /**
@@ -291,15 +410,21 @@ final class ContractRecorder
      */
     private static function write(string $directory, array $lines, array $meta): void
     {
-        $source = implode("\n", $lines)."\n";
-        $path = self::directory().'/'.$directory.'/'.substr(sha1($source), 0, 12);
+        // A record with no Contract to check (no lines) is a sidecar alone.
+        $source = $lines === [] ? null : implode("\n", $lines)."\n";
+        $sidecar = self::json($meta)."\n";
+        $path = self::directory().'/'.$directory.'/'.substr(sha1($source ?? $sidecar), 0, 12);
 
         // Parallel test processes create the same directories: losing that race is fine.
         if (! File::isDirectory(dirname($path))) {
             File::makeDirectory(dirname($path), 0755, recursive: true, force: true);
         }
-        File::put($path.'.ts', $source);
-        File::put($path.'.json', self::json($meta)."\n");
+
+        if ($source !== null) {
+            File::put($path.'.ts', $source);
+        }
+
+        File::put($path.'.json', $sidecar);
     }
 
     private static function json(mixed $value): string

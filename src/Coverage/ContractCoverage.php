@@ -19,8 +19,10 @@ use StrictlyLaravel\Inertia\Page;
  *   against the shared props Data class.
  * - flash: what was flashed, with a page (`page` records' `flash`) or before a redirect (`flash` records), is observed
  *   against the flash Data class, so a key no test flashes is a gap.
+ * - form endpoints: some test must send a request to every route whose action takes an input Data class (`form`
+ *   records), or the validation errors it can return were never checked against the input's fields.
  *
- * A Type Boundary that records Contracts of a new kind (deferred props, JSON responses, form endpoints, declared
+ * A Type Boundary that records Contracts of a new kind (deferred props, JSON responses, declared
  * vendor fields, broadcasts) adds its dimension here: an unexercised Gap for what no test reached, and its Data
  * values fed to the same ShapeCoverage so their shapes are proven too.
  */
@@ -36,15 +38,17 @@ final readonly class ContractCoverage
      * @param  list<stdClass>  $records  the Contract sidecars (ContractRecorder::records())
      * @param  array<string, class-string<Page>>  $pages  page component => Page class (PageLocations::pages())
      * @param  GlobalDataClasses|null  $global  the shared props and flash Data classes (GlobalDataClasses::in())
+     * @param  array<string, class-string>  $formEndpoints  endpoint => input Data class (FormEndpoints::all())
      * @return list<Gap>
      */
-    public function gaps(array $records, array $pages, ?GlobalDataClasses $global = null): array
+    public function gaps(array $records, array $pages, ?GlobalDataClasses $global = null, array $formEndpoints = []): array
     {
         $shapes = new ShapeCoverage($this->config);
         $unexercised = [
             ...$this->pages($records, $pages, $shapes),
             ...$this->shared($records, $global?->shared, $shapes),
             ...$this->flash($records, $global?->flash, $shapes),
+            ...$this->formEndpoints($records, $formEndpoints),
         ];
 
         return [...$unexercised, ...$shapes->gaps()];
@@ -139,6 +143,37 @@ final readonly class ContractCoverage
             }
 
             $shapes->observe($class, $rendered[$component], Origin::page($component));
+        }
+
+        return $gaps;
+    }
+
+    /**
+     * @param  list<stdClass>  $records
+     * @param  array<string, class-string>  $endpoints
+     * @return list<Gap>
+     */
+    private function formEndpoints(array $records, array $endpoints): array
+    {
+        $submitted = [];
+
+        foreach ($records as $record) {
+            if ($record->kind === 'form' && is_string($record->endpoint ?? null)) {
+                $submitted[$record->endpoint] = true;
+            }
+        }
+
+        $gaps = [];
+
+        foreach ($endpoints as $endpoint => $input) {
+            if (! isset($submitted[$endpoint])) {
+                $gaps[] = new Gap(
+                    "{$endpoint}: no feature test submits to this form endpoint",
+                    [],
+                    "add a feature test that sends {$input} to {$endpoint}",
+                    unexercised: true,
+                );
+            }
         }
 
         return $gaps;
