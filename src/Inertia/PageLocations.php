@@ -2,8 +2,10 @@
 
 namespace StrictlyLaravel\Inertia;
 
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use LogicException;
+use ReflectionClass;
 
 /**
  * Where a page lives, and the one place that maps between its names (Problems P-009, P-010): a Page class under
@@ -53,6 +55,38 @@ final class PageLocations
     public static function componentFor(string $class): string
     {
         return self::$components[$class] ??= self::resolveComponent($class);
+    }
+
+    /**
+     * Every concrete Page class under app/Pages, keyed by its page component's name and sorted by it.
+     *
+     * @return array<string, class-string<Page>>
+     */
+    public static function pages(): array
+    {
+        $directory = self::classesDirectory();
+
+        if (! is_dir($directory)) {
+            return [];
+        }
+
+        $pages = [];
+
+        foreach (File::allFiles($directory) as $file) {
+            if ($file->getExtension() !== 'php') {
+                continue;
+            }
+
+            $class = self::NAMESPACE.str_replace('/', '\\', Str::beforeLast($file->getRelativePathname(), '.php'));
+
+            if (class_exists($class) && is_subclass_of($class, Page::class) && ! (new ReflectionClass($class))->isAbstract()) {
+                $pages[self::componentFor($class)] = $class;
+            }
+        }
+
+        ksort($pages);
+
+        return $pages;
     }
 
     /**
