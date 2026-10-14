@@ -15,13 +15,17 @@ use ReflectionClass;
  *       → store(): RouteDefinition<'post'> & WithInput<StoreProjectData>
  *       → useRouteForm(store(), defaults), submit(store(), data): data and errors typed by StoreProjectData
  *
+ *     public function index(ProjectFiltersData $filters)   (a QueryData)
+ *       → index(options?: QueryOptions<ProjectFiltersData>): `index({ query: { sort: 'name' } })` typed by it
+ *
  * The package's resources/wayfinder directory is prepended to the `wayfinder` view namespace, so its `method`
  * template is used instead of Wayfinder's. Rather than a copy that would drift from upstream, it renders Wayfinder's
  * own template and adds the brands to each return type (method()); a template it doesn't override (such as
  * `function-arguments`) is still Wayfinder's.
  *
- * A Type Boundary that brands routes with more (a JSON endpoint's response, a GET action's query) adds its brand in
- * brands(); one that changes the route's arguments adds its own template to resources/wayfinder.
+ * A Type Boundary that brands routes with more (a JSON endpoint's response) adds its brand in brands(); one that
+ * changes the route's arguments adds its own template to resources/wayfinder. A GET action's query class retypes the
+ * last argument, `options`, in the rendered output instead (withQueryOptions()).
  */
 final class WayfinderTemplates
 {
@@ -52,7 +56,9 @@ final class WayfinderTemplates
             return $rendered;
         }
 
-        $brands = self::brands($controller, ($data['isInvokable'] ?? false) === true ? '__invoke' : $method);
+        $action = ($data['isInvokable'] ?? false) === true ? '__invoke' : $method;
+        $rendered = self::withQueryOptions($rendered, $controller, $action, $data['options'] ?? null);
+        $brands = self::brands($controller, $action);
 
         if ($brands === '') {
             return $rendered;
@@ -86,6 +92,27 @@ final class WayfinderTemplates
         }
 
         return $brands;
+    }
+
+    /**
+     * Problem P-006: the route functions of an action that takes a query Data class (RouteQuery) type their `options`
+     * argument by it, `options?: QueryOptions<ProjectFiltersData>` instead of Wayfinder's `RouteQueryOptions` (any
+     * key, any value). Wayfinder writes that argument last in every route function (`function-arguments`), so this
+     * keeps working when another template override changes the arguments before it.
+     */
+    private static function withQueryOptions(string $rendered, string $controller, string $method, mixed $options): string
+    {
+        $query = RouteQuery::ofAction($controller, $method);
+
+        if ($query === null || ! is_string($options) || $options === '') {
+            return $rendered;
+        }
+
+        return (string) preg_replace(
+            '/\b'.preg_quote($options, '/').'\?: RouteQueryOptions\b/',
+            sprintf("%s?: import('%s').QueryOptions<%s>", $options, self::TYPES_MODULE, self::generatedType($query)),
+            $rendered,
+        );
     }
 
     /**
