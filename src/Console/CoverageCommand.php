@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use Spatie\LaravelData\Support\DataConfig;
 use StrictlyLaravel\Coverage\ContractCoverage;
 use StrictlyLaravel\Coverage\Gap;
+use StrictlyLaravel\Inertia\GlobalDataClasses;
 use StrictlyLaravel\Inertia\PageLocations;
 use StrictlyLaravel\Testing\ContractRecorder;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -44,7 +45,7 @@ final class CoverageCommand extends Command
         }
 
         $strict = $this->option('strict') === true;
-        $gaps = (new ContractCoverage(app(DataConfig::class)))->gaps($records, $pages);
+        $gaps = (new ContractCoverage(app(DataConfig::class)))->gaps($records, $pages, GlobalDataClasses::in([app_path()]));
         $failing = array_filter($gaps, fn (Gap $gap): bool => $strict || $gap->unexercised);
 
         if ($gaps === []) {
