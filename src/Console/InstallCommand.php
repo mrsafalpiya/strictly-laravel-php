@@ -121,7 +121,9 @@ final class InstallCommand extends Command
             };
 
             if ($outcome === ConversionOutcome::Unknown) {
-                $skipped[] = "{$path} (sha256 ".KitConversion::hash($this->laravel->basePath($path)).')';
+                $adds = KitConversion::addedBy($path);
+                $skipped[] = "{$path} (sha256 ".KitConversion::hash($this->laravel->basePath($path)).')'
+                    .($adds === [] ? '' : ' and the files its conversion adds ('.implode(', ', $adds).')');
             }
 
             $this->components->twoColumnDetail($path, $status);
@@ -129,7 +131,7 @@ final class InstallCommand extends Command
 
         if ($skipped !== []) {
             $this->components->warn('Kit Conversion left these files untouched because their content is not a known Base Kit version: '
-                .implode(', ', $skipped).'. Compare each with its converted version in '
+                .implode('; ', $skipped).'. Compare each with its converted version in '
                 .'vendor/mrsafalpiya/strictly-laravel/kit/ and apply the changes by hand.');
         }
 

@@ -4,13 +4,19 @@ namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
+use App\Pages\Auth\ConfirmPasswordPage;
+use App\Pages\Auth\ForgotPasswordPage;
+use App\Pages\Auth\LoginPage;
+use App\Pages\Auth\RegisterPage;
+use App\Pages\Auth\ResetPasswordPage;
+use App\Pages\Auth\TwoFactorChallengePage;
+use App\Pages\Auth\VerifyEmailPage;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
-use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
 
@@ -48,32 +54,49 @@ class FortifyServiceProvider extends ServiceProvider
      */
     private function configureViews(): void
     {
-        Fortify::loginView(fn (Request $request) => Inertia::render('auth/login', [
-            'canResetPassword' => Features::enabled(Features::resetPasswords()),
-            'status' => $request->session()->get('status'),
-        ]));
+        Fortify::loginView(fn (Request $request) => new LoginPage(
+            canResetPassword: Features::enabled(Features::resetPasswords()),
+            status: self::status($request),
+        ));
 
-        Fortify::resetPasswordView(fn (Request $request) => Inertia::render('auth/reset-password', [
-            'email' => $request->email,
-            'token' => $request->route('token'),
-            'passwordRules' => Password::defaults()->toPasswordRulesString(),
-        ]));
+        Fortify::resetPasswordView(fn (Request $request) => new ResetPasswordPage(
+            email: $request->string('email')->toString(),
+            token: self::routeParameter($request, 'token'),
+            passwordRules: Password::defaults()->toPasswordRulesString(),
+        ));
 
-        Fortify::requestPasswordResetLinkView(fn (Request $request) => Inertia::render('auth/forgot-password', [
-            'status' => $request->session()->get('status'),
-        ]));
+        Fortify::requestPasswordResetLinkView(fn (Request $request) => new ForgotPasswordPage(
+            status: self::status($request),
+        ));
 
-        Fortify::verifyEmailView(fn (Request $request) => Inertia::render('auth/verify-email', [
-            'status' => $request->session()->get('status'),
-        ]));
+        Fortify::verifyEmailView(fn (Request $request) => new VerifyEmailPage(
+            status: self::status($request),
+        ));
 
-        Fortify::registerView(fn () => Inertia::render('auth/register', [
-            'passwordRules' => Password::defaults()->toPasswordRulesString(),
-        ]));
+        Fortify::registerView(fn () => new RegisterPage(
+            passwordRules: Password::defaults()->toPasswordRulesString(),
+        ));
 
-        Fortify::twoFactorChallengeView(fn () => Inertia::render('auth/two-factor-challenge'));
+        Fortify::twoFactorChallengeView(fn () => new TwoFactorChallengePage);
 
-        Fortify::confirmPasswordView(fn () => Inertia::render('auth/confirm-password'));
+        Fortify::confirmPasswordView(fn () => new ConfirmPasswordPage);
+    }
+
+    /**
+     * The status message a redirect flashed to the session, if any.
+     */
+    private static function status(Request $request): ?string
+    {
+        $status = $request->session()->get('status');
+
+        return is_string($status) ? $status : null;
+    }
+
+    private static function routeParameter(Request $request, string $name): string
+    {
+        $value = $request->route($name);
+
+        return is_string($value) ? $value : '';
     }
 
     /**

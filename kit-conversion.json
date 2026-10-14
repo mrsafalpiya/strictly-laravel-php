@@ -15,13 +15,24 @@
         "upstream": [
             "1155df036512d539d81dcf03a116bba07a411007d125fff060c60bde41101152"
         ],
-        "earlierConversions": []
+        "earlierConversions": [
+            "092764a92589e3eda1bb021b730e0510a055c3932907ba8fc2bb31c878028e79"
+        ],
+        "adds": [
+            "app/Pages/Settings/ProfilePage.php"
+        ]
     },
     "app/Http/Controllers/Settings/SecurityController.php": {
         "upstream": [
             "11d528a214cba42084a3eddf1d0d85608ef2bd7d3fe12fb2c99dd30e0946a78a"
         ],
-        "earlierConversions": []
+        "earlierConversions": [
+            "55f5333025a5ab4c54df393a4d084258345adab54f7b473534e0c0662aca98c9"
+        ],
+        "adds": [
+            "app/Pages/Settings/SecurityPage.php",
+            "app/Data/PasskeyData.php"
+        ]
     },
     "app/Http/Requests/Settings/ProfileUpdateRequest.php": {
         "upstream": [
@@ -33,19 +44,41 @@
         "upstream": [
             "635a2513215ec6c0e7520eb1da31ab8a246db9adb0913199940475d9a9ec32ee"
         ],
-        "earlierConversions": []
+        "earlierConversions": [
+            "cf7752564f162198bddacc636d0e81bd28193752d339df2e3ce8e118deb7a347"
+        ],
+        "adds": [
+            "app/Pages/Auth/LoginPage.php",
+            "app/Pages/Auth/ResetPasswordPage.php",
+            "app/Pages/Auth/ForgotPasswordPage.php",
+            "app/Pages/Auth/VerifyEmailPage.php",
+            "app/Pages/Auth/RegisterPage.php",
+            "app/Pages/Auth/TwoFactorChallengePage.php",
+            "app/Pages/Auth/ConfirmPasswordPage.php"
+        ]
     },
     "routes/settings.php": {
         "upstream": [
             "f2b35475c66dc2f48d5234536d8584c4cc9f1e5a907b566689b5fec8a25f5a4e"
         ],
-        "earlierConversions": []
+        "earlierConversions": [
+            "6eb47cf3b83c3cbb21aeed1ff2ef8f4141061f0ac2940a438b1401a19dac44b6"
+        ],
+        "adds": [
+            "app/Pages/Settings/AppearancePage.php"
+        ]
     },
     "routes/web.php": {
         "upstream": [
             "6742122385aed4e9eb436a43420912fc97c2a3893b13f4fa3439c7f000fb1569"
         ],
-        "earlierConversions": []
+        "earlierConversions": [
+            "7d176e8249ba5b2203437770ff5e386e76008e2364a1f8df08b9b1af1c193df0"
+        ],
+        "adds": [
+            "app/Pages/WelcomePage.php",
+            "app/Pages/DashboardPage.php"
+        ]
     },
     "tests/Feature/Auth/EmailVerificationTest.php": {
         "upstream": [
@@ -86,6 +119,48 @@
     "resources/js/hooks/use-initials.tsx": {
         "upstream": [
             "6d77fee1bfbe966d909725098d14a1e16e67974d1bb15bfa5f9a34bb11abfaf9"
+        ],
+        "earlierConversions": []
+    },
+    "resources/js/pages/auth/login.tsx": {
+        "upstream": [
+            "c82a6db34b9a2deb47d2d8eb553d16d12619a43dbd313aa618e038cda8bbc22e"
+        ],
+        "earlierConversions": []
+    },
+    "resources/js/pages/auth/reset-password.tsx": {
+        "upstream": [
+            "30d78c3a675265c2afa4491f7d1aa7ebdeb39459fe86e157dd387d73e0e3762c"
+        ],
+        "earlierConversions": []
+    },
+    "resources/js/pages/auth/register.tsx": {
+        "upstream": [
+            "b2444e4b06861e32667d2ec4066a6fe6451ef8fe80ba961ee87c8094dd750d4f"
+        ],
+        "earlierConversions": []
+    },
+    "resources/js/pages/auth/verify-email.tsx": {
+        "upstream": [
+            "38d763f949717537a7547f2e875e760b9805a8af697427f433fc0056fe8091e2"
+        ],
+        "earlierConversions": []
+    },
+    "resources/js/pages/auth/forgot-password.tsx": {
+        "upstream": [
+            "e44f1262385e9fe0a88130917d89e061b4b9db3933270be8e7bc75ab22d00f0c"
+        ],
+        "earlierConversions": []
+    },
+    "resources/js/pages/settings/profile.tsx": {
+        "upstream": [
+            "64191fb3cc6c6e885f5d8e2201349fddfa83dd376bb493e3c79cb01d8dbbc6ea"
+        ],
+        "earlierConversions": []
+    },
+    "resources/js/pages/settings/security.tsx": {
+        "upstream": [
+            "f5abb5a1e900200e06326816e59b32f8961cb4db01a8a5d0faefe5eee3783cb1"
         ],
         "earlierConversions": []
     }
