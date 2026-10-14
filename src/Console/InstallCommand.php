@@ -8,6 +8,7 @@ use StrictlyLaravel\Install\CiCheckScripts;
 use StrictlyLaravel\Install\ConversionOutcome;
 use StrictlyLaravel\Install\GenerateFirst;
 use StrictlyLaravel\Install\GitignoreEntry;
+use StrictlyLaravel\Install\JsxTypes;
 use StrictlyLaravel\Install\KitConversion;
 use StrictlyLaravel\Install\PackageManager;
 use StrictlyLaravel\Install\PestContractsHook;
@@ -99,8 +100,10 @@ final class InstallCommand extends Command
             'config/strictly.php' => fn () => $this->publishConfig($files, "{$root}/config/strictly.php"),
             "Composer scripts: ci:check and its steps (using {$packageManager->value})" => fn () => $this->writeCiCheck("{$root}/composer.json", $packageManager),
             'tsconfig.json: strictness flags' => fn () => TsconfigFlags::patch("{$root}/tsconfig.json"),
+            'tsconfig.json: narrowed JSX types' => fn () => JsxTypes::patchTsconfig("{$root}/tsconfig.json"),
             'vite.config.ts: Strictly Laravel oxlint plugin' => fn () => ViteLintPlugin::register("{$root}/vite.config.ts"),
             'vite.config.ts: Strictly Laravel Vite plugin' => fn () => ViteTypesPlugin::register("{$root}/vite.config.ts"),
+            "vite.config.ts: React plugin keeps React's JSX runtime" => fn () => JsxTypes::pinViteReactRuntime("{$root}/vite.config.ts"),
             'Generated TypeScript gitignored' => fn () => GitignoreEntry::ensure("{$root}/.gitignore", '/resources/js/'.TypeGeneration::OUTPUT_DIRECTORY),
             'Recorded Contracts gitignored' => fn () => GitignoreEntry::ensure("{$root}/.gitignore", '/resources/js/'.ContractRecorder::DIRECTORY),
             'package.json scripts: build and types:check generate first' => fn () => GenerateFirst::ensure("{$root}/package.json"),
