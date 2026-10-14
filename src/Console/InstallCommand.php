@@ -8,6 +8,7 @@ use StrictlyLaravel\Install\CiCheckScripts;
 use StrictlyLaravel\Install\ConversionOutcome;
 use StrictlyLaravel\Install\KitConversion;
 use StrictlyLaravel\Install\PackageManager;
+use StrictlyLaravel\Install\PhpstanInclude;
 use StrictlyLaravel\StrictlyServiceProvider;
 use StrictlyLaravel\Workarounds\WayfinderQueryVerb;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -38,20 +39,48 @@ final class InstallCommand extends Command
         $failed = false;
 
         foreach ($hooks as $hook => $apply) {
-            try {
-                $this->components->twoColumnDetail($hook, $apply() ? '<fg=green>applied</>' : '<fg=gray>unchanged</>');
-            } catch (Throwable $e) {
-                $failed = true;
-                $this->components->twoColumnDetail($hook, '<fg=red>not applied</>');
-                $this->components->error($e->getMessage());
-            }
+            $failed = ! $this->applyHook($hook, $apply) || $failed;
         }
 
-        if (! $this->convertKit()) {
-            $failed = true;
-        }
+        $failed = ! $this->convertKit() || $failed;
+        // After Kit Conversion, which writes the include into a phpstan.neon it converts.
+        $failed = ! $this->applyHook('PHPStan extension included in phpstan.neon', $this->includePhpstanExtension(...)) || $failed;
 
         return $failed ? self::FAILURE : self::SUCCESS;
+    }
+
+    /**
+     * Report one hook as a row: applied, unchanged, or not applied with its error. Returns false when it failed.
+     *
+     * @param  callable(): bool  $apply  returns whether it changed anything
+     */
+    private function applyHook(string $hook, callable $apply): bool
+    {
+        try {
+            $this->components->twoColumnDetail($hook, $apply() ? '<fg=green>applied</>' : '<fg=gray>unchanged</>');
+
+            return true;
+        } catch (Throwable $e) {
+            $this->components->twoColumnDetail($hook, '<fg=red>not applied</>');
+            $this->components->error($e->getMessage());
+
+            return false;
+        }
+    }
+
+    private function includePhpstanExtension(): bool
+    {
+        $removed = PhpstanInclude::ensure($this->laravel->basePath('phpstan.neon'));
+
+        if ($removed === null) {
+            return false;
+        }
+
+        $this->components->warn('phpstan.neon was not converted, so only the Strictly Laravel extension was added to its includes'
+            .($removed === [] ? '' : ', replacing the ones it already brings ('.implode(', ', $removed).')')
+            .'. Check by hand that it sets no level below max and that its paths include tests/.');
+
+        return true;
     }
 
     /**
