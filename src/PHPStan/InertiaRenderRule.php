@@ -19,7 +19,8 @@ use PHPStan\Rules\RuleErrorBuilder;
  * props that `PageProps<'component'>` is generated from. Every other way to render a page sends props no generated
  * type describes, so it is rejected: `Inertia::render()` (with an array or a Data object, or with no props at all,
  * which leaves the page without a Page class), the `inertia()` helper with a component, `ResponseFactory::render()`
- * and `Route::inertia()`. Inertia's other APIs (`Inertia::flash()`, `inertia()->share()`, …) are untouched.
+ * and `Route::inertia()`. Inertia's other APIs (`inertia()->share()`, …) are untouched; flashing has its own rule
+ * (InertiaFlashRule).
  *
  * @implements Rule<CallLike>
  */
