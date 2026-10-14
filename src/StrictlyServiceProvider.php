@@ -9,6 +9,7 @@ use Illuminate\Support\ServiceProvider;
 use Spatie\TypeScriptTransformer\TypeScriptTransformerConfig;
 use StrictlyLaravel\Console\GenerateCommand;
 use StrictlyLaravel\Console\InstallCommand;
+use StrictlyLaravel\Console\MakePageCommand;
 use StrictlyLaravel\TypeScript\TypeGeneration;
 use StrictlyLaravel\Workarounds\WayfinderQueryVerb;
 
@@ -37,7 +38,7 @@ final class StrictlyServiceProvider extends ServiceProvider
 
         $this->publishes([self::CONFIG_STUB => config_path('strictly.php')], 'strictly-config');
 
-        $this->commands([GenerateCommand::class, InstallCommand::class]);
+        $this->commands([GenerateCommand::class, InstallCommand::class, MakePageCommand::class]);
 
         Event::listen(CommandFinished::class, WayfinderQueryVerb::afterCommand(...));
     }
