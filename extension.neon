@@ -1,0 +1,36 @@
+# The Strictly Laravel PHPStan extension. The app's phpstan.neon includes this file (Kit Conversion writes that
+# include), so every setting and rule here reaches the app through `composer update`.
+#
+# The extensions below are included by path rather than through phpstan/extension-installer: Composer blocks that
+# plugin unless the app allows it first, which would break a plain `composer require`. %rootDir% is
+# vendor/phpstan/phpstan.
+
+includes:
+    - %rootDir%/../../larastan/larastan/extension.neon
+    - %rootDir%/../../nesbot/carbon/extension.neon
+    - %rootDir%/../phpstan-strict-rules/rules.neon
+    - %rootDir%/../../tomasvotruba/type-coverage/config/extension.neon
+    - %rootDir%/../../pestphp/pest-plugin-phpstan/extension.neon
+    - phar://phpstan.phar/conf/bleedingEdge.neon
+
+parameters:
+    level: max
+
+    # Problem P-037: read model casts from the casts() method, so enum and date casts aren't typed as strings.
+    # Upstream: https://github.com/larastan/larastan/issues/2512 (drop this once Larastan reads casts() by default).
+    parseModelCastsMethod: true
+
+    # ADR-0007: a suppression names the identifiers it ignores and gives a reason for each,
+    # `@phpstan-ignore strictly.rule (reason)`. A bare @phpstan-ignore-line or -next-line is rejected.
+    reportIgnoresWithoutComments: true
+
+    strictRules:
+        # Eloquent builders and PHPUnit assertions forward static calls dynamically (User::where(...),
+        # $this->markTestSkipped(...)): false positives.
+        dynamicCallOnStaticMethod: false
+
+    type_coverage:
+        return: 100
+        param: 100
+        property: 100
+        constant: 100

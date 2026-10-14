@@ -1,0 +1,12 @@
+# Strictly Laravel's PHPStan settings (level max, strict rules, bleeding edge, full type coverage, Pest) come from the
+# package's extension, so they update with the package.
+includes:
+    - vendor/mrsafalpiya/strictly-laravel/extension.neon
+
+parameters:
+    paths:
+        - app/
+        - bootstrap/app.php
+        - database/
+        - routes/
+        - tests/

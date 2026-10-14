@@ -5,6 +5,8 @@ namespace StrictlyLaravel\Console;
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
 use StrictlyLaravel\Install\CiCheckScripts;
+use StrictlyLaravel\Install\ConversionOutcome;
+use StrictlyLaravel\Install\KitConversion;
 use StrictlyLaravel\Install\PackageManager;
 use StrictlyLaravel\StrictlyServiceProvider;
 use StrictlyLaravel\Workarounds\WayfinderQueryVerb;
@@ -12,8 +14,9 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Throwable;
 
 /**
- * Applies the Overlay's hooks to the app. Idempotent and non-interactive: running it again changes nothing, and it
- * never overwrites a file the app owns (such as an existing config/strictly.php).
+ * Applies the Overlay's hooks and Kit Conversion to the app. Idempotent and non-interactive: running it again changes
+ * nothing, and it never overwrites a file the app owns (such as an existing config/strictly.php, or a Base Kit file
+ * whose content Kit Conversion doesn't recognise).
  */
 #[AsCommand(name: 'strictly:install')]
 final class InstallCommand extends Command
@@ -44,7 +47,52 @@ final class InstallCommand extends Command
             }
         }
 
+        if (! $this->convertKit()) {
+            $failed = true;
+        }
+
         return $failed ? self::FAILURE : self::SUCCESS;
+    }
+
+    /**
+     * One row per Base Kit file, labelled with its path. A skipped file doesn't fail the command (the app may have
+     * edited it on purpose), but the row is reported so the fresh-install harness can fail on it (ADR-0005).
+     */
+    private function convertKit(): bool
+    {
+        try {
+            $outcomes = KitConversion::apply($this->laravel->basePath());
+        } catch (Throwable $e) {
+            $this->components->twoColumnDetail('Kit Conversion', '<fg=red>not applied</>');
+            $this->components->error($e->getMessage());
+
+            return false;
+        }
+
+        $skipped = [];
+
+        foreach ($outcomes as $path => $outcome) {
+            $status = match ($outcome) {
+                ConversionOutcome::Converted => '<fg=green>applied</>',
+                ConversionOutcome::AlreadyConverted => '<fg=gray>unchanged</>',
+                ConversionOutcome::Missing => '<fg=yellow>not found</>',
+                ConversionOutcome::Unknown => '<fg=yellow>skipped (unknown content)</>',
+            };
+
+            if ($outcome === ConversionOutcome::Unknown) {
+                $skipped[] = "{$path} (sha256 ".KitConversion::hash($this->laravel->basePath($path)).')';
+            }
+
+            $this->components->twoColumnDetail($path, $status);
+        }
+
+        if ($skipped !== []) {
+            $this->components->warn('Kit Conversion left these files untouched because their content is not a known Base Kit version: '
+                .implode(', ', $skipped).'. Compare each with its converted version in '
+                .'vendor/mrsafalpiya/strictly-laravel/kit/ and apply the changes by hand.');
+        }
+
+        return true;
     }
 
     private function writeCiCheck(PackageManager $packageManager): bool
