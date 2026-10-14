@@ -28,7 +28,7 @@ final class InstallCommand extends Command
 
         $hooks = [
             'config/strictly.php' => fn () => $this->publishConfig($files),
-            "Composer scripts: ci:check and its steps (using {$packageManager->value})" => fn () => CiCheckScripts::write($this->laravel->basePath('composer.json'), $packageManager),
+            "Composer scripts: ci:check and its steps (using {$packageManager->value})" => fn () => $this->writeCiCheck($packageManager),
             'Wayfinder QUERY verb workaround' => fn () => WayfinderQueryVerb::patch(resource_path('js/wayfinder/index.ts')),
         ];
 
@@ -45,6 +45,17 @@ final class InstallCommand extends Command
         }
 
         return $failed ? self::FAILURE : self::SUCCESS;
+    }
+
+    private function writeCiCheck(PackageManager $packageManager): bool
+    {
+        $result = CiCheckScripts::write($this->laravel->basePath('composer.json'), $packageManager);
+
+        if ($result['replaced'] !== []) {
+            $this->components->warn('Replaced or removed these edited ci:check steps: '.implode(', ', $result['replaced']).'. Add custom checks to a script of your own instead.');
+        }
+
+        return $result['changed'];
     }
 
     private function publishConfig(Filesystem $files): bool

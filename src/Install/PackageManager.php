@@ -3,7 +3,8 @@
 namespace StrictlyLaravel\Install;
 
 /**
- * The app's JS package manager, detected from its lockfile, as the Laravel installer leaves exactly one behind.
+ * The app's JS package manager, detected from its lockfile. Without one (the Laravel installer's `pnpm install` can
+ * fail silently and leave none), the Base Kit's `pnpm-workspace.yaml` means pnpm.
  */
 enum PackageManager: string
 {
@@ -18,6 +19,8 @@ enum PackageManager: string
             file_exists($basePath.'/pnpm-lock.yaml') => self::Pnpm,
             file_exists($basePath.'/yarn.lock') => self::Yarn,
             file_exists($basePath.'/bun.lock'), file_exists($basePath.'/bun.lockb') => self::Bun,
+            file_exists($basePath.'/package-lock.json') => self::Npm,
+            file_exists($basePath.'/pnpm-workspace.yaml') => self::Pnpm,
             default => self::Npm,
         };
     }

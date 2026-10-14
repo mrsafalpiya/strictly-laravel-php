@@ -5,7 +5,7 @@ namespace StrictlyLaravel\Workarounds;
 use Illuminate\Console\Events\CommandFinished;
 
 /**
- * Upstream bug: https://github.com/laravel/wayfinder/issues/326
+ * Problem P-001 (docs/problems.md). Upstream: https://github.com/laravel/wayfinder/issues/326
  *
  * Laravel 13 added the QUERY verb, so `Route::redirect()` / `Route::any()` routes (the Base Kit's `settings`
  * redirect) list "query", but the `type Method` union Wayfinder 0.1.x copies into resources/js/wayfinder/index.ts

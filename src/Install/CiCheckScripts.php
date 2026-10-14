@@ -29,9 +29,13 @@ final class CiCheckScripts
     }
 
     /**
-     * Write the scripts into the given composer.json. Returns whether the file changed.
+     * Write the scripts into the given composer.json. Returns whether the file changed, and the app's own
+     * `ci:check:*` scripts that were replaced or dropped because they differed from ours. (Replacing the Base Kit's
+     * `ci:check` itself is the point, so it isn't reported.)
+     *
+     * @return array{changed: bool, replaced: list<string>}
      */
-    public static function write(string $composerJson, PackageManager $packageManager): bool
+    public static function write(string $composerJson, PackageManager $packageManager): array
     {
         $original = file_get_contents($composerJson);
 
@@ -49,7 +53,18 @@ final class CiCheckScripts
             throw new RuntimeException("{$composerJson} is not a JSON object");
         }
 
-        $scripts = self::merge($manifest->scripts ?? new stdClass, self::scripts($packageManager));
+        $ours = self::scripts($packageManager);
+        $existing = $manifest->scripts ?? new stdClass;
+        $scripts = self::merge($existing, $ours);
+        $replaced = [];
+
+        foreach (get_object_vars($existing) as $name => $commands) {
+            $name = (string) $name;
+
+            if (str_starts_with($name, 'ci:check:') && ($ours[$name] ?? null) !== $commands) {
+                $replaced[] = $name;
+            }
+        }
         $span = self::topLevelObjectSpan($original, 'scripts');
 
         if ($span !== null) {
@@ -64,12 +79,12 @@ final class CiCheckScripts
         }
 
         if ($updated === $original) {
-            return false;
+            return ['changed' => false, 'replaced' => []];
         }
 
         file_put_contents($composerJson, $updated);
 
-        return true;
+        return ['changed' => true, 'replaced' => $replaced];
     }
 
     private static function encode(stdClass $value): string
