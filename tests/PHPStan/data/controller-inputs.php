@@ -62,3 +62,18 @@ final class ProjectFormatter
 {
     public function format(ProjectData $data): void {}
 }
+
+namespace App\Data\Queries;
+
+use StrictlyLaravel\Data\QueryData;
+
+final class ProjectFiltersData extends QueryData {}
+
+namespace App\Http\Controllers\Queries;
+
+use App\Data\Queries\ProjectFiltersData;
+
+final class ProjectListController
+{
+    public function index(ProjectFiltersData $filters): void {}
+}
