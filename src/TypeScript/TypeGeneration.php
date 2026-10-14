@@ -13,7 +13,8 @@ use Spatie\TypeScriptTransformer\Writers\FlatModuleWriter;
 /**
  * The typescript-transformer v3 configuration (ADR-0003) that turns the app's PHP into resources/js/generated/index.ts,
  * imported as `@/generated`. Nothing is registered by hand: every laravel-data class and every backed enum anywhere
- * in app/ becomes a TypeScript type, and every backed enum's values are exported in case order as `enumValues`.
+ * in app/ becomes a TypeScript type, every backed enum's values are exported in case order as `enumValues`, and every
+ * Page class becomes `PageProps<'component'>`, checked against its page component.
  */
 final class TypeGeneration
 {
@@ -31,15 +32,24 @@ final class TypeGeneration
         // because it is gitignored.
         File::ensureDirectoryExists(self::outputDirectory());
 
-        return TypeScriptTransformerConfigFactory::create()
+        $pages = new PageTransformer;
+
+        $config = TypeScriptTransformerConfigFactory::create()
             ->outputDirectory(self::outputDirectory())
             ->extension(new LaravelDataTypeScriptTransformerExtension)
             ->transformer(new EnumTransformer)
             ->transformDirectories($app->path())
             ->provider(new EnumValuesProvider([$app->path()]))
+            ->provider(new InertiaPagesProvider($app->path('Pages')))
             ->writer(new FlatModuleWriter('index.ts'))
             // Always write the file, so a deleted output is regenerated even when the PHP is unchanged.
             ->withoutManifest()
+            // Last, so it comes first in the chain: a Page class's props are transformed by every other transformer.
+            ->prependTransformer($pages)
             ->get();
+
+        $pages->delegateTo($config->transformers);
+
+        return $config;
     }
 }

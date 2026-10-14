@@ -9,6 +9,7 @@
         "illuminate/console": "^13.0",
         "illuminate/database": "^13.0",
         "illuminate/support": "^13.0",
+        "inertiajs/inertia-laravel": "^3.0",
         "larastan/larastan": "^3.9",
         "pestphp/pest-plugin-phpstan": "^5.2",
         "pestphp/pest-plugin-type-coverage": "^5.0",
