@@ -35,7 +35,9 @@ parameters:
         property: 100
         constant: 100
 
-# Data conventions: concrete Data classes are final, and only Data classes live in App\Data.
+# Data conventions: concrete Data classes are final, and only Data classes live in App\Data. Pages are rendered only
+# through Page classes (Problems P-009, P-011).
 rules:
     - StrictlyLaravel\PHPStan\DataClassFinalRule
     - StrictlyLaravel\PHPStan\DataNamespaceRule
+    - StrictlyLaravel\PHPStan\InertiaRenderRule
