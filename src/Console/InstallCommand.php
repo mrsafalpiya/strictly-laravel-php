@@ -9,6 +9,8 @@ use StrictlyLaravel\Install\ConversionOutcome;
 use StrictlyLaravel\Install\KitConversion;
 use StrictlyLaravel\Install\PackageManager;
 use StrictlyLaravel\Install\PhpstanInclude;
+use StrictlyLaravel\Install\TsconfigFlags;
+use StrictlyLaravel\Install\ViteLintPlugin;
 use StrictlyLaravel\StrictlyServiceProvider;
 use StrictlyLaravel\Workarounds\WayfinderQueryVerb;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -33,6 +35,8 @@ final class InstallCommand extends Command
         $hooks = [
             'config/strictly.php' => fn () => $this->publishConfig($files),
             "Composer scripts: ci:check and its steps (using {$packageManager->value})" => fn () => $this->writeCiCheck($packageManager),
+            'tsconfig.json: strictness flags' => fn () => TsconfigFlags::patch($this->laravel->basePath('tsconfig.json')),
+            'vite.config.ts: Strictly Laravel oxlint plugin' => fn () => ViteLintPlugin::register($this->laravel->basePath('vite.config.ts')),
             'Wayfinder QUERY verb workaround' => fn () => WayfinderQueryVerb::patch(resource_path('js/wayfinder/index.ts')),
         ];
 
