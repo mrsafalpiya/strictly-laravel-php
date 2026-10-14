@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Spatie\TypeScriptTransformer\TypeScriptTransformerConfig;
+use StrictlyLaravel\Console\CoverageCommand;
 use StrictlyLaravel\Console\GenerateCommand;
 use StrictlyLaravel\Console\InstallCommand;
 use StrictlyLaravel\Console\MakePageCommand;
@@ -38,7 +39,7 @@ final class StrictlyServiceProvider extends ServiceProvider
 
         $this->publishes([self::CONFIG_STUB => config_path('strictly.php')], 'strictly-config');
 
-        $this->commands([GenerateCommand::class, InstallCommand::class, MakePageCommand::class]);
+        $this->commands([CoverageCommand::class, GenerateCommand::class, InstallCommand::class, MakePageCommand::class]);
 
         Event::listen(CommandFinished::class, WayfinderQueryVerb::afterCommand(...));
     }

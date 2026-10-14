@@ -48,8 +48,8 @@ use Symfony\Component\HttpFoundation\Response;
  * component with no Page class fails `PageProps`' constraint. `Contract<T>` is T, except that a map may arrive as `[]`
  * (Problem P-076).
  *
- * Each Contract has a `.json` sidecar next to it describing what was recorded (`kind` is `page` or `flash`), for
- * Contract Coverage to read.
+ * Each Contract has a `.json` sidecar next to it describing what was recorded (`kind` is `page` or `flash`), which
+ * Contract Coverage reads (records(), `strictly:coverage`).
  *
  * The directory is gitignored and type-checked by `tsc` (the tsconfig includes resources/js), which `ci:check` runs
  * after the tests. A test run that isn't parallel starts from an empty directory, so a Contract no test produces any more
@@ -74,6 +74,41 @@ final class ContractRecorder
     public static function directory(): string
     {
         return resource_path('js/'.self::DIRECTORY);
+    }
+
+    /**
+     * Every recorded Contract's sidecar, decoded with objects as stdClass (so `{}` and `[]` stay apart), in no
+     * particular order: what Contract Coverage reads. Each has a `kind` (`page` or `flash`) and the payload it recorded.
+     *
+     * @return list<stdClass>
+     */
+    public static function records(): array
+    {
+        $directory = self::directory();
+
+        if (! File::isDirectory($directory)) {
+            return [];
+        }
+
+        $records = [];
+
+        foreach (File::allFiles($directory) as $file) {
+            if ($file->getExtension() !== 'json') {
+                continue;
+            }
+
+            try {
+                $record = json_decode($file->getContents(), false, flags: JSON_THROW_ON_ERROR);
+            } catch (JsonException) {
+                continue; // a sidecar a parallel test process is still writing
+            }
+
+            if ($record instanceof stdClass && is_string($record->kind ?? null)) {
+                $records[] = $record;
+            }
+        }
+
+        return $records;
     }
 
     /**
