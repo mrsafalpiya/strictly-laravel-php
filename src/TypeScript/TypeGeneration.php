@@ -40,7 +40,7 @@ final class TypeGeneration
             ->transformer(new EnumTransformer)
             ->transformDirectories($app->path())
             ->provider(new EnumValuesProvider([$app->path()]))
-            ->provider(new InertiaPagesProvider($app->path('Pages')))
+            ->provider(new InertiaPagesProvider($app->path('Pages'), resource_path('js/pages')))
             ->writer(new FlatModuleWriter('index.ts'))
             // Always write the file, so a deleted output is regenerated even when the PHP is unchanged.
             ->withoutManifest()

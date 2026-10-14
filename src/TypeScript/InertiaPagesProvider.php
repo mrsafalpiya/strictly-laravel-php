@@ -2,7 +2,10 @@
 
 namespace StrictlyLaravel\TypeScript;
 
+use FilesystemIterator;
 use LogicException;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 use Spatie\TypeScriptTransformer\References\ClassStringReference;
 use Spatie\TypeScriptTransformer\References\CustomReference;
 use Spatie\TypeScriptTransformer\Transformed\Transformed;
@@ -15,6 +18,7 @@ use Spatie\TypeScriptTransformer\TypeScriptNodes\TypeScriptObject;
 use Spatie\TypeScriptTransformer\TypeScriptNodes\TypeScriptProperty;
 use Spatie\TypeScriptTransformer\TypeScriptNodes\TypeScriptRaw;
 use Spatie\TypeScriptTransformer\TypeScriptNodes\TypeScriptReference;
+use SplFileInfo;
 use StrictlyLaravel\Inertia\Page;
 
 /**
@@ -24,9 +28,11 @@ use StrictlyLaravel\Inertia\Page;
  *     export type PageComponent = keyof InertiaPages;
  *     export type PageProps<K extends PageComponent> = InertiaPages[K];
  *     export type __PageComponentCheck = [CheckPage<'settings/profile', typeof import('@/pages/settings/profile').default>, …];
+ *     export type __PageFileCheck = [HasPageClass<'settings/profile'>, …];
  *
- * The check makes `tsc` fail when a Page class has no page component file, or when the component asks for a prop the
- * class doesn't send. The page types themselves come from the directory scan, named by PageTransformer.
+ * The checks make `tsc` fail when a Page class has no page component file, when the component asks for a prop the
+ * class doesn't send, and when a page component file has no Page class. The page types themselves come from the
+ * directory scan, named by PageTransformer.
  */
 final class InertiaPagesProvider implements ActionAwareTransformedProvider, TransformedProvider
 {
@@ -34,8 +40,16 @@ final class InertiaPagesProvider implements ActionAwareTransformedProvider, Tran
 
     private TransformedProviderActions $actions;
 
+    /** The extensions of page component files, as the Base Kit's config/inertia.php lists them for React. */
+    private const array COMPONENT_EXTENSIONS = ['tsx', 'ts', 'jsx', 'js'];
+
+    /**
+     * @param  string  $pagesDirectory  where the Page classes live (app/Pages)
+     * @param  string  $componentsDirectory  where the page components live (resources/js/pages)
+     */
     public function __construct(
         private readonly string $pagesDirectory,
+        private readonly string $componentsDirectory,
         private readonly string $componentsImportPrefix = '@/pages/',
     ) {}
 
@@ -51,7 +65,7 @@ final class InertiaPagesProvider implements ActionAwareTransformedProvider, Tran
     {
         $pages = $this->pages();
 
-        return [...$this->pageMap($pages), ...$this->componentCheck($pages)];
+        return [...$this->pageMap($pages), ...$this->componentCheck($pages), ...$this->pageFileCheck()];
     }
 
     /**
@@ -148,5 +162,62 @@ final class InertiaPagesProvider implements ActionAwareTransformedProvider, Tran
             [],
             false,
         )];
+    }
+
+    /**
+     * @return list<Transformed>
+     */
+    private function pageFileCheck(): array
+    {
+        $checks = array_map(
+            fn (string $component): string => "    HasPageClass<'{$component}'>,",
+            $this->componentFiles(),
+        );
+
+        if ($checks === []) {
+            return [];
+        }
+
+        return [new Transformed(
+            new TypeScriptRaw(implode("\n", [
+                '// Fails to compile when a page component file has no Page class (`php artisan make:page <component>` creates both).',
+                'type HasPageClass<K extends PageComponent> = K;',
+                'export type __PageFileCheck = [',
+                ...$checks,
+                '];',
+            ])),
+            new CustomReference(self::GROUP, 'file-check'),
+            [],
+            false,
+        )];
+    }
+
+    /**
+     * The page component name of every file under the components directory, sorted.
+     *
+     * @return list<string>
+     */
+    private function componentFiles(): array
+    {
+        if (! is_dir($this->componentsDirectory)) {
+            return [];
+        }
+
+        $components = [];
+        $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($this->componentsDirectory, FilesystemIterator::SKIP_DOTS));
+
+        foreach ($files as $file) {
+            if (! $file instanceof SplFileInfo || ! in_array($file->getExtension(), self::COMPONENT_EXTENSIONS, true)
+                || str_ends_with($file->getFilename(), '.d.ts')) {
+                continue;
+            }
+
+            $relative = substr($file->getPathname(), strlen(rtrim($this->componentsDirectory, '/\\')) + 1);
+            $components[] = str_replace('\\', '/', substr($relative, 0, -strlen($file->getExtension()) - 1));
+        }
+
+        sort($components);
+
+        return array_values(array_unique($components));
     }
 }
