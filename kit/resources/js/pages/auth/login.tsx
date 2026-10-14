@@ -1,4 +1,5 @@
-import { Form, Head } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
+import { TypedForm } from '@mrsafalpiya/strictly-laravel/react';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import TextLink from '@/components/text-link';
@@ -11,7 +12,7 @@ import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 import PasskeyVerify from '@/components/passkey-verify';
-import type { PageProps } from '@/generated';
+import type { LoginData, PageProps } from '@/generated';
 
 export default function Login({
     status,
@@ -23,12 +24,12 @@ export default function Login({
 
             <PasskeyVerify />
 
-            <Form
+            <TypedForm<LoginData>
                 {...store.form()}
                 resetOnSuccess={['password']}
                 className="flex flex-col gap-6"
             >
-                {({ processing, errors }) => (
+                {({ processing, errors, field }) => (
                     <>
                         <div className="grid gap-6">
                             <div className="grid gap-2">
@@ -36,7 +37,7 @@ export default function Login({
                                 <Input
                                     id="email"
                                     type="email"
-                                    name="email"
+                                    name={field('email')}
                                     required
                                     autoFocus
                                     tabIndex={1}
@@ -61,7 +62,7 @@ export default function Login({
                                 </div>
                                 <PasswordInput
                                     id="password"
-                                    name="password"
+                                    name={field('password')}
                                     required
                                     tabIndex={2}
                                     autoComplete="current-password"
@@ -73,7 +74,7 @@ export default function Login({
                             <div className="flex items-center space-x-3">
                                 <Checkbox
                                     id="remember"
-                                    name="remember"
+                                    name={field('remember')}
                                     tabIndex={3}
                                 />
                                 <Label htmlFor="remember">Remember me</Label>
@@ -99,7 +100,7 @@ export default function Login({
                         </div>
                     </>
                 )}
-            </Form>
+            </TypedForm>
 
             {status && (
                 <div className="mb-4 text-center text-sm font-medium text-green-600">

@@ -1,4 +1,5 @@
-import { Form, Head } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
+import { TypedForm } from '@mrsafalpiya/strictly-laravel/react';
 import { Link } from '@inertiajs/react';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import DeleteUser from '@/components/delete-user';
@@ -31,14 +32,14 @@ export default function Profile({
                     description="Update your name and email address"
                 />
 
-                <Form
+                <TypedForm
                     {...ProfileController.update.form()}
                     options={{
                         preserveScroll: true,
                     }}
                     className="space-y-6"
                 >
-                    {({ processing, errors }) => (
+                    {({ processing, errors, field }) => (
                         <>
                             <div className="grid gap-2">
                                 <Label htmlFor="name">Name</Label>
@@ -47,7 +48,7 @@ export default function Profile({
                                     id="name"
                                     className="mt-1 block w-full"
                                     defaultValue={user.name}
-                                    name="name"
+                                    name={field('name')}
                                     required
                                     autoComplete="name"
                                     placeholder="Full name"
@@ -67,7 +68,7 @@ export default function Profile({
                                     type="email"
                                     className="mt-1 block w-full"
                                     defaultValue={user.email}
-                                    name="email"
+                                    name={field('email')}
                                     required
                                     autoComplete="username"
                                     placeholder="Email address"
@@ -114,7 +115,7 @@ export default function Profile({
                             </div>
                         </>
                     )}
-                </Form>
+                </TypedForm>
             </div>
 
             <DeleteUser />

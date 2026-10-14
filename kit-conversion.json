@@ -17,10 +17,13 @@
         ],
         "earlierConversions": [
             "092764a92589e3eda1bb021b730e0510a055c3932907ba8fc2bb31c878028e79",
-            "70bee9316c700b9568554667f799e77f774f428eb416334a1bfb5199e539126e"
+            "70bee9316c700b9568554667f799e77f774f428eb416334a1bfb5199e539126e",
+            "59a5c7bf263777ec2dc754427a70d3b863aedf77a2272b9557a4bc3e7b429daa"
         ],
         "adds": [
-            "app/Pages/Settings/ProfilePage.php"
+            "app/Pages/Settings/ProfilePage.php",
+            "app/Data/ProfileUpdateData.php",
+            "app/Data/ProfileDeleteData.php"
         ]
     },
     "app/Http/Controllers/Settings/SecurityController.php": {
@@ -29,11 +32,13 @@
         ],
         "earlierConversions": [
             "55f5333025a5ab4c54df393a4d084258345adab54f7b473534e0c0662aca98c9",
-            "058b4c419c090076dcda55cc03ad7c2bb6cd844ee4d33ceea9eaaecb9850f0a6"
+            "058b4c419c090076dcda55cc03ad7c2bb6cd844ee4d33ceea9eaaecb9850f0a6",
+            "e2d7da2078102a5103637ec0df86bbcee742c8a2e45d326b60c2dd5195925991"
         ],
         "adds": [
             "app/Pages/Settings/SecurityPage.php",
-            "app/Data/PasskeyData.php"
+            "app/Data/PasskeyData.php",
+            "app/Data/PasswordUpdateData.php"
         ]
     },
     "app/Http/Requests/Settings/ProfileUpdateRequest.php": {
@@ -129,7 +134,9 @@
         "upstream": [
             "0a8b33930fe6e438b6a9b66e2be7be71e8283180acb11ab339044bebcaf11c03"
         ],
-        "earlierConversions": []
+        "earlierConversions": [
+            "501a3853c985a1d3d344c4b857d2057ff2b37a01464a916c15d6873c8ab7027a"
+        ]
     },
     "resources/js/components/passkey-item.tsx": {
         "upstream": [
@@ -149,7 +156,9 @@
         "upstream": [
             "59dc19f93bd031e8320c7df571cd9509e8c1ceb6337506ef380d11b2e10e2550"
         ],
-        "earlierConversions": []
+        "earlierConversions": [
+            "a414f835091bcd40c43015d2380a822d6f34d94044077b64bd59b75db49c7e78"
+        ]
     },
     "resources/js/hooks/use-initials.tsx": {
         "upstream": [
@@ -161,38 +170,61 @@
         "upstream": [
             "c82a6db34b9a2deb47d2d8eb553d16d12619a43dbd313aa618e038cda8bbc22e"
         ],
-        "earlierConversions": []
+        "earlierConversions": [
+            "14c3fb863c2b9f76056fb1bd39e1bc935165244aea72ded2ba1cb63f27f5e956"
+        ],
+        "adds": [
+            "app/Data/Auth/LoginData.php"
+        ]
     },
     "resources/js/pages/auth/reset-password.tsx": {
         "upstream": [
             "30d78c3a675265c2afa4491f7d1aa7ebdeb39459fe86e157dd387d73e0e3762c"
         ],
-        "earlierConversions": []
+        "earlierConversions": [
+            "fa7f4f4e742bf7061351e86c6737f4a0f958d9295405600329b569ea18a4d248"
+        ],
+        "adds": [
+            "app/Data/Auth/ResetPasswordData.php"
+        ]
     },
     "resources/js/pages/auth/register.tsx": {
         "upstream": [
             "b2444e4b06861e32667d2ec4066a6fe6451ef8fe80ba961ee87c8094dd750d4f"
         ],
-        "earlierConversions": []
+        "earlierConversions": [
+            "d14314ff48f0f737e75934262d399bca2488d5c499f3087143f33b4c554c251c"
+        ],
+        "adds": [
+            "app/Data/Auth/RegisterData.php"
+        ]
     },
     "resources/js/pages/auth/verify-email.tsx": {
         "upstream": [
             "38d763f949717537a7547f2e875e760b9805a8af697427f433fc0056fe8091e2"
         ],
-        "earlierConversions": []
+        "earlierConversions": [
+            "33e8bce6e0ec1a6a9f633e9afe12f4f720de4da77a7f2306cc20c516b88fd4e4"
+        ]
     },
     "resources/js/pages/auth/forgot-password.tsx": {
         "upstream": [
             "e44f1262385e9fe0a88130917d89e061b4b9db3933270be8e7bc75ab22d00f0c"
         ],
-        "earlierConversions": []
+        "earlierConversions": [
+            "efd53060dfdcfbeb7962289ff35f0262cf191519f8abcf39119fd79a677ca547"
+        ],
+        "adds": [
+            "app/Data/Auth/ForgotPasswordData.php"
+        ]
     },
     "resources/js/pages/settings/profile.tsx": {
         "upstream": [
             "64191fb3cc6c6e885f5d8e2201349fddfa83dd376bb493e3c79cb01d8dbbc6ea"
         ],
         "earlierConversions": [
-            "d3309f2243796755815dca001d37f640ff8b49a9c6ecf829281ff350ffa3b6eb"
+            "d3309f2243796755815dca001d37f640ff8b49a9c6ecf829281ff350ffa3b6eb",
+            "eabfec8779a7e8c28d73250d22e6f825a8ada9ed12d971f5fdf6eca2b9e8d95d"
         ],
         "adds": [
             "resources/js/hooks/use-user.ts"
@@ -202,7 +234,9 @@
         "upstream": [
             "f5abb5a1e900200e06326816e59b32f8961cb4db01a8a5d0faefe5eee3783cb1"
         ],
-        "earlierConversions": []
+        "earlierConversions": [
+            "6a263acb89bfebadf19f713df9d7476e8d0d49ef39ba3a68e4d203dd9ec4ea21"
+        ]
     },
     "app/Http/Middleware/HandleInertiaRequests.php": {
         "upstream": [
@@ -253,5 +287,80 @@
             "27964275a33cb65510e302721a3dc79650cf4eab10ca880adee223b5fdbcf5f7"
         ],
         "earlierConversions": []
+    },
+    "resources/js/components/ui/button.tsx": {
+        "upstream": [
+            "1260ee658e71b21d59827ca3e86d87ce131a7846484146a1640acfa91b0b6706"
+        ],
+        "earlierConversions": []
+    },
+    "resources/js/components/ui/input.tsx": {
+        "upstream": [
+            "17da6ceadd3932f8c4269c34e29fcdad73e490bff5bcf76b6c57d47656631695"
+        ],
+        "earlierConversions": []
+    },
+    "resources/js/components/ui/checkbox.tsx": {
+        "upstream": [
+            "8300e569667bfa905c5b1e1f0c63d0efeff87066203ed1750aebb2b3cf2eb08b"
+        ],
+        "earlierConversions": []
+    },
+    "resources/js/components/ui/select.tsx": {
+        "upstream": [
+            "b4e61d449d531da0caf056862ecc214450672ca20c5abdd19f367962c3a0c3f5"
+        ],
+        "earlierConversions": []
+    },
+    "resources/js/components/ui/sidebar.tsx": {
+        "upstream": [
+            "6a2f648f566b6eeff5174fe5de6aac1ce04933a71020116f97c59061949a3ee5"
+        ],
+        "earlierConversions": []
+    },
+    "resources/js/components/password-input.tsx": {
+        "upstream": [
+            "1d88ede1286014f78d98ec33f834f48a953ae8b17011da605adc29bfd67da282"
+        ],
+        "earlierConversions": []
+    },
+    "resources/js/components/two-factor-setup-modal.tsx": {
+        "upstream": [
+            "566ead7dd75c5461c2795f312c06286a5df1286f7e52b4783ffb187d4a0a126b"
+        ],
+        "earlierConversions": [],
+        "adds": [
+            "app/Data/Auth/TwoFactorCodeData.php"
+        ]
+    },
+    "resources/js/components/delete-user.tsx": {
+        "upstream": [
+            "32e58456a6268f423b2ab1d4405497833584a52d72e210c29435b1d1aef50a43"
+        ],
+        "earlierConversions": []
+    },
+    "resources/js/components/two-factor-recovery-codes.tsx": {
+        "upstream": [
+            "e30719941b17ca7ded18ac5fa2ccebb653b4ac05f107d41e6891f8a0b7bafdea"
+        ],
+        "earlierConversions": []
+    },
+    "resources/js/pages/auth/two-factor-challenge.tsx": {
+        "upstream": [
+            "3bb751cb822bd690f3ba1e6fd2b95480b2c38a0acc3d097275ec28c5ea85d843"
+        ],
+        "earlierConversions": [],
+        "adds": [
+            "app/Data/Auth/TwoFactorChallengeData.php"
+        ]
+    },
+    "resources/js/pages/auth/confirm-password.tsx": {
+        "upstream": [
+            "e5790b3dfd69b8fe8a37e58d93d73a780bc4718129cd9f15541f22593399a791"
+        ],
+        "earlierConversions": [],
+        "adds": [
+            "app/Data/Auth/ConfirmPasswordData.php"
+        ]
     }
 }

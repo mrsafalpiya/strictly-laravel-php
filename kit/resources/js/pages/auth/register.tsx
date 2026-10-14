@@ -1,4 +1,5 @@
-import { Form, Head } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
+import { TypedForm } from '@mrsafalpiya/strictly-laravel/react';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import TextLink from '@/components/text-link';
@@ -8,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
-import type { PageProps } from '@/generated';
+import type { PageProps, RegisterData } from '@/generated';
 
 export default function Register({
     passwordRules,
@@ -16,13 +17,13 @@ export default function Register({
     return (
         <>
             <Head title="Register" />
-            <Form
+            <TypedForm<RegisterData>
                 {...store.form()}
                 resetOnSuccess={['password', 'password_confirmation']}
                 disableWhileProcessing
                 className="flex flex-col gap-6"
             >
-                {({ processing, errors }) => (
+                {({ processing, errors, field }) => (
                     <>
                         <div className="grid gap-6">
                             <div className="grid gap-2">
@@ -34,7 +35,7 @@ export default function Register({
                                     autoFocus
                                     tabIndex={1}
                                     autoComplete="name"
-                                    name="name"
+                                    name={field('name')}
                                     placeholder="Full name"
                                 />
                                 <InputError
@@ -51,7 +52,7 @@ export default function Register({
                                     required
                                     tabIndex={2}
                                     autoComplete="email"
-                                    name="email"
+                                    name={field('email')}
                                     placeholder="email@example.com"
                                 />
                                 <InputError message={errors.email} />
@@ -64,7 +65,7 @@ export default function Register({
                                     required
                                     tabIndex={3}
                                     autoComplete="new-password"
-                                    name="password"
+                                    name={field('password')}
                                     placeholder="Password"
                                     passwordrules={passwordRules}
                                 />
@@ -80,7 +81,7 @@ export default function Register({
                                     required
                                     tabIndex={4}
                                     autoComplete="new-password"
-                                    name="password_confirmation"
+                                    name={field('password_confirmation')}
                                     placeholder="Confirm password"
                                     passwordrules={passwordRules}
                                 />
@@ -108,7 +109,7 @@ export default function Register({
                         </div>
                     </>
                 )}
-            </Form>
+            </TypedForm>
         </>
     );
 }

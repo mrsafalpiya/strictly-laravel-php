@@ -1,5 +1,6 @@
 // Components
-import { Form, Head } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
+import { TypedForm } from '@mrsafalpiya/strictly-laravel/react';
 import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
@@ -21,7 +22,7 @@ export default function VerifyEmail({
                 </div>
             )}
 
-            <Form {...send.form()} className="space-y-6 text-center">
+            <TypedForm {...send.form()} className="space-y-6 text-center">
                 {({ processing }) => (
                     <>
                         <Button disabled={processing} variant="secondary">
@@ -37,7 +38,7 @@ export default function VerifyEmail({
                         </TextLink>
                     </>
                 )}
-            </Form>
+            </TypedForm>
         </>
     );
 }

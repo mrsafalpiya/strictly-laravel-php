@@ -1,4 +1,4 @@
-import { Form } from '@inertiajs/react';
+import { TypedForm } from '@mrsafalpiya/strictly-laravel/react';
 import { ShieldCheck } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import Heading from '@/components/heading';
@@ -60,7 +60,7 @@ export default function ManageTwoFactor(props: Props) {
                     </p>
 
                     <div className="relative inline">
-                        <Form {...disable.form()}>
+                        <TypedForm {...disable.form()}>
                             {({ processing }) => (
                                 <Button
                                     variant="destructive"
@@ -70,7 +70,7 @@ export default function ManageTwoFactor(props: Props) {
                                     Disable 2FA
                                 </Button>
                             )}
-                        </Form>
+                        </TypedForm>
                     </div>
 
                     <TwoFactorRecoveryCodes
@@ -95,7 +95,7 @@ export default function ManageTwoFactor(props: Props) {
                                 Continue setup
                             </Button>
                         ) : (
-                            <Form
+                            <TypedForm
                                 {...enable.form()}
                                 onSuccess={() => setShowSetupModal(true)}
                             >
@@ -104,7 +104,7 @@ export default function ManageTwoFactor(props: Props) {
                                         Enable 2FA
                                     </Button>
                                 )}
-                            </Form>
+                            </TypedForm>
                         )}
                     </div>
                 </div>

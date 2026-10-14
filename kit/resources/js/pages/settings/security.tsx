@@ -1,4 +1,5 @@
-import { Form, Head } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
+import { TypedForm } from '@mrsafalpiya/strictly-laravel/react';
 import { useRef } from 'react';
 import SecurityController from '@/actions/App/Http/Controllers/Settings/SecurityController';
 import Heading from '@/components/heading';
@@ -28,7 +29,7 @@ export default function Security(props: PageProps<'settings/security'>) {
                     description="Ensure your account is using a long, random password to stay secure"
                 />
 
-                <Form
+                <TypedForm
                     {...SecurityController.update.form()}
                     options={{
                         preserveScroll: true,
@@ -50,7 +51,7 @@ export default function Security(props: PageProps<'settings/security'>) {
                     }}
                     className="space-y-6"
                 >
-                    {({ errors, processing }) => (
+                    {({ errors, processing, field }) => (
                         <>
                             <div className="grid gap-2">
                                 <Label htmlFor="current_password">
@@ -60,7 +61,7 @@ export default function Security(props: PageProps<'settings/security'>) {
                                 <PasswordInput
                                     id="current_password"
                                     ref={currentPasswordInput}
-                                    name="current_password"
+                                    name={field('current_password')}
                                     className="mt-1 block w-full"
                                     autoComplete="current-password"
                                     placeholder="Current password"
@@ -75,7 +76,7 @@ export default function Security(props: PageProps<'settings/security'>) {
                                 <PasswordInput
                                     id="password"
                                     ref={passwordInput}
-                                    name="password"
+                                    name={field('password')}
                                     className="mt-1 block w-full"
                                     autoComplete="new-password"
                                     placeholder="New password"
@@ -92,7 +93,7 @@ export default function Security(props: PageProps<'settings/security'>) {
 
                                 <PasswordInput
                                     id="password_confirmation"
-                                    name="password_confirmation"
+                                    name={field('password_confirmation')}
                                     className="mt-1 block w-full"
                                     autoComplete="new-password"
                                     placeholder="Confirm password"
@@ -114,7 +115,7 @@ export default function Security(props: PageProps<'settings/security'>) {
                             </div>
                         </>
                     )}
-                </Form>
+                </TypedForm>
             </div>
 
             <ManageTwoFactor
