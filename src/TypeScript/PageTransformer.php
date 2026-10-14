@@ -2,6 +2,7 @@
 
 namespace StrictlyLaravel\TypeScript;
 
+use Illuminate\Support\Str;
 use LogicException;
 use Spatie\TypeScriptTransformer\Actions\TransformTypesAction;
 use Spatie\TypeScriptTransformer\Data\TransformationContext;
@@ -12,6 +13,7 @@ use Spatie\TypeScriptTransformer\Transformers\Transformer;
 use Spatie\TypeScriptTransformer\TypeScriptNodes\TypeScriptAlias;
 use Spatie\TypeScriptTransformer\TypeScriptNodes\TypeScriptIdentifier;
 use StrictlyLaravel\Inertia\Page;
+use StrictlyLaravel\Inertia\PageLocations;
 
 /**
  * Names each Page class's generated type after its page component (`App\Pages\Settings\ProfilePage` becomes
@@ -52,10 +54,24 @@ final class PageTransformer implements Transformer
             throw new LogicException("Could not transform the Page class {$class} to a TypeScript type.");
         }
 
-        $name = Page::typeScriptNameFor($class);
+        $name = self::typeScriptName($class);
         $alias->identifier = new TypeScriptIdentifier($name);
         $transformed->nameAs($name);
 
         return $transformed;
+    }
+
+    /**
+     * The name of a Page class's generated type, such as "SettingsProfilePage": unique per page, where the class's
+     * short name (ProfilePage, ShowPage) is not.
+     *
+     * @param  class-string  $class
+     */
+    private static function typeScriptName(string $class): string
+    {
+        return Str::of(PageLocations::componentFor($class))
+            ->explode('/')
+            ->map(fn (string $segment): string => Str::studly($segment))
+            ->implode('').PageLocations::SUFFIX;
     }
 }

@@ -5,7 +5,7 @@ namespace StrictlyLaravel\Console;
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Str;
-use StrictlyLaravel\Inertia\Page;
+use StrictlyLaravel\Inertia\PageLocations;
 use Symfony\Component\Console\Attribute\AsCommand;
 
 /**
@@ -36,12 +36,11 @@ final class MakePageCommand extends Command
             return self::INVALID;
         }
 
-        /** @var class-string $class */
-        $class = Page::NAMESPACE.implode('\\', array_map(Str::studly(...), $segments)).Page::SUFFIX;
-        $component = Page::componentFor($class);
+        $class = PageLocations::classFor(implode('/', $segments));
+        $component = PageLocations::componentFor($class);
 
-        $this->write($files, app_path('Pages/'.str_replace('\\', '/', Str::after($class, Page::NAMESPACE)).'.php'), $this->pageClass($class));
-        $this->write($files, resource_path("js/pages/{$component}.tsx"), $this->pageComponent($component));
+        $this->write($files, PageLocations::classFile($class), $this->pageClass($class));
+        $this->write($files, PageLocations::componentFile($component), $this->pageComponent($component));
 
         $this->call('strictly:generate');
 

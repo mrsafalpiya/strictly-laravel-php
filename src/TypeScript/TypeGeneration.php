@@ -10,6 +10,7 @@ use Spatie\TypeScriptTransformer\Transformers\EnumTransformer;
 use Spatie\TypeScriptTransformer\TypeScriptTransformerConfig;
 use Spatie\TypeScriptTransformer\TypeScriptTransformerConfigFactory;
 use Spatie\TypeScriptTransformer\Writers\FlatModuleWriter;
+use StrictlyLaravel\Inertia\PageLocations;
 use StrictlyLaravel\Workarounds\TypeScriptTransformer\InertiaPropWrappers;
 use StrictlyLaravel\Workarounds\TypeScriptTransformer\PaginatorTypes;
 use StrictlyLaravel\Workarounds\TypeScriptTransformer\UnmappedClassCheck;
@@ -53,7 +54,7 @@ final class TypeGeneration
             ->provider(new PaginatorTypes)
             ->provider(new DateOnlyTypes)
             ->provider(new EnumValuesProvider([$app->path()]))
-            ->provider(new InertiaPagesProvider($app->path('Pages'), resource_path('js/pages')))
+            ->provider(new InertiaPagesProvider(PageLocations::classesDirectory(), PageLocations::componentsDirectory()))
             ->providedVisitorHook(new InertiaPropWrappers)
             ->connectedVisitorHook(new UnmappedClassCheck)
             ->writer(new FlatModuleWriter('index.ts'))

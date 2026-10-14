@@ -20,6 +20,7 @@ use Spatie\TypeScriptTransformer\TypeScriptNodes\TypeScriptRaw;
 use Spatie\TypeScriptTransformer\TypeScriptNodes\TypeScriptReference;
 use SplFileInfo;
 use StrictlyLaravel\Inertia\Page;
+use StrictlyLaravel\Inertia\PageLocations;
 
 /**
  * Ties every Page class to its page component (Problems P-009 and P-010):
@@ -91,7 +92,7 @@ final class InertiaPagesProvider implements ActionAwareTransformedProvider, Tran
                 continue;
             }
 
-            $component = Page::componentFor($class);
+            $component = PageLocations::componentFor($class);
 
             if (isset($pages[$component])) {
                 throw new LogicException("Both {$pages[$component]} and {$class} render the page component '{$component}'.");
