@@ -19,8 +19,9 @@ use StrictlyLaravel\Workarounds\TypeScriptTransformer\UnmappedClassTypes;
 /**
  * The typescript-transformer v3 configuration (ADR-0003) that turns the app's PHP into resources/js/generated/index.ts,
  * imported as `@/generated`. Nothing is registered by hand: every laravel-data class and every backed enum anywhere
- * in app/ becomes a TypeScript type, every backed enum's values are exported in case order as `enumValues`, and every
- * Page class becomes `PageProps<'component'>`, checked against its page component.
+ * in app/ becomes a TypeScript type, every backed enum's values are exported in case order as `enumValues`, every
+ * Page class becomes `PageProps<'component'>`, checked against its page component, and the shared props and flash
+ * Data classes become Inertia's global config typing.
  *
  * Every PHP type form generates the type that tells the truth: the fixes for typescript-transformer's defects each live
  * in their own class under StrictlyLaravel\Workarounds\TypeScriptTransformer (citing their Problem and upstream issue;
@@ -55,6 +56,7 @@ final class TypeGeneration
             ->provider(new DateOnlyTypes)
             ->provider(new EnumValuesProvider([$app->path()]))
             ->provider(new InertiaPagesProvider(PageLocations::classesDirectory(), PageLocations::componentsDirectory()))
+            ->provider(new InertiaConfigProvider([$app->path()]))
             ->providedVisitorHook(new InertiaPropWrappers)
             ->connectedVisitorHook(new UnmappedClassCheck)
             ->writer(new FlatModuleWriter('index.ts'))

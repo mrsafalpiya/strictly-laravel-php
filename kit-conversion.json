@@ -134,7 +134,9 @@
         "upstream": [
             "e66fe2acd3d4cfd40e2ea196296f459501d694414b25ac270c3c32d49147b17b"
         ],
-        "earlierConversions": []
+        "earlierConversions": [
+            "9f26d34b19b65efda76eb51e7940ca4f299da544fcafd7ad1042b0c5c191be6d"
+        ]
     },
     "resources/js/components/ui/input-otp.tsx": {
         "upstream": [
@@ -182,11 +184,51 @@
         "upstream": [
             "64191fb3cc6c6e885f5d8e2201349fddfa83dd376bb493e3c79cb01d8dbbc6ea"
         ],
-        "earlierConversions": []
+        "earlierConversions": [
+            "d3309f2243796755815dca001d37f640ff8b49a9c6ecf829281ff350ffa3b6eb"
+        ],
+        "adds": [
+            "resources/js/hooks/use-user.ts"
+        ]
     },
     "resources/js/pages/settings/security.tsx": {
         "upstream": [
             "f5abb5a1e900200e06326816e59b32f8961cb4db01a8a5d0faefe5eee3783cb1"
+        ],
+        "earlierConversions": []
+    },
+    "app/Http/Middleware/HandleInertiaRequests.php": {
+        "upstream": [
+            "9129636ba69a8dbf97f1b1163e4383dee27cfcd578bb72d5ef3613e1ff9ec482"
+        ],
+        "earlierConversions": [],
+        "adds": [
+            "app/Data/SharedProps.php",
+            "app/Data/AuthData.php",
+            "app/Data/UserData.php"
+        ]
+    },
+    "resources/js/types/global.d.ts": {
+        "upstream": [
+            "18312397eaab4634bec6c20782b82fb05df0941559247642f155450362b2895f"
+        ],
+        "earlierConversions": []
+    },
+    "resources/js/components/user-info.tsx": {
+        "upstream": [
+            "5bb590d096cb0a400ef64ebad48a724afadd99df4bef0eb0035aaf7b3417df42"
+        ],
+        "earlierConversions": []
+    },
+    "resources/js/components/user-menu-content.tsx": {
+        "upstream": [
+            "9397a42a92bc6c4f7314155ab48ad63684d807c1a41817fb92b0508510b0487f"
+        ],
+        "earlierConversions": []
+    },
+    "resources/js/components/app-header.tsx": {
+        "upstream": [
+            "5839c8191d29cc6dba2d1ac62583b6cbf9724774300e7531cff6e7e8543939cf"
         ],
         "earlierConversions": []
     }
