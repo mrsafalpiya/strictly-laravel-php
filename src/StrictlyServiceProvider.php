@@ -21,8 +21,9 @@ final class StrictlyServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Problem P-039: lazy loading, reading an attribute the query didn't select and filling a non-fillable
-        // attribute throw instead of silently changing a prop's shape (or costing a query per row).
-        Model::shouldBeStrict();
+        // attribute throw instead of silently changing a prop's shape (or costing a query per row). Off in
+        // production, where the tests have already caught them, so a missed case is not a 500.
+        Model::shouldBeStrict(! $this->app->isProduction());
 
         if (! $this->app->runningInConsole()) {
             return;
