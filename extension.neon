@@ -35,22 +35,7 @@ parameters:
         property: 100
         constant: 100
 
-    strictly:
-        # The namespace that holds only laravel-data classes (strictly.dataNamespace).
-        dataNamespace: App\Data
-
-parametersSchema:
-    strictly: structure([
-        dataNamespace: string()
-    ])
-
+# Data conventions: concrete Data classes are final, and only Data classes live in App\Data.
 rules:
     - StrictlyLaravel\PHPStan\DataClassFinalRule
-
-services:
-    -
-        class: StrictlyLaravel\PHPStan\DataNamespaceRule
-        arguments:
-            dataNamespace: %strictly.dataNamespace%
-        tags:
-            - phpstan.rules.rule
+    - StrictlyLaravel\PHPStan\DataNamespaceRule

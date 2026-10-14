@@ -19,7 +19,7 @@ use Spatie\LaravelData\Contracts\BaseData;
  */
 final class DataNamespaceRule implements Rule
 {
-    public function __construct(private readonly string $dataNamespace) {}
+    public function __construct(private readonly string $dataNamespace = 'App\\Data') {}
 
     public function getNodeType(): string
     {

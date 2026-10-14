@@ -13,7 +13,7 @@ final class DataNamespaceRuleTest extends RuleTestCase
 {
     protected function getRule(): Rule
     {
-        return new DataNamespaceRule('App\Data');
+        return new DataNamespaceRule;
     }
 
     public function test_only_data_classes_live_in_the_data_namespace(): void
