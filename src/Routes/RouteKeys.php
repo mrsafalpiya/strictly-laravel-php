@@ -14,6 +14,7 @@ use ReflectionNamedType;
 use ReflectionParameter;
 use ReflectionProperty;
 use StrictlyLaravel\Data\InputData;
+use StrictlyLaravel\Data\QueryData;
 use StrictlyLaravel\Data\RouteKeyOf;
 use Throwable;
 
@@ -30,7 +31,7 @@ use Throwable;
  *
  * So `show(project)` takes a ProjectData, its `id`, or an issue's declared `project_id`, but not an IssueData, its `id`
  * or a plain number. Feature tests check that every branded value sent is an existing key of its model
- * (Testing\RouteKeyChecks). Input classes are never branded: they hold what the user sent.
+ * (Testing\RouteKeyChecks). Input and query classes are never branded: they hold what the user sent.
  */
 final class RouteKeys
 {
@@ -110,7 +111,7 @@ final class RouteKeys
      */
     public function forProperty(string $dataClass, string $property): ?RouteKey
     {
-        if (! class_exists($dataClass) || ! property_exists($dataClass, $property) || is_subclass_of($dataClass, InputData::class)) {
+        if (! class_exists($dataClass) || ! property_exists($dataClass, $property) || is_subclass_of($dataClass, InputData::class) || is_subclass_of($dataClass, QueryData::class)) {
             return null;
         }
 
