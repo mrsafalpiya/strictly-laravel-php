@@ -8,7 +8,8 @@ use stdClass;
 
 /**
  * Writes the app's `ci:check` Composer script as a sequence of steps, each one also runnable on its own as
- * `composer ci:check:<step>`: generation first, then the Base Kit's own checks with its own tools.
+ * `composer ci:check:<step>`: the installer's check that every hook is applied, generation, then the Base Kit's own
+ * checks with its own tools.
  */
 final class CiCheckScripts
 {
@@ -22,6 +23,7 @@ final class CiCheckScripts
     public static function steps(PackageManager $packageManager): array
     {
         return [
+            'install' => ['@php artisan strictly:install --check'], // every hook applied (P-080, P-082)
             'generate' => ['@php artisan strictly:generate'],   // TypeScript from PHP (gitignored): Data, enums, routes
             'lint' => [$packageManager->run('check')],          // Vite+: oxlint (type-aware) and oxfmt
             'tsc' => [$packageManager->run('types:check')],     // tsc --noEmit

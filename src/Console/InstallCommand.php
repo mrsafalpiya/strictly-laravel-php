@@ -11,6 +11,7 @@ use StrictlyLaravel\Install\GitignoreEntry;
 use StrictlyLaravel\Install\KitConversion;
 use StrictlyLaravel\Install\PackageManager;
 use StrictlyLaravel\Install\PhpstanInclude;
+use StrictlyLaravel\Install\ScratchCopy;
 use StrictlyLaravel\Install\TsconfigFlags;
 use StrictlyLaravel\Install\ViteLintPlugin;
 use StrictlyLaravel\Install\ViteTypesPlugin;
@@ -23,74 +24,144 @@ use Throwable;
 /**
  * Applies the Overlay's hooks and Kit Conversion to the app. Idempotent and non-interactive: running it again changes
  * nothing, and it never overwrites a file the app owns (such as an existing config/strictly.php, or a Base Kit file
- * whose content Kit Conversion doesn't recognise).
+ * whose content Kit Conversion doesn't recognise). Run again after updating the packages, it applies whatever a newer
+ * release adds and reports what it can't apply (Problem P-080).
+ *
+ * `--check` changes nothing: it applies everything to a scratch copy of the app (ScratchCopy) and fails when anything
+ * would change or can't be applied. `ci:check` runs it first, so an app that lost a hook, hasn't picked up one a newer
+ * release adds, or hasn't made a change a release needs by hand fails until it is fixed (Problems P-080 and P-082; the
+ * release checks of the upgrade guide).
  */
 #[AsCommand(name: 'strictly:install')]
 final class InstallCommand extends Command
 {
-    protected $signature = 'strictly:install';
+    /** Where an installed app finds the upgrade guide. */
+    public const string UPGRADE_GUIDE = 'vendor/mrsafalpiya/strictly-laravel/UPGRADE.md';
+
+    protected $signature = 'strictly:install
+        {--check : Change nothing; fail when the installer would change something or can\'t apply a hook}';
 
     protected $description = 'Apply the Strictly Laravel Overlay to this app (safe to run again)';
 
+    private bool $checking = false;
+
+    /**
+     * The rows that failed or, checking, would change something.
+     *
+     * @var list<string>
+     */
+    private array $incomplete = [];
+
     public function handle(Filesystem $files): int
     {
-        $packageManager = PackageManager::detect($this->laravel->basePath());
+        $this->checking = (bool) $this->option('check');
 
-        $hooks = [
-            'config/strictly.php' => fn () => $this->publishConfig($files),
-            "Composer scripts: ci:check and its steps (using {$packageManager->value})" => fn () => $this->writeCiCheck($packageManager),
-            'tsconfig.json: strictness flags' => fn () => TsconfigFlags::patch($this->laravel->basePath('tsconfig.json')),
-            'vite.config.ts: Strictly Laravel oxlint plugin' => fn () => ViteLintPlugin::register($this->laravel->basePath('vite.config.ts')),
-            'vite.config.ts: Strictly Laravel Vite plugin' => fn () => ViteTypesPlugin::register($this->laravel->basePath('vite.config.ts')),
-            'Generated TypeScript gitignored' => fn () => GitignoreEntry::ensure(
-                $this->laravel->basePath('.gitignore'),
-                '/resources/js/'.TypeGeneration::OUTPUT_DIRECTORY,
-            ),
-            'package.json scripts: build and types:check generate first' => fn () => GenerateFirst::ensure($this->laravel->basePath('package.json')),
-            'Wayfinder QUERY verb workaround' => fn () => WayfinderQueryVerb::patch(resource_path('js/wayfinder/index.ts')),
-        ];
+        if (! $this->checking) {
+            $this->apply($this->laravel->basePath(), $files);
 
-        $failed = false;
-
-        foreach ($hooks as $hook => $apply) {
-            $failed = ! $this->applyHook($hook, $apply) || $failed;
+            return $this->incomplete === [] ? self::SUCCESS : self::FAILURE;
         }
 
-        $failed = ! $this->convertKit() || $failed;
-        // After Kit Conversion, which writes the include into a phpstan.neon it converts.
-        $failed = ! $this->applyHook('PHPStan extension included in phpstan.neon', $this->includePhpstanExtension(...)) || $failed;
+        $scratch = ScratchCopy::create($this->laravel->basePath());
 
-        return $failed ? self::FAILURE : self::SUCCESS;
+        try {
+            $this->apply($scratch, $files);
+        } finally {
+            ScratchCopy::remove($scratch);
+        }
+
+        if ($this->incomplete !== []) {
+            $this->components->error('Strictly Laravel is not fully applied to this app: '.implode('; ', $this->incomplete)
+                .'. Run `php artisan strictly:install`, then make by hand each change it reports it can\'t apply ('
+                .self::UPGRADE_GUIDE.' lists what each release needs).');
+
+            return self::FAILURE;
+        }
+
+        return self::SUCCESS;
     }
 
     /**
-     * Report one hook as a row: applied, unchanged, or not applied with its error. Returns false when it failed.
+     * Every hook, labelled with its row. A hook edits the app at $root, never base_path() (`--check` runs it on a scratch
+     * copy), returns whether it changed anything, and throws when it can't be applied, saying what to do by hand. A hook
+     * added here reaches every app installed before it existed the next time the installer runs, and until then the
+     * app's `ci:check` fails on it.
+     *
+     * @return array<string, callable(): bool>
+     */
+    private function hooks(string $root, Filesystem $files): array
+    {
+        $packageManager = PackageManager::detect($root);
+
+        return [
+            'config/strictly.php' => fn () => $this->publishConfig($files, "{$root}/config/strictly.php"),
+            "Composer scripts: ci:check and its steps (using {$packageManager->value})" => fn () => $this->writeCiCheck("{$root}/composer.json", $packageManager),
+            'tsconfig.json: strictness flags' => fn () => TsconfigFlags::patch("{$root}/tsconfig.json"),
+            'vite.config.ts: Strictly Laravel oxlint plugin' => fn () => ViteLintPlugin::register("{$root}/vite.config.ts"),
+            'vite.config.ts: Strictly Laravel Vite plugin' => fn () => ViteTypesPlugin::register("{$root}/vite.config.ts"),
+            'Generated TypeScript gitignored' => fn () => GitignoreEntry::ensure("{$root}/.gitignore", '/resources/js/'.TypeGeneration::OUTPUT_DIRECTORY),
+            'package.json scripts: build and types:check generate first' => fn () => GenerateFirst::ensure("{$root}/package.json"),
+            'Wayfinder QUERY verb workaround' => fn () => WayfinderQueryVerb::patch("{$root}/resources/js/wayfinder/index.ts"),
+        ];
+    }
+
+    /** Apply every hook and Kit Conversion to the app at $root. */
+    private function apply(string $root, Filesystem $files): void
+    {
+        foreach ($this->hooks($root, $files) as $hook => $apply) {
+            $this->applyHook($hook, $apply);
+        }
+
+        $this->convertKit($root);
+        // After Kit Conversion, which writes the include into a phpstan.neon it converts.
+        $this->applyHook('PHPStan extension included in phpstan.neon', fn () => $this->includePhpstanExtension("{$root}/phpstan.neon"));
+    }
+
+    /**
+     * Report one hook as a row: applied (checking: missing), unchanged, or not applied with its error.
      *
      * @param  callable(): bool  $apply  returns whether it changed anything
      */
-    private function applyHook(string $hook, callable $apply): bool
+    private function applyHook(string $hook, callable $apply): void
     {
         try {
-            $this->components->twoColumnDetail($hook, $apply() ? '<fg=green>applied</>' : '<fg=gray>unchanged</>');
-
-            return true;
+            $changed = $apply();
         } catch (Throwable $e) {
             $this->components->twoColumnDetail($hook, '<fg=red>not applied</>');
             $this->components->error($e->getMessage());
+            $this->incomplete[] = "{$hook} (not applied)";
 
-            return false;
+            return;
+        }
+
+        $this->components->twoColumnDetail($hook, match (true) {
+            ! $changed => '<fg=gray>unchanged</>',
+            $this->checking => '<fg=yellow>missing</>',
+            default => '<fg=green>applied</>',
+        });
+
+        if ($changed && $this->checking) {
+            $this->incomplete[] = "{$hook} (missing)";
         }
     }
 
-    private function includePhpstanExtension(): bool
+    /** A warning about what the installer just did. When checking it did nothing, and the hook's row says what's missing. */
+    private function warnAboutChange(string $message): void
     {
-        $removed = PhpstanInclude::ensure($this->laravel->basePath('phpstan.neon'));
+        if (! $this->checking) {
+            $this->components->warn($message);
+        }
+    }
+
+    private function includePhpstanExtension(string $phpstanNeon): bool
+    {
+        $removed = PhpstanInclude::ensure($phpstanNeon);
 
         if ($removed === null) {
             return false;
         }
 
-        $this->components->warn('phpstan.neon was not converted, so only the Strictly Laravel extension was added to its includes'
+        $this->warnAboutChange('phpstan.neon was not converted, so only the Strictly Laravel extension was added to its includes'
             .($removed === [] ? '' : ', replacing the ones it already brings ('.implode(', ', $removed).')')
             .'. Check by hand that it sets no level below max and that its paths include tests/.');
 
@@ -99,32 +170,38 @@ final class InstallCommand extends Command
 
     /**
      * One row per Base Kit file, labelled with its path. A skipped file doesn't fail the command (the app may have
-     * edited it on purpose), but the row is reported so the fresh-install harness can fail on it (ADR-0005).
+     * edited it on purpose), but the row is reported so the fresh-install harness can fail on it (ADR-0005). Checking,
+     * a file that still holds a known upstream version fails: a newer release converts it.
      */
-    private function convertKit(): bool
+    private function convertKit(string $root): void
     {
         try {
-            $outcomes = KitConversion::apply($this->laravel->basePath());
+            $outcomes = KitConversion::apply($root);
         } catch (Throwable $e) {
             $this->components->twoColumnDetail('Kit Conversion', '<fg=red>not applied</>');
             $this->components->error($e->getMessage());
+            $this->incomplete[] = 'Kit Conversion (not applied)';
 
-            return false;
+            return;
         }
 
         $skipped = [];
 
         foreach ($outcomes as $path => $outcome) {
             $status = match ($outcome) {
-                ConversionOutcome::Converted => '<fg=green>applied</>',
+                ConversionOutcome::Converted => $this->checking ? '<fg=yellow>not converted</>' : '<fg=green>applied</>',
                 ConversionOutcome::AlreadyConverted => '<fg=gray>unchanged</>',
                 ConversionOutcome::Missing => '<fg=yellow>not found</>',
                 ConversionOutcome::Unknown => '<fg=yellow>skipped (unknown content)</>',
             };
 
+            if ($outcome === ConversionOutcome::Converted && $this->checking) {
+                $this->incomplete[] = "{$path} (not converted)";
+            }
+
             if ($outcome === ConversionOutcome::Unknown) {
                 $adds = KitConversion::addedBy($path);
-                $skipped[] = "{$path} (sha256 ".KitConversion::hash($this->laravel->basePath($path)).')'
+                $skipped[] = "{$path} (sha256 ".KitConversion::hash("{$root}/{$path}").')'
                     .($adds === [] ? '' : ' and the files its conversion adds ('.implode(', ', $adds).')');
             }
 
@@ -132,29 +209,25 @@ final class InstallCommand extends Command
         }
 
         if ($skipped !== []) {
-            $this->components->warn('Kit Conversion left these files untouched because their content is not a known Base Kit version: '
+            $this->warnAboutChange('Kit Conversion left these files untouched because their content is not a known Base Kit version: '
                 .implode('; ', $skipped).'. Compare each with its converted version in '
                 .'vendor/mrsafalpiya/strictly-laravel/kit/ and apply the changes by hand.');
         }
-
-        return true;
     }
 
-    private function writeCiCheck(PackageManager $packageManager): bool
+    private function writeCiCheck(string $composerJson, PackageManager $packageManager): bool
     {
-        $result = CiCheckScripts::write($this->laravel->basePath('composer.json'), $packageManager);
+        $result = CiCheckScripts::write($composerJson, $packageManager);
 
         if ($result['replaced'] !== []) {
-            $this->components->warn('Replaced or removed these edited ci:check steps: '.implode(', ', $result['replaced']).'. Add custom checks to a script of your own instead.');
+            $this->warnAboutChange('Replaced or removed these edited ci:check steps: '.implode(', ', $result['replaced']).'. Add custom checks to a script of your own instead.');
         }
 
         return $result['changed'];
     }
 
-    private function publishConfig(Filesystem $files): bool
+    private function publishConfig(Filesystem $files, string $target): bool
     {
-        $target = config_path('strictly.php');
-
         if ($files->exists($target)) {
             return false;
         }
