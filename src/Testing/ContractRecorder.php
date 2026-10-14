@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\File;
 use Inertia\Inertia;
 use Inertia\Support\Header;
+use Inertia\Support\SessionKey;
 use JsonException;
 use Spatie\LaravelData\Support\DataConfig;
 use Spatie\LaravelData\Support\DataProperty;
@@ -25,18 +26,30 @@ use Symfony\Component\HttpFoundation\Response;
  * A page render becomes resources/js/__contracts__/<page component>/<hash>.ts:
  *
  *     // Recorded by Tests\Feature\MembersPageTest > the members page lists every member: GET /members
+ *     import type { FlashData, SharedPageProps } from '@inertiajs/core';
  *     import type { Contract } from '@mrsafalpiya/strictly-laravel/contracts';
  *     import type { PageProps } from '@/generated';
  *
  *     export const props = { "members": [ … ] } satisfies Contract<PageProps<'members'>>;
+ *     export const shared = { "name": "Laravel", "auth": { "user": null }, … } satisfies Contract<SharedPageProps>;
+ *     export const flash = { "toast": { … } } satisfies Contract<FlashData>;
  *
- * The props are the page's own props exactly as the browser receives them, decoded with `{}` and `[]` kept apart.
- * The shared props (the Inertia middleware's share step) are left out: they aren't the Page class's to type. A prop the
- * Page class declares is always kept, even when a shared prop has the same name. `satisfies` fails on a value of the
- * wrong type, a missing prop and a prop the type doesn't have, at any depth; a page component with no Page class fails
- * `PageProps`' constraint. `Contract<T>` is T, except that a map may arrive as `[]` (Problem P-076).
+ * `props` are the page's own props exactly as the browser receives them, decoded with `{}` and `[]` kept apart.
+ * `shared` are the shared props (the Inertia middleware's share step, except Inertia's own `errors`), checked against
+ * Inertia's global config typing, which `strictly:generate` writes from the shared props Data class (Problems P-012,
+ * P-088). A prop the Page class declares is always the page's own, even when a shared prop has the same name. `flash`
+ * is what the response flashed, when it flashed anything (Problem P-047). A partial reload records no `shared`, and a
+ * page rendered without the Inertia middleware, which shares nothing, records none either.
  *
- * Each Contract has a `.json` sidecar next to it describing what was recorded, for Contract Coverage to read.
+ * Flash data set before a redirect reaches the browser with the next page, so a redirect that flashes records it on
+ * its own, as resources/js/__contracts__/_flash/<hash>.ts with `export const flash = … satisfies Contract<FlashData>`.
+ *
+ * `satisfies` fails on a value of the wrong type, a missing key and a key the type doesn't have, at any depth; a page
+ * component with no Page class fails `PageProps`' constraint. `Contract<T>` is T, except that a map may arrive as `[]`
+ * (Problem P-076).
+ *
+ * Each Contract has a `.json` sidecar next to it describing what was recorded (`kind` is `page` or `flash`), for
+ * Contract Coverage to read.
  *
  * The directory is gitignored and type-checked by `tsc` (the tsconfig includes resources/js), which `ci:check` runs
  * after the tests. A test run that isn't parallel starts from an empty directory, so a Contract no test produces any more
@@ -46,6 +59,15 @@ final class ContractRecorder
 {
     /** Relative to resources/js; gitignored by the installer. */
     public const string DIRECTORY = '__contracts__';
+
+    /** Where the flash data of redirects is recorded, under DIRECTORY. */
+    private const string FLASH_DIRECTORY = '_flash';
+
+    /**
+     * The shared props Inertia types itself rather than through the shared props Data class: the validation errors
+     * (`Page['props']['errors']`), shared by Inertia's middleware.
+     */
+    private const array INERTIA_SHARED_PROPS = ['errors'];
 
     private static bool $cleared = false;
 
@@ -76,48 +98,85 @@ final class ContractRecorder
 
         if ($page !== null) {
             self::recordPage($test, $request, $page);
+        } elseif ($response->isRedirection()) {
+            self::recordRedirectFlash($test, $request);
         }
     }
 
     /**
-     * @param  array{component: string, props: stdClass}  $page
+     * @param  array{component: string, props: stdClass, sharedKeys: list<string>, flash: stdClass|null}  $page
      */
     private static function recordPage(string $test, Request $request, array $page): void
     {
         $component = $page['component'];
-        $props = self::ownProps($component, $page['props']);
+        $declared = self::declaredProps($component);
+        $sharedKeys = array_values(array_diff($page['sharedKeys'], self::INERTIA_SHARED_PROPS));
+        $props = new stdClass;
+        $shared = new stdClass;
+
+        foreach (get_object_vars($page['props']) as $key => $value) {
+            if (in_array($key, $declared, true) || ! in_array($key, $page['sharedKeys'], true)) {
+                $props->{$key} = $value;
+            } elseif (in_array($key, $sharedKeys, true)) {
+                $shared->{$key} = $value;
+            }
+        }
+
+        // A partial reload sends only the props it asked for, and a page rendered without the Inertia middleware
+        // shares nothing: neither shows what the shared props are.
+        $recordShared = $sharedKeys !== [] && $request->header(Header::PARTIAL_COMPONENT) === null;
+        $overridden = array_values(array_intersect($sharedKeys, $declared));
+        $sharedType = $overridden === []
+            ? 'SharedPageProps'
+            : 'Omit<SharedPageProps, '.implode(' | ', array_map(self::quote(...), $overridden)).'>';
+
+        $coreTypes = array_merge($recordShared ? ['SharedPageProps'] : [], $page['flash'] !== null ? ['FlashData'] : []);
+        sort($coreTypes);
 
         self::write($component, [
             sprintf('// Recorded by %s: %s %s', $test, $request->method(), $request->getRequestUri()),
+            ...$coreTypes === [] ? [] : [sprintf("import type { %s } from '@inertiajs/core';", implode(', ', $coreTypes))],
             "import type { Contract } from '@mrsafalpiya/strictly-laravel/contracts';",
             "import type { PageProps } from '@/generated';",
             '',
             sprintf('export const props = %s satisfies Contract<PageProps<%s>>;', self::json($props), self::quote($component)),
+            ...$recordShared ? [sprintf('export const shared = %s satisfies Contract<%s>;', self::json($shared), $sharedType)] : [],
+            ...$page['flash'] !== null ? [sprintf('export const flash = %s satisfies Contract<FlashData>;', self::json($page['flash']))] : [],
         ], [
             'kind' => 'page',
             'test' => $test,
             'request' => $request->method().' '.$request->getRequestUri(),
             'component' => $component,
             'props' => $props,
+            'shared' => $recordShared ? $shared : null,
+            'flash' => $page['flash'],
         ]);
     }
 
     /**
-     * The page's own props: every prop except the shared ones its Page class doesn't declare.
+     * Flash data set before a redirect is sent with the next page, which the test may never request: record it here.
      */
-    private static function ownProps(string $component, stdClass $props): stdClass
+    private static function recordRedirectFlash(string $test, Request $request): void
     {
-        $declared = self::declaredProps($component);
-        $shared = array_keys(Inertia::getShared());
-        $own = new stdClass;
+        $flashed = $request->hasSession() ? $request->session()->get(SessionKey::FLASH_DATA) : null;
+        $flash = is_array($flashed) && $flashed !== [] ? self::decode(self::json($flashed)) : null;
 
-        foreach (get_object_vars($props) as $key => $value) {
-            if (in_array($key, $declared, true) || ! in_array($key, $shared, true)) {
-                $own->{$key} = $value;
-            }
+        if (! $flash instanceof stdClass) {
+            return;
         }
 
-        return $own;
+        self::write(self::FLASH_DIRECTORY, [
+            sprintf('// Recorded by %s: %s %s (redirect)', $test, $request->method(), $request->getRequestUri()),
+            "import type { FlashData } from '@inertiajs/core';",
+            "import type { Contract } from '@mrsafalpiya/strictly-laravel/contracts';",
+            '',
+            sprintf('export const flash = %s satisfies Contract<FlashData>;', self::json($flash)),
+        ], [
+            'kind' => 'flash',
+            'test' => $test,
+            'request' => $request->method().' '.$request->getRequestUri(),
+            'flash' => $flash,
+        ]);
     }
 
     /**
@@ -142,9 +201,10 @@ final class ContractRecorder
 
     /**
      * The page object exactly as the browser receives it: the JSON body of an Inertia request, or the page the root
-     * view embeds on a first visit.
+     * view embeds on a first visit. `sharedKeys` are the props the Inertia middleware shared, which the page lists
+     * unless the app turned that off (`inertia.expose_shared_prop_keys`).
      *
-     * @return array{component: string, props: stdClass}|null
+     * @return array{component: string, props: stdClass, sharedKeys: list<string>, flash: stdClass|null}|null
      */
     private static function page(Response $response): ?array
     {
@@ -154,15 +214,7 @@ final class ContractRecorder
             default => false,
         };
 
-        if (! is_string($json)) {
-            return null;
-        }
-
-        try {
-            $page = json_decode($json, false, flags: JSON_THROW_ON_ERROR);
-        } catch (JsonException) {
-            return null;
-        }
+        $page = is_string($json) ? self::decode($json) : null;
 
         if (! $page instanceof stdClass || ! is_string($page->component ?? null)) {
             return null;
@@ -170,8 +222,15 @@ final class ContractRecorder
 
         // No props at all is encoded as an empty list.
         $props = $page->props ?? null;
+        $sharedKeys = $page->sharedProps ?? array_keys(Inertia::getShared());
+        $flash = $page->flash ?? null;
 
-        return ['component' => $page->component, 'props' => $props instanceof stdClass ? $props : new stdClass];
+        return [
+            'component' => $page->component,
+            'props' => $props instanceof stdClass ? $props : new stdClass,
+            'sharedKeys' => is_array($sharedKeys) ? array_values(array_filter($sharedKeys, is_string(...))) : [],
+            'flash' => $flash instanceof stdClass ? $flash : null,
+        ];
     }
 
     private static function viewPage(View $view): string|false
@@ -179,6 +238,16 @@ final class ContractRecorder
         $page = $view->getData()['page'] ?? null;
 
         return is_array($page) ? json_encode($page) : false;
+    }
+
+    /** JSON decoded with objects kept as objects, so `{}` and `[]` stay apart; null when it isn't JSON. */
+    private static function decode(string $json): mixed
+    {
+        try {
+            return json_decode($json, false, flags: JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            return null;
+        }
     }
 
     /**
