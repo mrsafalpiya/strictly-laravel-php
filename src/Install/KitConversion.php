@@ -14,24 +14,14 @@ final class KitConversion
     private const string CONVERTED_DIR = __DIR__.'/../../kit';
 
     /**
-     * App-relative path => SHA-256 of every known upstream version of the file, with line endings normalised to "\n".
-     * The converted version is kit/<path>. When upstream changes a file, the fresh-install harness reports it as
-     * skipped along with its hash: check the conversion still applies, then add the hash here.
+     * App-relative path => {upstream, earlierConversions}: the SHA-256 (line endings normalised to "\n") of every known
+     * upstream version of the file, which is replaced with kit/<path>, and of every converted version an earlier
+     * release wrote, which is left alone like the current one. When upstream changes a file, the fresh-install
+     * harness reports it as skipped and the installer's warning gives its hash: check the conversion still applies,
+     * then add the hash to "upstream". The harness fails until a changed kit/ file's previous version is listed in
+     * "earlierConversions".
      */
-    private const array UPSTREAM = [
-        'phpstan.neon' => ['5875f383d8832310ab68c37954be018ba2d5d34152a5a7166d5d7825b1fe6dcc'],
-        'app/Actions/Fortify/CreateNewUser.php' => ['caaaa98a8867c44ddaa45a1f58fd388f3b46f781d22cd9f8af67e292d3b82e60'],
-        'app/Http/Controllers/Settings/ProfileController.php' => ['1155df036512d539d81dcf03a116bba07a411007d125fff060c60bde41101152'],
-        'app/Http/Controllers/Settings/SecurityController.php' => ['11d528a214cba42084a3eddf1d0d85608ef2bd7d3fe12fb2c99dd30e0946a78a'],
-        'app/Http/Requests/Settings/ProfileUpdateRequest.php' => ['846e47b3ad44f7d7cea00c6c6b5744552cb894e82e8f5ed5a9a7244a5c8b2c6c'],
-        'app/Providers/FortifyServiceProvider.php' => ['635a2513215ec6c0e7520eb1da31ab8a246db9adb0913199940475d9a9ec32ee'],
-        'routes/settings.php' => ['f2b35475c66dc2f48d5234536d8584c4cc9f1e5a907b566689b5fec8a25f5a4e'],
-        'routes/web.php' => ['6742122385aed4e9eb436a43420912fc97c2a3893b13f4fa3439c7f000fb1569'],
-        'tests/Feature/Auth/EmailVerificationTest.php' => ['aea0c08a056689a27f0b3f0ad77b2380992ede1958445bb5e06743805eeca1df'],
-        'tests/Feature/Auth/PasswordResetTest.php' => ['016ae31c83a157f21c6372c1391e1ac0c2d72e03e1c155b2ffc9baea18e74cca'],
-        'tests/Pest.php' => ['eca105e821b77c688fd3c414708e48acb6d683cb94d2091cbb8493b358c4267c'],
-        'tests/Unit/ExampleTest.php' => ['d86e67e8dbb5e66fa3f63b8eaaf98529bf11786e3345e76dc2e1e1635e20ea56'],
-    ];
+    private const string MANIFEST = __DIR__.'/../../kit-conversion.json';
 
     /**
      * Convert every known file of the app at $basePath.
@@ -42,8 +32,8 @@ final class KitConversion
     {
         $outcomes = [];
 
-        foreach (self::UPSTREAM as $path => $upstreamHashes) {
-            $outcomes[$path] = self::convert($basePath.'/'.$path, self::CONVERTED_DIR.'/'.$path, $upstreamHashes);
+        foreach (self::manifest() as $path => ['upstream' => $upstream, 'earlierConversions' => $earlierConversions]) {
+            $outcomes[$path] = self::convert($basePath.'/'.$path, self::CONVERTED_DIR.'/'.$path, $upstream, $earlierConversions);
         }
 
         return $outcomes;
@@ -56,9 +46,10 @@ final class KitConversion
     }
 
     /**
-     * @param  list<string>  $upstreamHashes
+     * @param  list<string>  $upstream
+     * @param  list<string>  $earlierConversions
      */
-    private static function convert(string $target, string $converted, array $upstreamHashes): ConversionOutcome
+    private static function convert(string $target, string $converted, array $upstream, array $earlierConversions): ConversionOutcome
     {
         if (! is_file($target)) {
             return ConversionOutcome::Missing;
@@ -66,11 +57,11 @@ final class KitConversion
 
         $hash = self::hash($target);
 
-        if ($hash === self::hash($converted)) {
+        if ($hash === self::hash($converted) || in_array($hash, $earlierConversions, true)) {
             return ConversionOutcome::AlreadyConverted;
         }
 
-        if (! in_array($hash, $upstreamHashes, true)) {
+        if (! in_array($hash, $upstream, true)) {
             return ConversionOutcome::Unknown;
         }
 
@@ -79,6 +70,15 @@ final class KitConversion
         }
 
         return ConversionOutcome::Converted;
+    }
+
+    /**
+     * @return array<string, array{upstream: list<string>, earlierConversions: list<string>}>
+     */
+    private static function manifest(): array
+    {
+        /** @var array<string, array{upstream: list<string>, earlierConversions: list<string>}> */
+        return json_decode(self::read(self::MANIFEST), true, flags: JSON_THROW_ON_ERROR);
     }
 
     private static function read(string $file): string
