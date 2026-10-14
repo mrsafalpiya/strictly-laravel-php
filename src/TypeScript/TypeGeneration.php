@@ -10,6 +10,7 @@ use Spatie\TypeScriptTransformer\Transformers\EnumTransformer;
 use Spatie\TypeScriptTransformer\TypeScriptTransformerConfig;
 use Spatie\TypeScriptTransformer\TypeScriptTransformerConfigFactory;
 use Spatie\TypeScriptTransformer\Writers\FlatModuleWriter;
+use StrictlyLaravel\Workarounds\TypeScriptTransformer\UnmappedClassTypes;
 
 /**
  * The typescript-transformer v3 configuration (ADR-0003) that turns the app's PHP into resources/js/generated/index.ts,
@@ -32,16 +33,20 @@ final class TypeGeneration
         // because it is gitignored.
         File::ensureDirectoryExists(self::outputDirectory());
 
-        return TypeScriptTransformerConfigFactory::create()
+        $factory = TypeScriptTransformerConfigFactory::create()
             ->outputDirectory(self::outputDirectory())
             ->extension(new LaravelDataTypeScriptTransformerExtension)
             ->replaceTransformer(LaravelDataClassTransformer::class, new DataClassTransformer)
             ->transformer(new EnumTransformer)
             ->transformDirectories($app->path())
             ->provider(new EnumValuesProvider([$app->path()]))
+            ->connectedVisitorHook(new UnmappedClassCheck)
             ->writer(new FlatModuleWriter('index.ts'))
             // Always write the file, so a deleted output is regenerated even when the PHP is unchanged.
-            ->withoutManifest()
-            ->get();
+            ->withoutManifest();
+
+        UnmappedClassTypes::apply($factory);
+
+        return $factory->get();
     }
 }

@@ -4,6 +4,7 @@ namespace StrictlyLaravel\TypeScript;
 
 use Spatie\LaravelTypeScriptTransformer\LaravelData\Transformers\DataClassTransformer as LaravelDataClassTransformer;
 use StrictlyLaravel\Workarounds\TypeScriptTransformer\EnumKeyedMaps;
+use StrictlyLaravel\Workarounds\TypeScriptTransformer\HiddenDataProperties;
 use StrictlyLaravel\Workarounds\TypeScriptTransformer\LiteralTypes;
 
 /**
@@ -20,5 +21,13 @@ final class DataClassTransformer extends LaravelDataClassTransformer
                 new EnumKeyedMaps,
             ]),
         );
+    }
+
+    protected function classPropertyProcessors(): array
+    {
+        return [
+            new HiddenDataProperties,
+            ...parent::classPropertyProcessors(),
+        ];
     }
 }
