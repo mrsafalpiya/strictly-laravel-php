@@ -27,6 +27,7 @@ final class DataClassTransformer extends LaravelDataClassTransformer
     {
         return [
             new HiddenDataProperties,
+            new DateOnlyTypes,
             ...parent::classPropertyProcessors(),
         ];
     }

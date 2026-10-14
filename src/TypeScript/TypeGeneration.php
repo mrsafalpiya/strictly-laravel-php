@@ -42,6 +42,7 @@ final class TypeGeneration
             ->transformer(new EnumTransformer)
             ->transformDirectories($app->path())
             ->provider(new PaginatorTypes)
+            ->provider(new DateOnlyTypes)
             ->provider(new EnumValuesProvider([$app->path()]))
             ->providedVisitorHook(new InertiaPropWrappers)
             ->connectedVisitorHook(new UnmappedClassCheck)
