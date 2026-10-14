@@ -9,6 +9,7 @@ use StrictlyLaravel\Coverage\Gap;
 use StrictlyLaravel\Inertia\GlobalDataClasses;
 use StrictlyLaravel\Inertia\PageLocations;
 use StrictlyLaravel\Routes\FormEndpoints;
+use StrictlyLaravel\Routes\JsonEndpoints;
 use StrictlyLaravel\Testing\ContractRecorder;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Formatter\OutputFormatter;
@@ -39,15 +40,16 @@ final class CoverageCommand extends Command
         $records = ContractRecorder::records();
         $pages = PageLocations::pages();
         $formEndpoints = FormEndpoints::all(app('router'));
+        $jsonEndpoints = JsonEndpoints::all(app('router'));
 
-        if ($records === [] && ($pages !== [] || $formEndpoints !== [])) {
+        if ($records === [] && ($pages !== [] || $formEndpoints !== [] || $jsonEndpoints !== [])) {
             $this->line('Contract Coverage: no Contracts are recorded. Run the feature tests first (composer ci:check:test), then this command.');
 
             return self::FAILURE;
         }
 
         $strict = $this->option('strict') === true;
-        $gaps = (new ContractCoverage(app(DataConfig::class)))->gaps($records, $pages, GlobalDataClasses::in([app_path()]), $formEndpoints);
+        $gaps = (new ContractCoverage(app(DataConfig::class)))->gaps($records, $pages, GlobalDataClasses::in([app_path()]), $formEndpoints, $jsonEndpoints);
         $failing = array_filter($gaps, fn (Gap $gap): bool => $strict || $gap->unexercised);
 
         if ($gaps === []) {
