@@ -11,6 +11,7 @@ use StrictlyLaravel\Console\CoverageCommand;
 use StrictlyLaravel\Console\GenerateCommand;
 use StrictlyLaravel\Console\InstallCommand;
 use StrictlyLaravel\Console\MakePageCommand;
+use StrictlyLaravel\Routes\WayfinderTemplates;
 use StrictlyLaravel\TypeScript\TypeGeneration;
 use StrictlyLaravel\Workarounds\WayfinderQueryVerb;
 
@@ -42,5 +43,8 @@ final class StrictlyServiceProvider extends ServiceProvider
         $this->commands([CoverageCommand::class, GenerateCommand::class, InstallCommand::class, MakePageCommand::class]);
 
         Event::listen(CommandFinished::class, WayfinderQueryVerb::afterCommand(...));
+
+        // Wayfinder generates routes from the console only (its command and its Vite plugin's).
+        $this->callAfterResolving('view', WayfinderTemplates::register(...));
     }
 }
