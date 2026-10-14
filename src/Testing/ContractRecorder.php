@@ -6,6 +6,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Http\Events\RequestHandled;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Events\RouteMatched;
 use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\File;
@@ -68,10 +69,16 @@ use Symfony\Component\HttpFoundation\Response;
  *     import type { ErrorsOf } from '@mrsafalpiya/strictly-laravel/routes';
  *
  *     export const errors = { "tasks.0.title": "…" } satisfies ErrorsOf<import('@/generated').StoreProjectData>;
+ *     export const validated = [ "name", "tasks", "tasks.0.title" ] satisfies InputKey<import('@/generated').StoreProjectData>[];
+ *     export const read = [ "notify" ] satisfies InputKey<import('@/generated').StoreProjectData>[];
+ *
+ * `validated` are the fields the server validated (ValidatedFields, Problem P-113) and `read` the input keys the action
+ * read by name (InputReads, Problem P-024), both since the request reached its route: a rule or a read on a key the
+ * input type lacks fails `tsc`, since the typed form never sends that key.
  *
  * Each Contract has a `.json` sidecar next to it describing what was recorded (`kind` is `page`, `flash` or `form`; a
  * partial reload's page record has `partial`), which Contract Coverage reads (records(), `strictly:coverage`). A `form`
- * record of an accepted request has only the sidecar.
+ * record of a request that was neither refused nor validated nor read anything has only the sidecar.
  *
  * The directory is gitignored and type-checked by `tsc` (the tsconfig includes resources/js), which `ci:check` runs
  * after the tests. A test run that isn't parallel starts from an empty directory, so a Contract no test produces any more
@@ -147,6 +154,13 @@ final class ContractRecorder
 
         self::$cleared = true;
 
+        ValidatedFields::listen(app('validator'));
+
+        Event::listen(RouteMatched::class, function (): void {
+            InputReads::reset();
+            ValidatedFields::reset();
+        });
+
         Event::listen(RequestHandled::class, function (RequestHandled $event) use ($test): void {
             self::record($test, $event->request, $event->response);
         });
@@ -178,6 +192,8 @@ final class ContractRecorder
     private static function recordForm(string $test, Request $request, Response $response, string $endpoint, string $input): void
     {
         $errors = self::validationErrors($request, $response);
+        $validated = self::fieldPaths(ValidatedFields::fields());
+        $read = self::fieldPaths(InputReads::keys());
         $meta = [
             'kind' => 'form',
             'test' => $test,
@@ -185,20 +201,48 @@ final class ContractRecorder
             'endpoint' => $endpoint,
             'input' => $input,
             'errors' => $errors === null ? null : array_keys($errors),
+            'validated' => $validated,
+            'read' => $read,
         ];
 
-        if ($errors === null) {
+        if ($errors === null && $validated === [] && $read === []) {
             self::write(self::FORMS_DIRECTORY, [], $meta);
 
             return;
         }
 
+        $type = WayfinderTemplates::generatedType($input);
+        $imports = array_merge($errors === null ? [] : ['ErrorsOf'], $validated === [] && $read === [] ? [] : ['InputKey']);
+
         self::write(self::FORMS_DIRECTORY, [
-            sprintf('// Recorded by %s: %s %s (validation errors)', $test, $request->method(), $request->getRequestUri()),
-            "import type { ErrorsOf } from '".WayfinderTemplates::TYPES_MODULE."';",
+            sprintf('// Recorded by %s: %s %s%s', $test, $request->method(), $request->getRequestUri(), $errors === null ? '' : ' (validation errors)'),
+            sprintf("import type { %s } from '%s';", implode(', ', $imports), WayfinderTemplates::TYPES_MODULE),
             '',
-            sprintf('export const errors = %s satisfies ErrorsOf<%s>;', self::json((object) $errors), WayfinderTemplates::generatedType($input)),
+            ...$errors === null ? [] : [sprintf('export const errors = %s satisfies ErrorsOf<%s>;', self::json((object) $errors), $type)],
+            ...$validated === [] ? [] : [
+                '// Every field the server validated: a rule on a key the input type lacks refuses every typed form.',
+                sprintf('export const validated = %s satisfies InputKey<%s>[];', self::json($validated), $type),
+            ],
+            ...$read === [] ? [] : [
+                '// Every input key the action read: the typed form never sends a key the input type lacks.',
+                sprintf('export const read = %s satisfies InputKey<%s>[];', self::json($read), $type),
+            ],
         ], $meta);
+    }
+
+    /**
+     * Validation and input keys as field paths of the input type: a `*` segment stands for any item, so it is the
+     * first one (`tasks.*.title` → `tasks.0.title`).
+     *
+     * @param  list<string>  $keys
+     * @return list<string>
+     */
+    private static function fieldPaths(array $keys): array
+    {
+        return array_values(array_unique(array_map(
+            fn (string $key): string => preg_replace('/(?<=^|\.)\*(?=\.|$)/', '0', $key) ?? $key,
+            $keys,
+        )));
     }
 
     /**
