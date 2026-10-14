@@ -7,6 +7,7 @@ use Spatie\LaravelTypeScriptTransformer\Support\LaravelConsoleLogger;
 use Spatie\TypeScriptTransformer\Enums\RunnerMode;
 use Spatie\TypeScriptTransformer\Runners\Runner;
 use Spatie\TypeScriptTransformer\TypeScriptTransformerConfig;
+use StrictlyLaravel\TypeScript\UnmappedClassException;
 use StrictlyLaravel\Workarounds\UnparsableFiles;
 use StrictlyLaravel\Workarounds\WayfinderQueryVerb;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -39,7 +40,13 @@ final class GenerateCommand extends Command
             return self::FAILURE;
         }
 
-        $exitCode = $runner->run(new LaravelConsoleLogger($this), $config, RunnerMode::Direct);
+        try {
+            $exitCode = $runner->run(new LaravelConsoleLogger($this), $config, RunnerMode::Direct);
+        } catch (UnmappedClassException $exception) {
+            $this->components->error($exception->getMessage());
+
+            return self::FAILURE;
+        }
 
         if ($exitCode !== self::SUCCESS) {
             return $exitCode;
