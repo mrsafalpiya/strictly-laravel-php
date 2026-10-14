@@ -14,6 +14,7 @@ use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
 use Spatie\LaravelData\Contracts\BaseData;
 use StrictlyLaravel\Data\InputData;
+use StrictlyLaravel\Data\QueryData;
 
 /**
  * Every Data class a controller action takes is request input, which laravel-data validates from the request, so it
@@ -21,14 +22,15 @@ use StrictlyLaravel\Data\InputData;
  * replacing them, its authorize() runs before validation, and only an InputData parameter brands the action's route,
  * which types its form and validation errors.
  *
- * A Type Boundary with its own kind of request Data (a GET's query class) adds its base class to REQUEST_DATA.
+ * A GET action's query Data class extends QueryData instead (Problem P-006): it is parsed leniently from the query
+ * string, and it types the route function's `query` option.
  *
  * @implements Rule<ClassMethod>
  */
 final readonly class InputDataRule implements Rule
 {
     /** The base classes a Data class taken by a controller action may extend. */
-    public const array REQUEST_DATA = [InputData::class];
+    public const array REQUEST_DATA = [InputData::class, QueryData::class];
 
     public function __construct(
         private ReflectionProvider $reflection,
@@ -86,8 +88,8 @@ final readonly class InputDataRule implements Rule
                 ->identifier('strictly.inputData')
                 ->line($param->getStartLine())
                 ->tip(sprintf(
-                    'Make %s extend %s: its rules() then merge with the inferred ones, authorize() runs before validation, and the route is branded with its type.',
-                    $reflection->getName(), InputData::class,
+                    'Make %s extend %s: its rules() then merge with the inferred ones, authorize() runs before validation, and the route is branded with its type. A GET\'s query string extends %s instead.',
+                    $reflection->getName(), InputData::class, QueryData::class,
                 ))
                 ->build();
         }
