@@ -36,8 +36,9 @@ parameters:
         constant: 100
 
 # Data conventions: concrete Data classes are final, and only Data classes live in App\Data. Pages are rendered only
-# through Page classes (Problems P-009, P-011).
+# through Page classes (Problems P-009, P-011), and flash data is written only through the flash Data class (P-047).
 rules:
     - StrictlyLaravel\PHPStan\DataClassFinalRule
     - StrictlyLaravel\PHPStan\DataNamespaceRule
     - StrictlyLaravel\PHPStan\InertiaRenderRule
+    - StrictlyLaravel\PHPStan\InertiaFlashRule
