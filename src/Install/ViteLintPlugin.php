@@ -15,7 +15,7 @@ final class ViteLintPlugin
     public const string PLUGIN = '@mrsafalpiya/strictly-laravel/oxlint';
 
     /** The plugin's rules, all on as errors. */
-    public const array RULES = ['strictly/no-hardcoded-urls', 'strictly/require-suppression-reason'];
+    public const array RULES = ['strictly/no-hardcoded-urls', 'strictly/require-suppression-reason', 'strictly/typed-requests'];
 
     /**
      * Returns whether the file changed.
