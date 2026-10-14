@@ -33,7 +33,9 @@ abstract class Shared extends Data
      */
     public function props(): array
     {
-        /** @var array<string, mixed> Data objects always transform to string-keyed arrays. */
-        return $this->toArray();
+        /** @var array<string, mixed> $props Data objects always transform to string-keyed arrays. */
+        $props = $this->toArray();
+
+        return $props;
     }
 }
