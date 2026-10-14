@@ -157,6 +157,12 @@
         ],
         "earlierConversions": []
     },
+    "resources/js/hooks/use-two-factor-auth.ts": {
+        "upstream": [
+            "b13bca63e1e259c67300a31f3c76f05419bf70c9efe31163317c3c3a9372046d"
+        ],
+        "earlierConversions": []
+    },
     "resources/js/pages/auth/login.tsx": {
         "upstream": [
             "c82a6db34b9a2deb47d2d8eb553d16d12619a43dbd313aa618e038cda8bbc22e"
