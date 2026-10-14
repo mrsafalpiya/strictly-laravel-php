@@ -18,6 +18,11 @@ use StrictlyLaravel\Workarounds\TypeScriptTransformer\UnmappedClassTypes;
  * The typescript-transformer v3 configuration (ADR-0003) that turns the app's PHP into resources/js/generated/index.ts,
  * imported as `@/generated`. Nothing is registered by hand: every laravel-data class and every backed enum anywhere
  * in app/ becomes a TypeScript type, and every backed enum's values are exported in case order as `enumValues`.
+ *
+ * Every PHP type form generates the type that tells the truth: the fixes for typescript-transformer's defects each live
+ * in their own class under StrictlyLaravel\Workarounds\TypeScriptTransformer (citing their Problem and upstream issue),
+ * a PHP class with no TypeScript type fails generation (UnmappedClassCheck), and `#[DateOnly]` dates get their own
+ * type (DateOnlyTypes).
  */
 final class TypeGeneration
 {

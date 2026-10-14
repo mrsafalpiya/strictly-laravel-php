@@ -2,7 +2,6 @@
 
 namespace StrictlyLaravel\TypeScript;
 
-use RuntimeException;
 use Spatie\TypeScriptTransformer\References\ClassStringReference;
 use Spatie\TypeScriptTransformer\TypeScriptNodes\TypeScriptAlias;
 use Spatie\TypeScriptTransformer\TypeScriptNodes\TypeScriptGeneric;
@@ -52,7 +51,7 @@ final class UnmappedClassCheck extends VisitorClosure
         if ($node instanceof TypeScriptReference && $node->referenced === null && $node->reference instanceof ClassStringReference) {
             $where = $this->property === null ? $this->typeName : "{$this->typeName}.{$this->property}";
 
-            throw new RuntimeException(
+            throw new UnmappedClassException(
                 "{$where} is typed with the PHP class {$node->reference->classString}, which has no TypeScript type, so it "
                 .'would be generated as `undefined` (Problem P-061). Use a Data class, a backed enum or a scalar instead.',
             );
