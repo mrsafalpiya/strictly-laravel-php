@@ -5,6 +5,7 @@ namespace StrictlyLaravel\TypeScript;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Facades\File;
 use Spatie\LaravelTypeScriptTransformer\LaravelData\LaravelDataTypeScriptTransformerExtension;
+use Spatie\LaravelTypeScriptTransformer\LaravelData\Transformers\DataClassTransformer as LaravelDataClassTransformer;
 use Spatie\TypeScriptTransformer\Transformers\EnumTransformer;
 use Spatie\TypeScriptTransformer\TypeScriptTransformerConfig;
 use Spatie\TypeScriptTransformer\TypeScriptTransformerConfigFactory;
@@ -34,6 +35,7 @@ final class TypeGeneration
         return TypeScriptTransformerConfigFactory::create()
             ->outputDirectory(self::outputDirectory())
             ->extension(new LaravelDataTypeScriptTransformerExtension)
+            ->replaceTransformer(LaravelDataClassTransformer::class, new DataClassTransformer)
             ->transformer(new EnumTransformer)
             ->transformDirectories($app->path())
             ->provider(new EnumValuesProvider([$app->path()]))
