@@ -10,6 +10,8 @@ use Spatie\TypeScriptTransformer\Transformers\EnumTransformer;
 use Spatie\TypeScriptTransformer\TypeScriptTransformerConfig;
 use Spatie\TypeScriptTransformer\TypeScriptTransformerConfigFactory;
 use Spatie\TypeScriptTransformer\Writers\FlatModuleWriter;
+use StrictlyLaravel\Workarounds\TypeScriptTransformer\InertiaPropWrappers;
+use StrictlyLaravel\Workarounds\TypeScriptTransformer\PaginatorTypes;
 use StrictlyLaravel\Workarounds\TypeScriptTransformer\UnmappedClassTypes;
 
 /**
@@ -39,7 +41,9 @@ final class TypeGeneration
             ->replaceTransformer(LaravelDataClassTransformer::class, new DataClassTransformer)
             ->transformer(new EnumTransformer)
             ->transformDirectories($app->path())
+            ->provider(new PaginatorTypes)
             ->provider(new EnumValuesProvider([$app->path()]))
+            ->providedVisitorHook(new InertiaPropWrappers)
             ->connectedVisitorHook(new UnmappedClassCheck)
             ->writer(new FlatModuleWriter('index.ts'))
             // Always write the file, so a deleted output is regenerated even when the PHP is unchanged.
