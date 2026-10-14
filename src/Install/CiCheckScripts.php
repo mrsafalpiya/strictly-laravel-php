@@ -8,7 +8,8 @@ use stdClass;
 
 /**
  * Writes the app's `ci:check` Composer script as a sequence of steps, each one also runnable on its own as
- * `composer ci:check:<step>`: generation first, then the Base Kit's own checks with its own tools.
+ * `composer ci:check:<step>`: generation first, then the Base Kit's own checks with its own tools, with `tsc` after the
+ * tests so that it also checks the Contracts they recorded (Problem P-065).
  */
 final class CiCheckScripts
 {
@@ -24,8 +25,8 @@ final class CiCheckScripts
         return [
             'generate' => ['@php artisan strictly:generate'],   // TypeScript from PHP (gitignored): Data, enums, routes
             'lint' => [$packageManager->run('check')],          // Vite+: oxlint (type-aware) and oxfmt
-            'tsc' => [$packageManager->run('types:check')],     // tsc --noEmit
-            'test' => ['@test'],                                // Pint, PHPStan (Larastan) and Pest
+            'test' => ['@test'],                                // Pint, PHPStan (Larastan) and Pest, which records Contracts
+            'tsc' => [$packageManager->run('types:check')],     // tsc --noEmit: the app and the Contracts the tests recorded
         ];
     }
 

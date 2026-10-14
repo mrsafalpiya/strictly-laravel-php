@@ -96,7 +96,9 @@
         "upstream": [
             "eca105e821b77c688fd3c414708e48acb6d683cb94d2091cbb8493b358c4267c"
         ],
-        "earlierConversions": []
+        "earlierConversions": [
+            "7cadcd12bbed066ac5d11379566c6c10beb8d015abd19c0405f7aef8d6177ac8"
+        ]
     },
     "tests/Unit/ExampleTest.php": {
         "upstream": [

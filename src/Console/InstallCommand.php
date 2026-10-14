@@ -10,11 +10,13 @@ use StrictlyLaravel\Install\GenerateFirst;
 use StrictlyLaravel\Install\GitignoreEntry;
 use StrictlyLaravel\Install\KitConversion;
 use StrictlyLaravel\Install\PackageManager;
+use StrictlyLaravel\Install\PestContractsHook;
 use StrictlyLaravel\Install\PhpstanInclude;
 use StrictlyLaravel\Install\TsconfigFlags;
 use StrictlyLaravel\Install\ViteLintPlugin;
 use StrictlyLaravel\Install\ViteTypesPlugin;
 use StrictlyLaravel\StrictlyServiceProvider;
+use StrictlyLaravel\Testing\ContractRecorder;
 use StrictlyLaravel\TypeScript\TypeGeneration;
 use StrictlyLaravel\Workarounds\WayfinderQueryVerb;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -46,6 +48,10 @@ final class InstallCommand extends Command
                 $this->laravel->basePath('.gitignore'),
                 '/resources/js/'.TypeGeneration::OUTPUT_DIRECTORY,
             ),
+            'Recorded Contracts gitignored' => fn () => GitignoreEntry::ensure(
+                $this->laravel->basePath('.gitignore'),
+                '/resources/js/'.ContractRecorder::DIRECTORY,
+            ),
             'package.json scripts: build and types:check generate first' => fn () => GenerateFirst::ensure($this->laravel->basePath('package.json')),
             'Wayfinder QUERY verb workaround' => fn () => WayfinderQueryVerb::patch(resource_path('js/wayfinder/index.ts')),
         ];
@@ -59,6 +65,8 @@ final class InstallCommand extends Command
         $failed = ! $this->convertKit() || $failed;
         // After Kit Conversion, which writes the include into a phpstan.neon it converts.
         $failed = ! $this->applyHook('PHPStan extension included in phpstan.neon', $this->includePhpstanExtension(...)) || $failed;
+        // After Kit Conversion too, which writes the hook into a tests/Pest.php it converts.
+        $failed = ! $this->applyHook('tests/Pest.php: feature tests record Contracts', fn () => PestContractsHook::ensure($this->laravel->basePath('tests/Pest.php'))) || $failed;
 
         return $failed ? self::FAILURE : self::SUCCESS;
     }

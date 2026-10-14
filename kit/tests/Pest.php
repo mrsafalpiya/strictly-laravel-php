@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use StrictlyLaravel\Testing\RecordsContracts;
 use Tests\TestCase;
 
 /*
@@ -16,6 +17,7 @@ use Tests\TestCase;
 
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
+    ->use(RecordsContracts::class) // every page a feature test renders is a Contract, checked by tsc
     ->in('Feature');
 
 /*
