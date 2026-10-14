@@ -19,6 +19,12 @@ Running `strictly:install` on an app that is fully up to date changes nothing: e
 
 Newest first. Each entry lists the app-side changes the release needs. Each change says how to apply it and which check fails until it is applied.
 
+### Unreleased
+
+- **Route parameters bound to a model take that model's route key (Problem P-003).** A route whose action type-hints `Passkey $passkey` now takes `RouteKey<'Passkey', number>`, not any number, so code that passes a plain `number` fails `tsc`. Pass the Data object or its key instead, and type ids you hand around by their Data class (`PasskeyData['id']`). An app whose `resources/js/components/manage-passkeys.tsx` and `passkey-item.tsx` hold an earlier Kit Conversion types `handleDelete`'s and `onDelete`'s `id` as `number`: change both to `PasskeyData['id']` (imported from `@/generated`), as the current conversion does. **Check:** `ci:check:tsc` fails with TS2345 at `visit(destroy(id), …)` until then.
+- **A route parameter that names a binding field needs its model type-hinted (Problem P-002).** `strictly:generate` fails on a route such as `{workspace:slug}` whose action takes `string $workspace`, and lists each one. Type-hint the model (`Workspace $workspace`). **Check:** `ci:check:generate`.
+- **Feature tests check route keys and give every table its own id range (Problem P-116).** A test that asserted a literal id (`1`) for a fresh row on SQLite now sees ids such as `4000001`: assert the model's own `id` instead. **Check:** the test fails.
+
 ### 0.1.0
 
 The first release. Nothing to change.

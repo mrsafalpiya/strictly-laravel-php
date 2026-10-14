@@ -14,7 +14,7 @@ import type { PasskeyData } from '@/generated';
 
 type Props = {
     passkey: PasskeyData;
-    onDelete: (id: number, onError: () => void) => void;
+    onDelete: (id: PasskeyData['id'], onError: () => void) => void;
 };
 
 export default function PasskeyItem({ passkey, onDelete }: Props) {

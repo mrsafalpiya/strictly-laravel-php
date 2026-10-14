@@ -5,7 +5,7 @@ import { destroy } from '@/actions/Laravel/Passkeys/Http/Controllers/PasskeyRegi
 import Heading from '@/components/heading';
 import PasskeyItem from '@/components/passkey-item';
 import PasskeyRegistration from '@/components/passkey-register';
-import type { PageProps } from '@/generated';
+import type { PageProps, PasskeyData } from '@/generated';
 
 export type Props = Pick<
     PageProps<'settings/security'>,
@@ -29,7 +29,7 @@ const EmptyState = () => {
 export default function ManagePasskeys(props: Props) {
     const passkeys = props.passkeys;
 
-    const handleDelete = (id: number, onError: () => void) => {
+    const handleDelete = (id: PasskeyData['id'], onError: () => void) => {
         visit(destroy(id), {
             preserveScroll: true,
             onError,

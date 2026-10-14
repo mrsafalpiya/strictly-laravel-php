@@ -3,10 +3,12 @@
 namespace StrictlyLaravel\Console;
 
 use Illuminate\Console\Command;
+use Illuminate\Routing\Router;
 use Spatie\LaravelTypeScriptTransformer\Support\LaravelConsoleLogger;
 use Spatie\TypeScriptTransformer\Enums\RunnerMode;
 use Spatie\TypeScriptTransformer\Runners\Runner;
 use Spatie\TypeScriptTransformer\TypeScriptTransformerConfig;
+use StrictlyLaravel\Routes\RouteKeys;
 use StrictlyLaravel\TypeScript\RawInertiaPropException;
 use StrictlyLaravel\Workarounds\TypeScriptTransformer\UnmappedClassException;
 use StrictlyLaravel\Workarounds\UnparsableFiles;
@@ -51,6 +53,20 @@ final class GenerateCommand extends Command
 
         if ($exitCode !== self::SUCCESS) {
             return $exitCode;
+        }
+
+        if (! $this->option('skip-routes')) {
+            $untyped = RouteKeys::untypedBindings($this->laravel->make(Router::class));
+
+            if ($untyped !== []) {
+                $this->components->error('A route parameter names a binding field, but its action doesn\'t type-hint the model, so its route function takes any value instead of that model\'s key (Problem P-002). Type-hint the bound model in the action, such as show(Workspace $workspace):');
+
+                foreach ($untyped as $binding) {
+                    $this->line("  {$binding}");
+                }
+
+                return self::FAILURE;
+            }
         }
 
         if (! $this->option('skip-routes') && $this->getApplication()?->has('wayfinder:generate') === true) {
