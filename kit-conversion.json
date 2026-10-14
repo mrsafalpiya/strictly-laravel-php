@@ -110,6 +110,30 @@
         ],
         "earlierConversions": []
     },
+    "resources/js/components/manage-passkeys.tsx": {
+        "upstream": [
+            "03c333a929f641eaf98a52088fffe30994c294c82bce064af2af86bdc2aa4737"
+        ],
+        "earlierConversions": []
+    },
+    "resources/js/components/manage-two-factor.tsx": {
+        "upstream": [
+            "0a8b33930fe6e438b6a9b66e2be7be71e8283180acb11ab339044bebcaf11c03"
+        ],
+        "earlierConversions": []
+    },
+    "resources/js/components/passkey-item.tsx": {
+        "upstream": [
+            "b09a9db3c8f8ee697e5f8e31cb5990b882a5271535999cdc6544afdb59cf4089"
+        ],
+        "earlierConversions": []
+    },
+    "resources/js/types/auth.ts": {
+        "upstream": [
+            "e66fe2acd3d4cfd40e2ea196296f459501d694414b25ac270c3c32d49147b17b"
+        ],
+        "earlierConversions": []
+    },
     "resources/js/components/ui/input-otp.tsx": {
         "upstream": [
             "59dc19f93bd031e8320c7df571cd9509e8c1ceb6337506ef380d11b2e10e2550"
