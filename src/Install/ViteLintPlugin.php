@@ -39,23 +39,32 @@ final class ViteLintPlugin
         $block = substr($original, $start, $end - $start);
         $added = '';
 
-        if (! str_contains($block, "'".self::PLUGIN."'")) {
-            $count = 0;
-            $block = (string) preg_replace('/\bjsPlugins:\s*\[/', '$0\''.self::PLUGIN.'\', ', $block, 1, $count);
+        if (! self::mentions($block, self::PLUGIN)) {
+            [$block, $edited] = self::addToFirst($block, [
+                '/\bjsPlugins:\s*\[\s*\]/' => "jsPlugins: ['".self::PLUGIN."']",
+                '/^([ \t]*)jsPlugins:\s*\[[ \t]*\n/m' => "\$0\$1    '".self::PLUGIN."',\n",
+                '/\bjsPlugins:\s*\[/' => "\$0'".self::PLUGIN."', ",
+            ]);
 
-            if ($count === 0) {
+            if (! $edited) {
                 $added .= "{$indent}jsPlugins: ['".self::PLUGIN."'],\n";
             }
         }
 
-        $missing = array_values(array_filter(self::RULES, fn (string $rule): bool => ! str_contains($block, "'{$rule}'")));
-        $ruleLines = implode('', array_map(fn (string $rule): string => "{$indent}    '{$rule}': 'error',\n", $missing));
+        $missing = array_values(array_filter(self::RULES, fn (string $rule): bool => ! self::mentions($block, $rule)));
 
         if ($missing !== []) {
-            $count = 0;
-            $block = (string) preg_replace('/^([ \t]*)rules:\s*\{[ \t]*\n/m', '$0'.str_replace('$', '\$', $ruleLines), $block, 1, $count);
+            $ruleLines = implode('', array_map(fn (string $rule): string => "{$indent}    '{$rule}': 'error',\n", $missing));
+            [$block, $edited] = self::addToFirst($block, [
+                '/\brules:\s*\{\s*\}/' => "rules: {\n{$ruleLines}{$indent}}",
+                '/^[ \t]*rules:\s*\{[ \t]*\n/m' => '$0'.$ruleLines,
+            ]);
 
-            if ($count === 0) {
+            if (! $edited && preg_match('/\brules\s*:/', $block) === 1) {
+                throw new RuntimeException('vite.config.ts writes lint.rules on one line; add '.implode(', ', array_map(fn (string $rule): string => "'{$rule}': 'error'", $missing)).' to it by hand');
+            }
+
+            if (! $edited) {
                 $added .= "{$indent}rules: {\n{$ruleLines}{$indent}},\n";
             }
         }
@@ -71,6 +80,32 @@ final class ViteLintPlugin
         }
 
         return true;
+    }
+
+    /** Whether the lint config names $value as a single- or double-quoted string. */
+    private static function mentions(string $block, string $value): bool
+    {
+        return preg_match('/([\'"])'.preg_quote($value, '/').'\1/', $block) === 1;
+    }
+
+    /**
+     * Apply the first pattern => replacement that matches $block, once. Returns the block and whether one matched.
+     *
+     * @param  array<string, string>  $edits
+     * @return array{string, bool}
+     */
+    private static function addToFirst(string $block, array $edits): array
+    {
+        foreach ($edits as $pattern => $replacement) {
+            $count = 0;
+            $edited = (string) preg_replace($pattern, $replacement, $block, 1, $count);
+
+            if ($count === 1) {
+                return [$edited, true];
+            }
+        }
+
+        return [$block, false];
     }
 
     /**

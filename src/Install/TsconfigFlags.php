@@ -59,7 +59,7 @@ final class TsconfigFlags
 
         // The Base Kit's `// "flag": true,    /* description */` becomes `"flag": true /* description */,`.
         $config = (string) preg_replace_callback(
-            '~^(\s*)//\s*('.$key.'true)\s*,?\s*(/\*.*\*/)?[ \t]*$~m',
+            '~^([ \t]*)//[ \t]*('.$key.'true)[ \t]*,?[ \t]*(/\*.*\*/)?[ \t]*$~m',
             fn (array $match): string => $match[1].$match[2].(($match[3] ?? '') === '' ? '' : ' '.$match[3]).',',
             $config,
             1,
