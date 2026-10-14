@@ -12,6 +12,7 @@ use Spatie\TypeScriptTransformer\TypeScriptTransformerConfigFactory;
 use Spatie\TypeScriptTransformer\Writers\FlatModuleWriter;
 use StrictlyLaravel\Workarounds\TypeScriptTransformer\InertiaPropWrappers;
 use StrictlyLaravel\Workarounds\TypeScriptTransformer\PaginatorTypes;
+use StrictlyLaravel\Workarounds\TypeScriptTransformer\UnmappedClassCheck;
 use StrictlyLaravel\Workarounds\TypeScriptTransformer\UnmappedClassTypes;
 
 /**
@@ -21,9 +22,9 @@ use StrictlyLaravel\Workarounds\TypeScriptTransformer\UnmappedClassTypes;
  * Page class becomes `PageProps<'component'>`, checked against its page component.
  *
  * Every PHP type form generates the type that tells the truth: the fixes for typescript-transformer's defects each live
- * in their own class under StrictlyLaravel\Workarounds\TypeScriptTransformer (citing their Problem and upstream issue),
- * a PHP class with no TypeScript type fails generation (UnmappedClassCheck), and `#[DateOnly]` dates get their own
- * type (DateOnlyTypes).
+ * in their own class under StrictlyLaravel\Workarounds\TypeScriptTransformer (citing their Problem and upstream issue;
+ * among them, a PHP class with no TypeScript type fails generation, UnmappedClassCheck), and `#[DateOnly]` dates get
+ * their own type (DateOnlyTypes).
  */
 final class TypeGeneration
 {

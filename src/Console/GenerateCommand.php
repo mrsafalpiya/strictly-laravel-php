@@ -7,7 +7,7 @@ use Spatie\LaravelTypeScriptTransformer\Support\LaravelConsoleLogger;
 use Spatie\TypeScriptTransformer\Enums\RunnerMode;
 use Spatie\TypeScriptTransformer\Runners\Runner;
 use Spatie\TypeScriptTransformer\TypeScriptTransformerConfig;
-use StrictlyLaravel\TypeScript\UnmappedClassException;
+use StrictlyLaravel\Workarounds\TypeScriptTransformer\UnmappedClassException;
 use StrictlyLaravel\Workarounds\UnparsableFiles;
 use StrictlyLaravel\Workarounds\WayfinderQueryVerb;
 use Symfony\Component\Console\Attribute\AsCommand;
