@@ -27,11 +27,12 @@ use StrictlyLaravel\Inertia\Page;
  *     export type InertiaPages = { 'settings/profile': SettingsProfilePage; … };
  *     export type PageComponent = keyof InertiaPages;
  *     export type PageProps<K extends PageComponent> = InertiaPages[K];
- *     export type __PageComponentCheck = [CheckPage<'settings/profile', typeof import('@/pages/settings/profile').default>, …];
+ *     export type __PageComponentCheck = [CheckPage<'settings/profile', OnlySentProps<'settings/profile', typeof import('@/pages/settings/profile').default>>, …];
  *     export type __PageFileCheck = [HasPageClass<'settings/profile'>, …];
  *
- * The checks make `tsc` fail when a Page class has no page component file, when the component asks for a prop the
- * class doesn't send, and when a page component file has no Page class. The page types themselves come from the
+ * The checks make `tsc` fail when a Page class has no page component file, when the component declares a prop the
+ * class doesn't send (even an optional one, which would otherwise always be missing), and when a page component file
+ * has no Page class. The page types themselves come from the
  * directory scan, named by PageTransformer.
  */
 final class InertiaPagesProvider implements ActionAwareTransformedProvider, TransformedProvider
@@ -43,6 +44,9 @@ final class InertiaPagesProvider implements ActionAwareTransformedProvider, Tran
     /** The extensions of page component files, as the Base Kit's config/inertia.php lists them for React. */
     private const array COMPONENT_EXTENSIONS = ['tsx', 'ts', 'jsx', 'js'];
 
+    /** How a page component is imported, as the Base Kit's `@/` alias for resources/js resolves it. */
+    private const string COMPONENTS_IMPORT_PREFIX = '@/pages/';
+
     /**
      * @param  string  $pagesDirectory  where the Page classes live (app/Pages)
      * @param  string  $componentsDirectory  where the page components live (resources/js/pages)
@@ -50,7 +54,6 @@ final class InertiaPagesProvider implements ActionAwareTransformedProvider, Tran
     public function __construct(
         private readonly string $pagesDirectory,
         private readonly string $componentsDirectory,
-        private readonly string $componentsImportPrefix = '@/pages/',
     ) {}
 
     public function setActions(TransformedProviderActions $actions): void
@@ -146,13 +149,19 @@ final class InertiaPagesProvider implements ActionAwareTransformedProvider, Tran
         }
 
         $checks = array_map(
-            fn (string $component): string => "    CheckPage<'{$component}', typeof import('{$this->componentsImportPrefix}{$component}').default>,",
+            fn (string $component): string => "    CheckPage<'{$component}', OnlySentProps<'{$component}', typeof import('".self::COMPONENTS_IMPORT_PREFIX."{$component}').default>>,",
             array_keys($pages),
         );
 
         return [new Transformed(
             new TypeScriptRaw(implode("\n", [
-                "// Fails to compile when a Page class's page component file is missing, or the component asks for a prop the class doesn't send.",
+                "// Fails to compile when a Page class's page component file is missing, or the component declares a prop the class",
+                "// doesn't send, even an optional one: it then stands in as `{ unsentProps: 'prop' | … }`, which isn't a component.",
+                'type OnlySentProps<K extends PageComponent, C> = C extends (props: infer P) => unknown',
+                '    ? [Exclude<keyof P, keyof %InertiaPages%[K]>] extends [never]',
+                '        ? C',
+                '        : { unsentProps: Exclude<keyof P, keyof %InertiaPages%[K]> }',
+                '    : C;',
                 'type CheckPage<K extends PageComponent, C extends (props: %InertiaPages%[K]) => unknown> = [K, C];',
                 'export type __PageComponentCheck = [',
                 ...$checks,
