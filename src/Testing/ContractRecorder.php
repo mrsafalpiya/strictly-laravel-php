@@ -41,6 +41,10 @@ use Symfony\Component\HttpFoundation\Response;
  * is what the response flashed, when it flashed anything (Problem P-047). A partial reload records no `shared`, and a
  * page rendered without the Inertia middleware, which shares nothing, records none either.
  *
+ * A partial reload (Problem P-046) sends only the props it asked for, so its `props` are checked as
+ * `Contract<PartialReload<PageProps<'reports'>, 'stats'>>`: each requested prop of the page must be there, even one the
+ * page's type marks optional (a deferred prop), and a requested name the page doesn't have fails `tsc`.
+ *
  * Flash data set before a redirect reaches the browser with the next page, so a redirect that flashes records it on
  * its own, as resources/js/__contracts__/_flash/<hash>.ts with `export const flash = … satisfies Contract<FlashData>`.
  *
@@ -48,7 +52,7 @@ use Symfony\Component\HttpFoundation\Response;
  * component with no Page class fails `PageProps`' constraint. `Contract<T>` is T, except that a map may arrive as `[]`
  * (Problem P-076).
  *
- * Each Contract has a `.json` sidecar next to it describing what was recorded (`kind` is `page` or `flash`), which
+ * Each Contract has a `.json` sidecar next to it describing what was recorded (`kind` is `page` or `flash`; a partial reload's page record has `partial`), which
  * Contract Coverage reads (records(), `strictly:coverage`).
  *
  * The directory is gitignored and type-checked by `tsc` (the tsconfig includes resources/js), which `ci:check` runs
@@ -157,9 +161,11 @@ final class ContractRecorder
             }
         }
 
+        $partial = self::partialReload($request, $component, $declared, $page['sharedKeys']);
+
         // A partial reload sends only the props it asked for, and a page rendered without the Inertia middleware
         // shares nothing: neither shows what the shared props are.
-        $recordShared = $sharedKeys !== [] && $request->header(Header::PARTIAL_COMPONENT) === null;
+        $recordShared = $sharedKeys !== [] && $partial === null;
         $overridden = array_values(array_intersect($sharedKeys, $declared));
         $sharedType = $overridden === []
             ? 'SharedPageProps'
@@ -169,12 +175,14 @@ final class ContractRecorder
         sort($coreTypes);
 
         self::write($component, [
-            sprintf('// Recorded by %s: %s %s', $test, $request->method(), $request->getRequestUri()),
+            sprintf('// Recorded by %s: %s %s%s', $test, $request->method(), $request->getRequestUri(), self::describePartial($partial)),
             ...$coreTypes === [] ? [] : [sprintf("import type { %s } from '@inertiajs/core';", implode(', ', $coreTypes))],
-            "import type { Contract } from '@mrsafalpiya/strictly-laravel/contracts';",
+            sprintf("import type { %s } from '@mrsafalpiya/strictly-laravel/contracts';", $partial === null ? 'Contract' : 'Contract, PartialReload'),
             "import type { PageProps } from '@/generated';",
             '',
-            sprintf('export const props = %s satisfies Contract<PageProps<%s>>;', self::json($props), self::quote($component)),
+            sprintf('export const props = %s satisfies Contract<%s>;', self::json($props), $partial === null
+                ? 'PageProps<'.self::quote($component).'>'
+                : 'PartialReload<PageProps<'.self::quote($component).'>, '.($partial['only'] === [] ? 'never' : implode(' | ', array_map(self::quote(...), $partial['only']))).'>'),
             ...$recordShared ? [sprintf('export const shared = %s satisfies Contract<%s>;', self::json($shared), $sharedType)] : [],
             ...$page['flash'] !== null ? [sprintf('export const flash = %s satisfies Contract<FlashData>;', self::json($page['flash']))] : [],
         ], [
@@ -182,10 +190,65 @@ final class ContractRecorder
             'test' => $test,
             'request' => $request->method().' '.$request->getRequestUri(),
             'component' => $component,
+            'partial' => $partial,
             'props' => $props,
             'shared' => $recordShared ? $shared : null,
             'flash' => $page['flash'],
         ]);
+    }
+
+    /**
+     * The page's own props a partial reload of the component asked for (Problem P-046), or null when the request isn't
+     * one: Inertia reloads only when the partial component it names is the one it renders. `only` keeps the requested
+     * names (dotted ones too, `project.stats`) whose first segment is the page's own, as ownership is decided for the
+     * props; `except` is what it left out.
+     *
+     * @param  list<string>  $declared  the props the Page class declares
+     * @param  list<string>  $sharedKeys  the shared props
+     * @return array{only: list<string>, except: list<string>}|null
+     */
+    private static function partialReload(Request $request, string $component, array $declared, array $sharedKeys): ?array
+    {
+        if ($request->header(Header::PARTIAL_COMPONENT) !== $component) {
+            return null;
+        }
+
+        $only = array_values(array_filter(self::headerList($request, Header::PARTIAL_ONLY), function (string $key) use ($declared, $sharedKeys): bool {
+            $head = explode('.', $key, 2)[0];
+
+            return in_array($head, $declared, true) || ! in_array($head, $sharedKeys, true);
+        }));
+
+        return ['only' => $only, 'except' => self::headerList($request, Header::PARTIAL_EXCEPT)];
+    }
+
+    /**
+     * @param  array{only: list<string>, except: list<string>}|null  $partial
+     */
+    private static function describePartial(?array $partial): string
+    {
+        if ($partial === null) {
+            return '';
+        }
+
+        $parts = array_filter([
+            $partial['only'] === [] ? null : 'only '.implode(', ', $partial['only']),
+            $partial['except'] === [] ? null : 'except '.implode(', ', $partial['except']),
+        ]);
+
+        return ' (partial reload'.($parts === [] ? '' : ': '.implode('; ', $parts)).')';
+    }
+
+    /**
+     * A comma-separated request header, as Inertia reads it.
+     *
+     * @return list<string>
+     */
+    private static function headerList(Request $request, string $header): array
+    {
+        $value = $request->header($header);
+
+        return is_string($value) ? array_values(array_unique(array_filter(explode(',', $value), fn (string $key): bool => $key !== ''))) : [];
     }
 
     /**
