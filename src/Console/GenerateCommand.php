@@ -7,6 +7,7 @@ use Spatie\LaravelTypeScriptTransformer\Support\LaravelConsoleLogger;
 use Spatie\TypeScriptTransformer\Enums\RunnerMode;
 use Spatie\TypeScriptTransformer\Runners\Runner;
 use Spatie\TypeScriptTransformer\TypeScriptTransformerConfig;
+use StrictlyLaravel\TypeScript\RawInertiaPropException;
 use StrictlyLaravel\Workarounds\TypeScriptTransformer\UnmappedClassException;
 use StrictlyLaravel\Workarounds\UnparsableFiles;
 use StrictlyLaravel\Workarounds\WayfinderQueryVerb;
@@ -42,7 +43,7 @@ final class GenerateCommand extends Command
 
         try {
             $exitCode = $runner->run(new LaravelConsoleLogger($this), $config, RunnerMode::Direct);
-        } catch (UnmappedClassException $exception) {
+        } catch (RawInertiaPropException|UnmappedClassException $exception) {
             $this->components->error($exception->getMessage());
 
             return self::FAILURE;

@@ -41,10 +41,12 @@ final class ShapeCoverage
      *
      * @param  class-string<Data>  $class
      * @param  list<mixed>  $values
+     * @param  list<string>  $absenceReported  the class's own properties (by output name) whose absence another
+     *                                         dimension reports, such as a page's deferred props
      */
-    public function observe(string $class, array $values, Origin $origin): void
+    public function observe(string $class, array $values, Origin $origin, array $absenceReported = []): void
     {
-        $this->walk($class, $values, $origin, '');
+        $this->walk($class, $values, $origin, '', $absenceReported);
     }
 
     /**
@@ -70,8 +72,9 @@ final class ShapeCoverage
     /**
      * @param  class-string  $class
      * @param  list<mixed>  $values
+     * @param  list<string>  $absenceReported
      */
-    private function walk(string $class, array $values, Origin $origin, string $prefix): void
+    private function walk(string $class, array $values, Origin $origin, string $prefix, array $absenceReported = []): void
     {
         $objects = array_values(array_filter($values, fn (mixed $value): bool => $value instanceof stdClass));
 
@@ -94,7 +97,7 @@ final class ShapeCoverage
                 }
             }
 
-            if ($property->type->isOptional || $property->type->lazyType !== null) {
+            if (($property->type->isOptional || $property->type->lazyType !== null) && ! in_array($name, $absenceReported, true)) {
                 $this->shape($class, $property, 'is only ever absent', $origin, $path, 'sent', seen: $present !== []);
             }
 

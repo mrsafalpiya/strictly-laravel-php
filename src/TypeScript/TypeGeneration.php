@@ -58,6 +58,7 @@ final class TypeGeneration
             ->provider(new InertiaPagesProvider(PageLocations::classesDirectory(), PageLocations::componentsDirectory()))
             ->provider(new InertiaConfigProvider([$app->path()]))
             ->providedVisitorHook(new InertiaPropWrappers)
+            ->connectedVisitorHook(new RawInertiaPropCheck)
             ->connectedVisitorHook(new UnmappedClassCheck)
             ->writer(new FlatModuleWriter('index.ts'))
             // Always write the file, so a deleted output is regenerated even when the PHP is unchanged.

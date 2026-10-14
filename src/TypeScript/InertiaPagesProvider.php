@@ -28,6 +28,7 @@ use StrictlyLaravel\Inertia\PageLocations;
  *     export type InertiaPages = { 'settings/profile': SettingsProfilePage; … };
  *     export type PageComponent = keyof InertiaPages;
  *     export type PageProps<K extends PageComponent> = InertiaPages[K];
+ *     declare module '@mrsafalpiya/strictly-laravel/react' { interface Register { pages: InertiaPages; … } }
  *     export type __PageComponentCheck = [CheckPage<'settings/profile', OnlySentProps<'settings/profile', typeof import('@/pages/settings/profile').default>>, …];
  *     export type __PageFileCheck = [HasPageClass<'settings/profile'>, …];
  *
@@ -47,6 +48,9 @@ final class InertiaPagesProvider implements ActionAwareTransformedProvider, Tran
 
     /** How a page component is imported, as the Base Kit's `@/` alias for resources/js resolves it. */
     private const string COMPONENTS_IMPORT_PREFIX = '@/pages/';
+
+    /** The npm package's React helpers, whose `Register` interface the page map is registered in. */
+    private const string REACT_HELPERS_MODULE = '@mrsafalpiya/strictly-laravel/react';
 
     /**
      * @param  string  $pagesDirectory  where the Page classes live (app/Pages)
@@ -131,6 +135,15 @@ final class InertiaPagesProvider implements ActionAwareTransformedProvider, Tran
                     'export type PageComponent = keyof %InertiaPages%;',
                     "/** The props a page component receives, from its Page class's constructor: `PageProps<'settings/profile'>`. */",
                     'export type PageProps<K extends PageComponent> = %InertiaPages%[K];',
+                    "// The npm package's React helpers name props by page: `forPage<'settings/profile'>()` (Problem P-045). The",
+                    '// import puts the module in the program even when no file uses it, which augmenting it requires.',
+                    "import type {} from '".self::REACT_HELPERS_MODULE."';",
+                    "declare module '".self::REACT_HELPERS_MODULE."' {",
+                    '    interface Register {',
+                    '        pages: %InertiaPages%;',
+                    "        sharedProps: import('@inertiajs/core').SharedPageProps;",
+                    '    }',
+                    '}',
                 ]), references: ['InertiaPages' => new CustomReference(self::GROUP, 'pages')]),
                 new CustomReference(self::GROUP, 'helpers'),
                 [],

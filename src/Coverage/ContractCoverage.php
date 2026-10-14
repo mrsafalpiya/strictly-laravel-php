@@ -17,6 +17,8 @@ use StrictlyLaravel\Inertia\Page;
  * - pages: every Page class must be rendered by some test (`page` records), and its props' shapes are observed.
  * - shared props: some test must render a page with them (`page` records' `shared`), and their shapes are observed
  *   against the shared props Data class.
+ * - deferred props: every lazy prop of a Page class must be loaded by some test (a partial reload, which is how
+ *   Inertia loads a deferred prop, records the page with it), or its type was never checked.
  * - flash: what was flashed, with a page (`page` records' `flash`) or before a redirect (`flash` records), is observed
  *   against the flash Data class, so a key no test flashes is a gap.
  * - form endpoints: some test must send a request to every route whose action takes an input Data class (`form`
@@ -114,6 +116,42 @@ final readonly class ContractCoverage
     }
 
     /**
+     * The props of a Page class that are absent until the page loads them (Problem P-043): the laravel-data lazies
+     * (`Lazy|ReportStatsData` built with `Lazy::inertiaDeferred()`, `Lazy::inertia()` and the like), by output name.
+     *
+     * @param  class-string<Page>  $class
+     * @return list<string>
+     */
+    private function deferredProps(string $class): array
+    {
+        $props = [];
+
+        foreach ($this->config->getDataClass($class)->properties as $property) {
+            if (! $property->hidden && $property->type->lazyType !== null) {
+                $props[] = $property->outputMappedName ?? $property->name;
+            }
+        }
+
+        return $props;
+    }
+
+    /**
+     * @param  list<mixed>  $values
+     */
+    private function anyHas(array $values, string $prop): bool
+    {
+        foreach ($values as $value) {
+            if ($value instanceof stdClass && property_exists($value, $prop)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Every page record counts, a partial reload's too (Problem P-046): it is how a deferred prop is loaded.
+     *
      * @param  list<stdClass>  $records
      * @param  array<string, class-string<Page>>  $pages
      * @return list<Gap>
@@ -142,7 +180,19 @@ final readonly class ContractCoverage
                 continue;
             }
 
-            $shapes->observe($class, $rendered[$component], Origin::page($component));
+            $deferred = $this->deferredProps($class);
+            $shapes->observe($class, $rendered[$component], Origin::page($component), absenceReported: $deferred);
+
+            foreach ($deferred as $prop) {
+                if (! $this->anyHas($rendered[$component], $prop)) {
+                    $gaps[] = new Gap(
+                        "{$component} › {$prop}: no feature test loads this deferred prop",
+                        [],
+                        "add a feature test that renders {$component} and loads {$prop} (`\$page->loadDeferredProps()` in `assertInertia()`, or a partial reload)",
+                        unexercised: true,
+                    );
+                }
+            }
         }
 
         return $gaps;
