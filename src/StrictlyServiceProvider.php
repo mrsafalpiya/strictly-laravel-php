@@ -6,7 +6,10 @@ use Illuminate\Console\Events\CommandFinished;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
+use Spatie\TypeScriptTransformer\TypeScriptTransformerConfig;
+use StrictlyLaravel\Console\GenerateCommand;
 use StrictlyLaravel\Console\InstallCommand;
+use StrictlyLaravel\TypeScript\TypeGeneration;
 use StrictlyLaravel\Workarounds\WayfinderQueryVerb;
 
 final class StrictlyServiceProvider extends ServiceProvider
@@ -16,6 +19,9 @@ final class StrictlyServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(self::CONFIG_STUB, 'strictly');
+
+        // Also what `typescript:transform` (and its --watch) runs.
+        $this->app->singleton(TypeScriptTransformerConfig::class, TypeGeneration::config(...));
     }
 
     public function boot(): void
@@ -31,7 +37,7 @@ final class StrictlyServiceProvider extends ServiceProvider
 
         $this->publishes([self::CONFIG_STUB => config_path('strictly.php')], 'strictly-config');
 
-        $this->commands([InstallCommand::class]);
+        $this->commands([GenerateCommand::class, InstallCommand::class]);
 
         Event::listen(CommandFinished::class, WayfinderQueryVerb::afterCommand(...));
     }

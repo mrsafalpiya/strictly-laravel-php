@@ -34,3 +34,8 @@ parameters:
         param: 100
         property: 100
         constant: 100
+
+# Data conventions: concrete Data classes are final, and only Data classes live in App\Data.
+rules:
+    - StrictlyLaravel\PHPStan\DataClassFinalRule
+    - StrictlyLaravel\PHPStan\DataNamespaceRule
