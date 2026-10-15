@@ -1,6 +1,6 @@
 ---
 name: strictly-add-broadcast-event
-description: "Adds a broadcast event the Strictly Laravel way: an event whose payload is a Data class, a channel defined in routes/channels.php, a typed useChannelEvent listener in React, and a feature test that broadcasts it. Use when adding real-time updates, a ShouldBroadcast event, a private, presence or public channel, or listening for an event with Echo."
+description: "Adds a broadcast event the Strictly Laravel way: an event whose payload is a Data class and whose #[BroadcastsOn] names its channels, a channel defined in routes/channels.php, a typed useChannelEvent listener in React, and a feature test that broadcasts it. Use when adding real-time updates, a ShouldBroadcast event, a private, presence or public channel, or listening for an event with Echo."
 ---
 # Add a broadcast event
 
@@ -34,11 +34,12 @@ A public channel (`new Channel('status')`, which guests can listen on too) has n
 ],
 ```
 
-## 2. Write the event with a Data class payload
+## 2. Write the event with a Data class payload and its channels
 
-The payload is a Data class (here `ProjectData`, built with `fromModel()`) that is the same for every listener. The event implements `ShouldBroadcast`, uses `BroadcastsData`, and declares the payload class as `broadcastData()`'s return type:
+The payload is a Data class (here `ProjectData`, built with `fromModel()`) that is the same for every listener. The event implements `ShouldBroadcast`, uses `BroadcastsData`, and declares the payload class as `broadcastData()`'s return type. `broadcastOn()` builds each channel's name at runtime, so name each channel's pattern in a `#[BroadcastsOn]` (`StrictlyLaravel\Broadcasting\BroadcastsOn`), once per pattern; it must be one `routes/channels.php` defines or `config/strictly.php` declares public:
 
 ```php title="app/Events/ProjectUpdated.php"
+#[BroadcastsOn('projects.{project}')]
 final class ProjectUpdated implements ShouldBroadcast
 {
     use BroadcastsData, Dispatchable, InteractsWithSockets;
@@ -69,7 +70,7 @@ Keep the constructor's properties `private`, and leave `broadcastWith()` to the 
 
 ## 4. Listen with `useChannelEvent`
 
-`channel()` takes only the patterns `routes/channels.php` defines, with their parameters (a Data object or its route key); the event name is the one Echo listens for (`ProjectUpdated` for `App\Events\ProjectUpdated`, `Projects.Renamed` for `App\Events\Projects\Renamed`); the callback receives the payload's type:
+`channel()` takes only the patterns `routes/channels.php` defines, with their parameters (a Data object or its route key); the event name is the one Echo listens for (`ProjectUpdated` for `App\Events\ProjectUpdated`, `Projects.Renamed` for `App\Events\Projects\Renamed`), and only an event whose `#[BroadcastsOn]` declares the channel's pattern; the callback receives the payload's type:
 
 ```tsx title="resources/js/components/projects/project-title.tsx"
 import { useState } from 'react';
@@ -100,7 +101,7 @@ A broadcast notification (`toBroadcast()`) or a model broadcast (`BroadcastsEven
 
 ## 5. Broadcast every payload shape in a feature test
 
-Every event a feature test broadcasts is recorded as a Contract (its payload, and its channels against `routes/channels.php` and the public channels `config/strictly.php` declares). A test must broadcast each event, with each nullable payload field both `null` and set, or `ci:check:coverage` fails. Spy with `Event::listen()`; `Event::fake()` stops the broadcast, so nothing is recorded:
+Every event a feature test broadcasts is recorded as a Contract (its payload, and its channels against `routes/channels.php`, the public channels `config/strictly.php` declares and the event's `#[BroadcastsOn]`). A test must broadcast each event on each channel it declares, with each nullable payload field both `null` and set, or `ci:check:coverage` fails. Spy with `Event::listen()`; `Event::fake()` stops the broadcast, so nothing is recorded:
 
 ```php title="tests/Feature/Projects/UpdateProjectTest.php"
 test('updating a project broadcasts it to the project channel', function () {
@@ -126,12 +127,18 @@ Done when `composer ci:check` passes. `php artisan reverb:start` serves the even
 ## When a check fails
 
 - `ci:check:test` fails with `Broadcast event App\Events\ProjectUpdated sends a payload that has no`: return a Data class from `broadcastData()` instead of public properties or `broadcastWith()`.
+- `ci:check:test` fails with `Broadcast event App\Events\ProjectUpdated declares no channel it is`: add a `#[BroadcastsOn('projects.{project}')]` for each channel pattern `broadcastOn()` sends it to.
 - `ci:check:lint` fails with ``Echo's `useEcho()` takes any event name and a hand-typed payload``: listen with `useChannelEvent()` from `@/generated/broadcasting`.
 - `ci:check:lint` fails with ``Echo's `useEchoNotification()` reads a broadcast notification's hand-typed payload``: broadcast an app event with a `BroadcastsData` payload alongside the notification and listen for it with `useChannelEvent()`; the same for `useEchoModel()` and a model change.
 - `ci:check:tsc` fails with `error TS2345: Argument of type '"project.{project}"' is not assignable to parameter of type '"projects.{project}"'.`: the pattern isn't defined in `routes/channels.php`.
 - `ci:check:tsc` fails with `error TS2345: Argument of type '"ProjectUpdatd"' is not assignable to parameter of type '"ProjectUpdated"'.`: use the event's Echo name.
 - `ci:check:tsc` fails with `error TS2339: Property 'title' does not exist on type 'ProjectData'.`: the callback reads a field the payload class doesn't have.
+- `ci:check:tsc` fails with `error TS2345: Argument of type '"ProjectUpdated"' is not assignable to parameter of type '"ProjectShared"'.`: the event isn't sent on that channel (its `#[BroadcastsOn]` doesn't declare the pattern), so the callback would never run. Listen on a channel it is sent on, or declare the channel if `broadcastOn()` sends it there.
+- `ci:check:tsc` fails with `error TS2322: Type '"App.Models.User.{id}"' is not assignable to type '"projects.{project}"'.`: a broadcast Contract shows `broadcastOn()` sending the event to a channel its `#[BroadcastsOn]` doesn't declare. Declare the pattern, or stop sending it there.
 - `ci:check:tsc` fails with `error TS2345: Argument of type '"statuss"' is not assignable to parameter of type '"status" | "projects.{project}.public"'.`: the public channel isn't declared in `config/strictly.php`'s `public_channels`.
 - `ci:check:tsc` fails with `' is not assignable to type 'BroadcastChannelName'.`: the event broadcasts on a channel `routes/channels.php` doesn't define, or on a public channel `config/strictly.php` doesn't declare.
 - `ci:check:generate` fails with `public_channels.projects.{project}.public.projct: the pattern has no parameter {projct}.`: a `public_channels` declaration binds a model to a parameter its pattern doesn't have.
+- `ci:check:generate` fails with `App\Events\ProjectUpdated: #[BroadcastsOn('project.{project}')] names no channel.`: use a pattern `routes/channels.php` defines, or declare the public channel in `config/strictly.php`.
 - `ci:check:coverage` fails with `✗ ProjectUpdated: no feature test broadcasts this event: add a feature test that broadcasts App\Events\ProjectUpdated, so its App\Data\ProjectData payload is checked.`: add the step 5 test.
+- `ci:check:coverage` fails with `✗ ProjectUpdated on App.Models.User.{id}: no feature test broadcasts this event on this channel: add a feature test that broadcasts App\Events\ProjectUpdated on it, or remove #[BroadcastsOn('App.Models.User.{id}')] if it is never sent there.`: test the broadcast to that channel, or drop the stale declaration.
+- `ci:check:coverage` fails with `✗ maintenance: no event's #[BroadcastsOn] names this public channel: declare it on the events sent on it, or remove it from public_channels.`: a public channel nothing is sent on.

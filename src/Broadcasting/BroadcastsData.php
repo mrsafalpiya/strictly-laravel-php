@@ -8,6 +8,7 @@ use Spatie\LaravelData\Data;
  * A broadcast event whose payload is a Data class (Problem P-052). The event returns the payload from
  * `broadcastData()`, typed with its Data class, and this trait sends it as the payload Laravel broadcasts:
  *
+ *     #[BroadcastsOn('issues.{issue}')]
  *     final class CommentPosted implements ShouldBroadcast
  *     {
  *         use BroadcastsData, Dispatchable, InteractsWithSockets;

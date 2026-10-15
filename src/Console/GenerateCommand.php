@@ -100,12 +100,27 @@ final class GenerateCommand extends Command
         }
 
         try {
-            BroadcastingModule::write(BroadcastEvents::in([$this->laravel->path()]), BroadcastChannels::of($this->laravel), TypeGeneration::outputDirectory(), $files);
+            $events = BroadcastEvents::in([$this->laravel->path()]);
         } catch (RuntimeException $exception) {
             $this->components->error('Cannot generate the broadcast events: '.$exception->getMessage());
 
             return self::FAILURE;
         }
+
+        $channels = BroadcastChannels::of($this->laravel);
+        $undeclared = BroadcastEvents::check($events, $channels);
+
+        if ($undeclared !== []) {
+            $this->components->error('A broadcast event declares a channel the app doesn\'t know, so no listener could name it (Problem P-144):');
+
+            foreach ($undeclared as $error) {
+                $this->line("  {$error}");
+            }
+
+            return self::FAILURE;
+        }
+
+        BroadcastingModule::write($events, $channels, TypeGeneration::outputDirectory(), $files);
 
         if (! $this->option('skip-routes')) {
             $untyped = RouteKeys::untypedBindings($this->laravel->make(Router::class));
