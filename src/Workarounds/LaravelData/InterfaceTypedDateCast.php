@@ -20,12 +20,16 @@ use Spatie\LaravelData\Casts\Uncastable;
  */
 final class InterfaceTypedDateCast extends DateTimeInterfaceCast
 {
+    /**
+     * The class a date of this type is created as: CarbonImmutable for an interface it implements.
+     */
+    public static function readAs(string $type): string
+    {
+        return interface_exists($type) && is_a(CarbonImmutable::class, $type, true) ? CarbonImmutable::class : $type;
+    }
+
     protected function castValue(?string $type, mixed $value): Uncastable|null|DateTimeInterface
     {
-        if ($type !== null && interface_exists($type) && is_a(CarbonImmutable::class, $type, true)) {
-            $type = CarbonImmutable::class;
-        }
-
-        return parent::castValue($type, $value);
+        return parent::castValue($type === null ? null : self::readAs($type), $value);
     }
 }

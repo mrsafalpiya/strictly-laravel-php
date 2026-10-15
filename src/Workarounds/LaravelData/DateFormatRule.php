@@ -4,8 +4,11 @@ namespace StrictlyLaravel\Workarounds\LaravelData;
 
 use Closure;
 use DateTime;
+use DateTimeImmutable;
 use DateTimeInterface;
 use Illuminate\Contracts\Validation\ValidationRule;
+use InvalidArgumentException;
+use ReflectionClass;
 use ValueError;
 
 /**
@@ -23,26 +26,45 @@ final readonly class DateFormatRule implements ValidationRule
 {
     /**
      * @param  non-empty-list<string>  $formats
+     * @param  class-string<DateTime|DateTimeImmutable>  $type  the class the cast creates, whose createFromFormat()
+     *                                                          reads the value: Carbon's reads more formats than PHP's
+     *                                                          own (`c`, an `A` before the hour)
      */
     private function __construct(
         private array $formats,
         private bool $eachItem,
+        private string $type,
     ) {}
 
     /**
      * @param  non-empty-list<string>  $formats
      */
-    public static function of(array $formats): self
+    public static function of(array $formats, string $type = DateTime::class): self
     {
-        return new self($formats, false);
+        return new self($formats, false, self::creatable($type));
     }
 
     /**
      * @param  non-empty-list<string>  $formats
      */
-    public static function ofEachItem(array $formats): self
+    public static function ofEachItem(array $formats, string $type = DateTime::class): self
     {
-        return new self($formats, true);
+        return new self($formats, true, self::creatable($type));
+    }
+
+    /**
+     * @return class-string<DateTime|DateTimeImmutable>
+     */
+    private static function creatable(string $type): string
+    {
+        // An interface is read as InterfaceTypedDateCast reads it (P-189); one it can't read fails every value anyway.
+        $type = InterfaceTypedDateCast::readAs($type);
+
+        if (is_a($type, DateTime::class, true) || is_a($type, DateTimeImmutable::class, true)) {
+            return (new ReflectionClass($type))->isAbstract() ? DateTime::class : $type;
+        }
+
+        return DateTime::class;
     }
 
     public function validate(string $attribute, mixed $value, Closure $fail): void
@@ -83,13 +105,14 @@ final readonly class DateFormatRule implements ValidationRule
 
         foreach ($this->formats as $format) {
             try {
-                $date = DateTime::createFromFormat($format, $value);
-            } catch (ValueError) {
+                $date = $this->type::createFromFormat($format, $value);
+            } catch (ValueError|InvalidArgumentException) {
+                // An invalid format, or Carbon's strict mode refusing the value.
                 continue;
             }
 
             // A warning is an impossible date or time the cast would roll over ("The parsed date was invalid").
-            $errors = DateTime::getLastErrors();
+            $errors = $this->type::getLastErrors();
 
             if ($date !== false && ($errors === false || $errors['warning_count'] + $errors['error_count'] === 0)) {
                 return true;

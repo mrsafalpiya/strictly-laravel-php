@@ -43,10 +43,12 @@ final class DateFormatRuleInferrer implements RuleInferrer
         if ($property->type->kind === DataTypeKind::Array && $item !== null && is_a($item, DateTimeInterface::class, true)) {
             $formats = self::formatsOf(self::first(app(DataConfig::class)->casts->findCastsForIterableType($item)));
 
-            return $formats === null ? $rules : $rules->add(new Rule(DateFormatRule::ofEachItem($formats)));
+            return $formats === null ? $rules : $rules->add(new Rule(DateFormatRule::ofEachItem($formats, $item)));
         }
 
-        if ($property->type->type->findAcceptedTypeForBaseType(DateTimeInterface::class) === null) {
+        $type = $property->type->type->findAcceptedTypeForBaseType(DateTimeInterface::class);
+
+        if ($type === null) {
             return $rules;
         }
 
@@ -59,7 +61,14 @@ final class DateFormatRuleInferrer implements RuleInferrer
 
         $formats = self::formatsOf($cast);
 
-        return $formats === null ? $rules : $rules->add(new Rule(DateFormatRule::of($formats)));
+        if ($formats === null || ! $cast instanceof DateTimeInterfaceCast) {
+            return $rules;
+        }
+
+        // The class the cast creates, whose createFromFormat() reads the value: its own `type`, otherwise the property's.
+        $castType = (fn (): mixed => $this->type)->call($cast);
+
+        return $rules->add(new Rule(DateFormatRule::of($formats, is_string($castType) ? $castType : $type)));
     }
 
     /**
