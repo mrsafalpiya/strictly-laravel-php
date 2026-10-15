@@ -27,7 +27,8 @@ use Throwable;
  * with the visibility the server answers for. The user data is what each member shares with the others: a Data class
  * the callback declares as its return type (`fn (User $user, Issue $issue): ?ViewerData => …`) types the channel's
  * members (Problem P-145); an `array` return type still makes it a presence channel, whose members nothing types, so
- * the PHPStan rule `strictly.presenceData` rejects it.
+ * the PHPStan rule `strictly.presenceData` rejects it. An array or a bool (`make:channel`'s `array|bool`) makes it a
+ * private channel, which that rule rejects too, asking for one or the other.
  *
  * Public channels need no definition, so they come from config/strictly.php instead (PublicChannels, Problem P-143).
  */
@@ -149,7 +150,9 @@ final class BroadcastChannels
 
     /**
      * What a presence channel's callback returns for each member: the Data class among its declared return types, null
-     * for an `array` (untyped member data), or false when it returns no user data at all (a private channel).
+     * for an `array` (untyped member data), or false when it returns no user data at all (a private channel). An array
+     * or a bool (`make:channel`'s `array|bool`) could answer either kind, so it's taken for the private channel it
+     * mostly is, and `strictly.presenceData` asks for `bool` or a Data class instead.
      *
      * @return class-string<Data>|false|null
      */
@@ -161,7 +164,8 @@ final class BroadcastChannels
             $type instanceof ReflectionUnionType => $type->getTypes(),
             default => [],
         };
-        $member = false;
+        $array = false;
+        $bool = false;
 
         foreach ($types as $returned) {
             if (! $returned instanceof ReflectionNamedType) {
@@ -172,11 +176,10 @@ final class BroadcastChannels
                 return $returned->getName();
             }
 
-            if ($returned->getName() === 'array') {
-                $member = null;
-            }
+            $array = $array || $returned->getName() === 'array';
+            $bool = $bool || in_array($returned->getName(), ['bool', 'false', 'true'], true);
         }
 
-        return $member;
+        return $array && ! $bool ? null : false;
     }
 }

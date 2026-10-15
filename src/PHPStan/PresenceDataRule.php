@@ -29,7 +29,9 @@ use Spatie\LaravelData\Data;
  * => …`). A callback that returns an array (Laravel's documented way) shares data nothing types, and one that returns a
  * Data class without declaring it can't be told from a private channel when the app's channels are read, so both are
  * rejected, on `Broadcast::channel()` and a broadcaster's `channel()`, for a closure or a channel class's `join()`.
- * A callback returning `bool` (a private channel) is untouched.
+ * So is one returning an array or a bool (`make:channel`'s `array|bool`), which could be either kind: generation takes
+ * it for a private channel, and the rule asks for `bool` or a Data class instead. A callback returning `bool` (a private
+ * channel) is untouched.
  *
  * @implements Rule<CallLike>
  */
@@ -62,7 +64,8 @@ final readonly class PresenceDataRule implements Rule
         }
 
         $patterns = $scope->getType($args[0]->value)->getConstantStrings();
-        $channel = count($patterns) === 1 ? "Presence channel {$patterns[0]->getValue()}" : 'A presence channel';
+        $pattern = count($patterns) === 1 ? $patterns[0]->getValue() : null;
+        $channel = $pattern !== null ? "Presence channel {$pattern}" : 'A presence channel';
         $returned = $this->returnType($args[1]->value, $scope);
 
         if ($returned === null) {
@@ -71,6 +74,15 @@ final readonly class PresenceDataRule implements Rule
 
         [$type, $declared] = $returned;
         $members = $type instanceof UnionType ? $type->getTypes() : [$type];
+
+        if ($this->eitherVisibility($members)) {
+            $either = $pattern !== null ? "Channel {$pattern}" : 'A channel';
+
+            return [RuleErrorBuilder::message("{$either} returns an array or a bool, which doesn't tell a private channel from a presence one.")
+                ->identifier('strictly.presenceData')
+                ->tip('Declare bool for a private channel (fn (User $user, Issue $issue): bool => …), or a Data class for a presence channel (fn (User $user, Issue $issue): ?ViewerData => …): strictly:generate reads the declared return type to tell them apart.')
+                ->build()];
+        }
 
         foreach ($members as $member) {
             if ($member->isArray()->yes()) {
@@ -91,6 +103,25 @@ final readonly class PresenceDataRule implements Rule
         }
 
         return [];
+    }
+
+    /**
+     * An array or a bool, as `make:channel`'s `join(User $user): array|bool` returns: either a private channel's answer
+     * or a presence channel's member data, so neither PHPStan nor `strictly:generate` can tell which the channel is.
+     *
+     * @param  list<Type>  $members
+     */
+    private function eitherVisibility(array $members): bool
+    {
+        $array = false;
+        $bool = false;
+
+        foreach ($members as $member) {
+            $array = $array || $member->isArray()->yes();
+            $bool = $bool || $member->isBoolean()->yes();
+        }
+
+        return $array && $bool;
     }
 
     /**
