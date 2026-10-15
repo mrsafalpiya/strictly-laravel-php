@@ -167,6 +167,18 @@
             "a414f835091bcd40c43015d2380a822d6f34d94044077b64bd59b75db49c7e78"
         ]
     },
+    "resources/js/hooks/use-appearance.tsx": {
+        "upstream": [
+            "e91f589c28237176e1e7f5ec21b044c6ad7d9e57fba7afedce0174fd8692240c"
+        ],
+        "earlierConversions": []
+    },
+    "resources/js/hooks/use-current-url.ts": {
+        "upstream": [
+            "ea024f22b8b487bf8319bf884dba8ca5b22fef7d7a9cc8c3d9d58eef1ac5566c"
+        ],
+        "earlierConversions": []
+    },
     "resources/js/hooks/use-initials.tsx": {
         "upstream": [
             "6d77fee1bfbe966d909725098d14a1e16e67974d1bb15bfa5f9a34bb11abfaf9"
