@@ -50,6 +50,8 @@ Done when `composer ci:check` passes.
 
 A shape no request can produce is a type that says too much: make the property non-nullable, or the list's minimum explicit, in PHP. Shapes are proven per property, so one test may cover several gaps.
 
+Contract Coverage sees only the shapes laravel-data describes: one item type per list or map, and nothing inside a PHPDoc array shape. So PHPStan (`strictly.dataShape`) rejects a Data property that holds an array shape (`list<array{lead: ?string}>`), a list or map of a union (`list<int|string>`, `list<IssueData|MilestoneData>`) or a list or map of lists. Model the item as a Data class (`list<ProjectSummaryData>`, with `public ?string $lead`; for a union of Data classes, a Data class whose one property is the union, its variants told apart by a literal discriminant); its properties' gaps then show up here like any other.
+
 ## When a check fails
 
 - `ci:check:coverage` fails with `✗ ProjectData.description is only ever null (at projects/index › projects[].description): add a feature test that renders projects/index with projects[].description not null.`: the step 2 test.
@@ -57,4 +59,5 @@ A shape no request can produce is a type that says too much: make the property n
 - `ci:check:coverage` fails with `✗ FlashData.highlight is only ever absent (at flash data › highlight): add a feature test that flashes data with highlight sent.`: make a request whose response flashes it.
 - `ci:check:coverage` fails with `✗ ChangePage.change is never seen as PriorityChangedData (at change › change): add a feature test that renders change with change as PriorityChangedData.`: render that variant.
 - `ci:check:coverage` fails with `Contract Coverage: no Contracts are recorded. Run the feature tests first (composer ci:check:test), then this command.`: run `composer ci:check:test` first, or the whole `composer ci:check`.
+- `ci:check:test` fails with `App\Pages\Projects\IndexPage::$projects has an array shape`: model the item as a Data class, `list<ProjectSummaryData>` with `public ?string $lead` on it, so Contract Coverage checks its fields.
 - `ci:check:test` fails with `Attempted to lazy load [passkeys] on model [App\Models\User] but lazy loading is disabled.`: the new test reached code that lazy loads; eager load the relation (`with()`, `load()`) in the code under test.
