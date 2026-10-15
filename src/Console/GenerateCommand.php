@@ -22,6 +22,7 @@ use StrictlyLaravel\Translations\TranslationsModule;
 use StrictlyLaravel\TypeScript\RawInertiaPropException;
 use StrictlyLaravel\TypeScript\TypeGeneration;
 use StrictlyLaravel\Workarounds\TypeScriptTransformer\DuplicateTypeNamesException;
+use StrictlyLaravel\Workarounds\TypeScriptTransformer\UnloadableClasses;
 use StrictlyLaravel\Workarounds\TypeScriptTransformer\UnmappedClassException;
 use StrictlyLaravel\Workarounds\UnparsableFiles;
 use StrictlyLaravel\Workarounds\WayfinderQueryVerb;
@@ -50,6 +51,12 @@ final class GenerateCommand extends Command
 
         if ($unparsable !== []) {
             return $this->failWith('Cannot generate types while a PHP file has a syntax error:', $unparsable);
+        }
+
+        $unloadable = UnloadableClasses::in([$this->laravel->path()], $this->laravel->basePath());
+
+        if ($unloadable !== []) {
+            return $this->failWith('Cannot generate types while a class that gets one can\'t be loaded, so its type would be missing (Problem P-073):', $unloadable);
         }
 
         $declarations = VendorDeclarations::check($this->laravel->make(Router::class));
