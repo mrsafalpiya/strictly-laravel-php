@@ -22,7 +22,7 @@ final class StoreProjectData extends InputData
 }
 ```
 
-- A nested object is a property typed by a plain `Data` class; a list is `public array $tasks` with `@param list<TaskInputData> $tasks` on the constructor.
+- A nested object is a property typed by a plain `Data` class; a list is `public array $tasks` with `@param list<TaskInputData> $tasks` on the constructor. A nested class that has `rules()` extends `InputData` too, or its `rules()` replace the ones inferred from its types.
 - For an update where a field may be left out, type it `Optional|string` (`Spatie\LaravelData\Optional`); the key is then optional in TypeScript.
 - Extra rules go in `public static function rules(): array`; they are merged with the inferred ones.
 - Authorize in the input class, which runs before validation: `public static function authorize(Request $request): bool`. Read a route's bound model there with `$request->route('project')`.
@@ -126,6 +126,7 @@ Done when `composer ci:check` passes.
 - `ci:check:tsc` fails with `error TS2322: Type 'string' is not assignable to type 'FieldName'.`: a plain string names a control. Use `field('…')`, and type a forwarded `name` as `FieldName`.
 - `ci:check:tsc` fails with `error TS2339: Property 'nmae' does not exist on type 'Partial<Record<"name"`: the error key isn't a field of the input.
 - `ci:check:test` fails with `doesn't extend StrictlyLaravel\Data\InputData.`: the action's Data parameter must extend `InputData`.
+- `ci:check:test` fails with `App\Data\StoreTaskData::$task nests App\Data\TaskData, whose rules()`: a Data class with `rules()` nested in an input must extend `InputData` too.
 - `ci:check:test` fails with `Gate::authorize() after App\Data\StoreProjectData was validated, so`: move the check into the input's `authorize()`.
 - `ci:check:tsc` fails with `error TS2353: Object literal may only specify known properties, and '"project"' does not exist in type 'Partial<Record<"name" | "description" | "estimate"`: the server returned an error key that isn't an input field. Make it a field, or flash a toast instead.
 - `ci:check:tsc` fails with `error TS2322: Type '"notify"' is not assignable to type '"name" | "public"'.`: the action read a request key the input doesn't declare. Add it to the input class and read it from `$data`.

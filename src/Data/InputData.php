@@ -19,7 +19,9 @@ use Spatie\LaravelData\Data;
  *   runs before validation, so a user who may not submit gets a 403, not a 422 listing the fields (Problem P-030).
  *   The PHPStan rule `strictly.authorizeInInput` rejects authorizing in the action's body instead.
  *
- * The PHPStan rule `strictly.inputData` requires every Data class an action takes to extend this class.
+ * The PHPStan rule `strictly.inputData` requires every Data class an action takes to extend this class, and every Data
+ * class with `rules()` nested in an input too: laravel-data reads #[MergeValidationRules] from each nested class, so a
+ * plain one's `rules()` replace its inferred ones (Problem P-099).
  */
 #[MergeValidationRules]
 abstract class InputData extends Data {}
