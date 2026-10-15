@@ -2,6 +2,8 @@
 
 namespace App\Data\RouteModels;
 
+use Attribute;
+use Illuminate\Contracts\Container\ContextualAttribute;
 use Illuminate\Contracts\Routing\UrlRoutable;
 use Illuminate\Http\Request;
 use Spatie\LaravelData\Data;
@@ -88,4 +90,24 @@ abstract class BaseCommentData extends Data
 final class ReplyData extends BaseCommentData
 {
     public string $body;
+}
+
+/** Stands in for a contextual attribute such as #[CurrentUser], which the container resolves instead of the route. */
+#[Attribute(Attribute::TARGET_PARAMETER)]
+final class CurrentComment implements ContextualAttribute {}
+
+final class CommentSearchData extends QueryData
+{
+    public ?string $search = null;
+
+    /** @return array<string, list<string>> */
+    public static function rules(#[CurrentComment] Comment $comment): array
+    {
+        return [];
+    }
+
+    public static function authorize(#[CurrentComment] ?Comment $comment): bool
+    {
+        return $comment !== null;
+    }
 }

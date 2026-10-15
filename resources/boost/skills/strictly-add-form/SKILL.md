@@ -28,7 +28,7 @@ final class StoreProjectData extends InputData
 - Extra rules go in `public static function rules(): array`; they are merged with the inferred ones.
 - A field that holds a model's key declares the model: `#[KeyOf(User::class)] public ?int $assigneeId`, or `#[KeyOf(Label::class)] public array $labelIds` for a list (`StrictlyLaravel\Data\KeyOf`; `#[KeyOf(Issue::class, 'number')]` for a key by another field). TypeScript then takes only that model's key for it, so fill it from the Data the server sent (`member.id`); for a select, look its string value up among the options' keys instead of `Number(value)`. Keep the `exists` rule: it checks the row exists for this user.
 - Authorize in the input class, which runs before validation: `public static function authorize(Request $request): bool`.
-- `authorize()` and `rules()` receive the route's bound models: name a model parameter after the route's (`authorize(Project $project)` for `{project}`, `rules(Label $label)` to `->ignore($label->id)`). Don't read `$request->route('project')`. Only an input class gets them; a query class's or a plain Data class's model parameter would be a new, empty model.
+- `authorize()` and `rules()` receive the route's bound models: name a model parameter after the route's (`authorize(Project $project)` for `{project}`, `rules(Label $label)` to `->ignore($label->id)`). Don't read `$request->route('project')`. A model parameter with a contextual attribute comes from the container instead (`#[CurrentUser] User $user` is the signed-in user, whatever the route's `{user}`). Only an input class gets the route's models; a query class's or a plain Data class's model parameter would be a new, empty model.
 
 ## 2. Type-hint it in the action
 
