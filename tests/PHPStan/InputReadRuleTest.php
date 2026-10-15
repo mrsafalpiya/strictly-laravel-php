@@ -48,4 +48,19 @@ final class InputReadRuleTest extends RuleTestCase
             $error('filter', 'input()', 97),
         ]);
     }
+
+    public function test_closure_routes_read_no_input(): void
+    {
+        $error = static fn (string $with, int $line): array => [
+            "A closure route reads input from the request with {$with}, where nothing types it: a typed form sends only the fields of a controller action's input class.",
+            $line,
+            'Move the route to a controller action that takes an input class (a final Data class extending StrictlyLaravel\Data\InputData) and read the field from it: Wayfinder brands a route function with the input class of the controller action it runs, never with a closure\'s.',
+        ];
+
+        $this->analyse([__DIR__.'/data/closure-route-reads.php'], [
+            $error('input()', 8),
+            $error('request()', 12),
+            $error('string()', 13),
+        ]);
+    }
 }

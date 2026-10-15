@@ -16,6 +16,9 @@ use StrictlyLaravel\Data\QueryData;
  * `Request::query('tab')`. A route function sends only the keys of its action's query class (none when it takes none),
  * so such a key is one no typed link sets, and nothing checks its value.
  *
+ * A closure route reads no query string either (Problem P-151): Wayfinder types no route function from a closure, so
+ * its route function sends no query keys at all (RouteClosure).
+ *
  * Framework code that reads its own key (the paginators' `page` and `cursor`) isn't in a controller, so it isn't
  * affected.
  *
@@ -40,7 +43,15 @@ final readonly class QueryReadRule implements Rule
         $controller = ControllerAction::enclosing($scope);
 
         if ($controller === null) {
-            return [];
+            return RouteClosure::encloses($scope) ? [
+                RuleErrorBuilder::message('A closure route reads the query string from the request, where nothing types it: a route function sends only the keys of a controller action\'s query class.')
+                    ->identifier('strictly.queryRead')
+                    ->tip(sprintf(
+                        'Move the route to a controller action that takes a query class (a final Data class extending %s) and read the key from it: Wayfinder types a route function\'s query option with the query class of the controller action it runs, never with a closure\'s.',
+                        QueryData::class,
+                    ))
+                    ->build(),
+            ] : [];
         }
 
         return [
