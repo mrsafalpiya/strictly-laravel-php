@@ -12,6 +12,7 @@ use ReflectionFunctionAbstract;
 use ReflectionMethod;
 use ReflectionNamedType;
 use ReflectionUnionType;
+use Spatie\LaravelData\Data;
 use StrictlyLaravel\Routes\RouteKey;
 use Throwable;
 
@@ -22,8 +23,11 @@ use Throwable;
  * model, takes that model's route key (`fn (User $user, Issue $issue): bool` binds `{issue}` by the issue's `id`); any
  * other parameter is a plain value.
  *
- * A callback that returns user data (an `array` return type) authorizes a presence channel, any other a private one,
- * so the client subscribes with the visibility the server answers for.
+ * A callback that returns user data authorizes a presence channel, any other a private one, so the client subscribes
+ * with the visibility the server answers for. The user data is what each member shares with the others: a Data class
+ * the callback declares as its return type (`fn (User $user, Issue $issue): ?ViewerData => …`) types the channel's
+ * members (Problem P-145); an `array` return type still makes it a presence channel, whose members nothing types, so
+ * the PHPStan rule `strictly.presenceData` rejects it.
  *
  * Public channels need no definition, so they come from config/strictly.php instead (PublicChannels, Problem P-143).
  */
@@ -78,10 +82,13 @@ final class BroadcastChannels
                 $parameters[$name] = $function === null ? null : self::routeKey($function, $name);
             }
 
+            $member = $function === null ? false : self::member($function);
+
             $definitions[$pattern] = new ChannelDefinition(
                 $pattern,
-                $function !== null && self::returnsArray($function) ? 'presence' : 'private',
+                $member !== false ? 'presence' : 'private',
                 $parameters,
+                $member === false ? null : $member,
             );
         }
 
@@ -140,7 +147,13 @@ final class BroadcastChannels
         return null;
     }
 
-    private static function returnsArray(ReflectionFunctionAbstract $function): bool
+    /**
+     * What a presence channel's callback returns for each member: the Data class among its declared return types, null
+     * for an `array` (untyped member data), or false when it returns no user data at all (a private channel).
+     *
+     * @return class-string<Data>|false|null
+     */
+    private static function member(ReflectionFunctionAbstract $function): string|false|null
     {
         $type = $function->getReturnType();
         $types = match (true) {
@@ -148,13 +161,22 @@ final class BroadcastChannels
             $type instanceof ReflectionUnionType => $type->getTypes(),
             default => [],
         };
+        $member = false;
 
-        foreach ($types as $member) {
-            if ($member instanceof ReflectionNamedType && $member->getName() === 'array') {
-                return true;
+        foreach ($types as $returned) {
+            if (! $returned instanceof ReflectionNamedType) {
+                continue;
+            }
+
+            if (! $returned->isBuiltin() && is_subclass_of($returned->getName(), Data::class)) {
+                return $returned->getName();
+            }
+
+            if ($returned->getName() === 'array') {
+                $member = null;
             }
         }
 
-        return false;
+        return $member;
     }
 }

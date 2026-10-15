@@ -8,19 +8,23 @@ use StrictlyLaravel\Routes\WayfinderTemplates;
 
 /**
  * Writes `broadcasting.ts` into the generated directory (`@/generated/broadcasting`): the app's broadcast events and
- * channels, which events are sent on which channel, and the npm package's Echo helpers bound to them (Problems P-052,
- * P-053, P-054, P-143, P-144):
+ * channels, which events are sent on which channel, the data each member of a presence channel shares, and the npm
+ * package's Echo helpers bound to them (Problems P-052, P-053, P-054, P-143, P-144, P-145):
  *
  *     export type BroadcastEvents = { CommentPosted: import('@/generated').CommentData };
- *     export type BroadcastChannels = { 'issues.{issue}': { visibility: 'private'; params: { issue: RouteKey<'Issue', number> | … } } };
+ *     export type BroadcastChannels = {
+ *         'issues.{issue}': { visibility: 'private'; params: { issue: RouteKey<'Issue', number> | … } };
+ *         'issues.{issue}.viewers': { visibility: 'presence'; params: { … }; member: import('@/generated').ViewerData };
+ *     };
  *     export type ChannelEvents = { 'issues.{issue}': 'CommentPosted' };
  *     export type EventChannels = { CommentPosted: 'issues.{issue}' };
- *     export const { channel, publicChannel, useChannelEvent } = createBroadcasting<BroadcastEvents, BroadcastChannels, ChannelEvents>({ … });
+ *     export const { channel, publicChannel, useChannelEvent, usePresence } = createBroadcasting<BroadcastEvents, BroadcastChannels, ChannelEvents>({ … });
  *
  * so `useChannelEvent(channel('issues.{issue}', { issue: issue.id }), 'CommentPosted', (comment) => …)` takes only a
  * defined channel with its parameters, only an event its #[BroadcastsOn] declares on that channel (Problem P-144), and
  * types the payload from its Data class; `publicChannel('projects.{project}.public', { project })` takes only a public
- * channel config/strictly.php declares.
+ * channel config/strictly.php declares; `usePresence(channel('issues.{issue}.viewers', { issue }), { here, joining, leaving })`
+ * types the members from the Data class the presence channel's callback returns.
  * `BroadcastChannelName` is every name the server may broadcast on a channel the app knows under, which the broadcast
  * Contracts check.
  */
@@ -78,10 +82,11 @@ final class BroadcastingModule
             }
 
             $channelLines[] = sprintf(
-                "    %s: { visibility: '%s'; params: { %s } };",
+                "    %s: { visibility: '%s'; params: { %s }%s };",
                 self::literal($definition->pattern),
                 $definition->visibility,
                 implode('; ', $params),
+                $definition->visibility === 'presence' ? '; member: '.self::memberType($definition->member) : '',
             );
             $definitionLines[] = sprintf(
                 "    %s: { visibility: '%s', keys: { %s } },",
@@ -109,8 +114,9 @@ final class BroadcastingModule
 
                 /**
                  * Every channel the app knows, by its pattern: the private and presence ones routes/channels.php defines and the
-                 * public ones config/strictly.php declares. How a client subscribes to it, and the value each parameter of its
-                 * name takes (a model's route key where the channel binds the model).
+                 * public ones config/strictly.php declares. How a client subscribes to it, the value each parameter of its name
+                 * takes (a model's route key where the channel binds the model), and for a presence channel, the data each
+                 * member shares: the Data class its callback returns.
                  */
                 export type BroadcastChannels = {%s};
 
@@ -127,10 +133,11 @@ final class BroadcastingModule
 
                 /**
                  * `channel(pattern, params)` names a channel routes/channels.php defines, `publicChannel(pattern, params)` a public
-                 * one config/strictly.php declares, and `useChannelEvent(channel, event, callback)` listens on it for an event sent
-                 * on it, typing the payload.
+                 * one config/strictly.php declares, `useChannelEvent(channel, event, callback)` listens on it for an event sent
+                 * on it, typing the payload, and `usePresence(channel, { here, joining, leaving })` follows a presence channel's
+                 * members, typed as its callback's Data class.
                  */
-                export const { channel, publicChannel, useChannelEvent } = createBroadcasting<BroadcastEvents, BroadcastChannels, ChannelEvents>({%s});
+                export const { channel, publicChannel, useChannelEvent, usePresence } = createBroadcasting<BroadcastEvents, BroadcastChannels, ChannelEvents>({%s});
 
                 TS,
             $echo,
@@ -162,6 +169,17 @@ final class BroadcastingModule
         $type = sprintf("import('%s').RouteKey<'%s', %s>", WayfinderTemplates::TYPES_MODULE, $key->brand(), $value);
 
         return sprintf('%s | { %s: %s }', $type, self::literal($key->field), $type);
+    }
+
+    /**
+     * What each member of a presence channel shares: the Data class its callback returns, or `unknown` for one that
+     * returns an array, which nothing types (Problem P-145).
+     *
+     * @param  class-string|null  $member
+     */
+    private static function memberType(?string $member): string
+    {
+        return $member === null ? 'unknown' : WayfinderTemplates::generatedType($member);
     }
 
     /**
