@@ -38,7 +38,7 @@ Activate the matching skill before you start; each one is a worked example that 
 - URLs come from Wayfinder: `import { index } from '@/routes/projects'` or `import { store } from '@/actions/App/Http/Controllers/ProjectController'`, passing Data objects or their keys as parameters.
 - Requests go through the route-typed helpers of `@mrsafalpiya/strictly-laravel/react`: `<TypedForm {...store.form()}>` with `name={field('name')}`, `useRouteForm(route, defaults)`, `submit(route, data)`, `visit(route)` and `useRouteHttp(route, init)`.
 - Prop names go through `const page = forPage<'projects/index'>()`: `page.only('stats')`, `page.reset('projects')`, `<page.Deferred>`, `<page.WhenVisible>`, `<page.InfiniteScroll>`, `page.optimistic(…)`. Call `usePage()` without a type argument.
-- Broadcasts: `useChannelEvent(channel('projects.{project}', { project }), 'ProjectUpdated', cb)` from `@/generated/broadcasting`. Text: `t('projects.index.title')` from `@/generated/translations`.
+- Broadcasts: `useChannelEvent(channel('projects.{project}', { project }), 'ProjectUpdated', cb)` from `@/generated/broadcasting`. Text: `t('projects.index.title')` from `@/generated/translations`, and `choice('projects.index.count', count)` for a pluralised (`|`) message.
 - Narrow with checks (`!== null`, `!== undefined`, `switch` on a discriminant) instead of `as` or `!`.
 - Every suppression names its rule and gives a reason: `// oxlint-disable-next-line strictly/typed-requests -- why`, `// @ts-expect-error why`, `@phpstan-ignore strictly.inertiaRender (why)`.
 
