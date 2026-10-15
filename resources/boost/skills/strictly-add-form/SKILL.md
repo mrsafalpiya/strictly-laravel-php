@@ -25,6 +25,7 @@ final class StoreProjectData extends InputData
 - A nested object is a property typed by a plain `Data` class; a list is `public array $tasks` with `@param list<TaskInputData> $tasks` on the constructor. A nested class that has `rules()` extends `InputData` too, or its `rules()` replace the ones inferred from its types.
 - For an update where a field may be left out, type it `Optional|string` (`Spatie\LaravelData\Optional`); the key is then optional in TypeScript.
 - Extra rules go in `public static function rules(): array`; they are merged with the inferred ones.
+- A field that holds a model's key declares the model: `#[KeyOf(User::class)] public ?int $assigneeId`, or `#[KeyOf(Label::class)] public array $labelIds` for a list (`StrictlyLaravel\Data\KeyOf`; `#[KeyOf(Issue::class, 'number')]` for a key by another field). TypeScript then takes only that model's key for it, so fill it from the Data the server sent (`member.id`); for a select, look its string value up among the options' keys instead of `Number(value)`. Keep the `exists` rule: it checks the row exists for this user.
 - Authorize in the input class, which runs before validation: `public static function authorize(Request $request): bool`.
 - `authorize()` and `rules()` receive the route's bound models: name a model parameter after the route's (`authorize(Project $project)` for `{project}`, `rules(Label $label)` to `->ignore($label->id)`). Don't read `$request->route('project')`. Only an input class gets them; a query class's or a plain Data class's model parameter would be a new, empty model.
 
@@ -127,6 +128,8 @@ Done when `composer ci:check` passes.
 - `ci:check:tsc` fails with `error TS2322: Type 'string' is not assignable to type 'FieldName'.`: a plain string names a control. Use `field('…')`, and type a forwarded `name` as `FieldName`.
 - `ci:check:tsc` fails with `error TS2339: Property 'nmae' does not exist on type 'Partial<Record<"name"`: the error key isn't a field of the input.
 - `ci:check:test` fails with `doesn't extend StrictlyLaravel\Data\InputData.`: the action's Data parameter must extend `InputData`.
+- `ci:check:test` fails with `App\Data\BulkUpdateIssuesData::$ids is validated by an exists rule`: the field holds a model's key; declare the model with `#[KeyOf(Issue::class)]` (`strictly.keyOf`). A value that is no model's key takes `@phpstan-ignore strictly.keyOf (why)`.
+- `ci:check:tsc` fails with `error TS2345: Argument of type 'number & { readonly [keyOf]: "Issue.id"; }' is not assignable to parameter of type '(number & { readonly [keyOf]: "User.id"; }) | null'.`: an issue's key was sent where the input takes a user's. Send the key of the model the field declares.
 - `ci:check:test` fails with `App\Data\StoreTaskData::$task nests App\Data\TaskData, whose rules()`: a Data class with `rules()` nested in an input must extend `InputData` too.
 - `ci:check:test` fails with `Gate::authorize() after App\Data\StoreProjectData was validated, so`: move the check into the input's `authorize()`.
 - `ci:check:test` fails with `App\Data\UpdateEmailData::authorize() takes App\Models\User $account, but the route users/{user}/email has no {account} parameter.`: name the model parameter after the route's parameter. If it says the route binds `{user}` to a string, the action must take the model (`User $user`) so the route binds it.

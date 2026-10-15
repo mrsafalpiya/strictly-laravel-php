@@ -9,15 +9,15 @@ use Illuminate\Database\Eloquent\Model;
  * Problem P-003: on a Data property that holds another model's route key, the model it belongs to:
  *
  *     #[RouteKeyOf(Project::class)]
- *     public int $project_id,
+ *     public string $projectKey,
  *
- * The property is generated as that model's route key (`RouteKey<'Project', number>`), so it can be passed to a route
- * whose action type-hints `Project $project`. A list of keys (`list<int>`) is branded per item. A class's own key
- * needs no attribute: the `id` of a Data class built from a Project (`fromModel(Project $project)`) is branded by
- * itself (StrictlyLaravel\Routes\RouteKeys).
+ * The special case of #[KeyOf] (Problem P-128) for the field the routes bind the model by when they name none: it is
+ * `#[KeyOf(Project::class, (new Project)->getRouteKeyName())]`, so the property is generated as the model's route key
+ * (`Key<'Project', 'key', string>`, which `RouteKey<'Project', string>` names) and can be passed to a route whose
+ * action type-hints `Project $project`. `$field` overrides the field, as in #[KeyOf]. A list of keys is branded per
+ * item.
  *
- * Feature tests check every value sent for it is an existing key of the model (StrictlyLaravel\Testing\RouteKeyChecks):
- * a row whose `$field` (the model's route key name unless given) holds it.
+ * Feature tests check every value sent for it is an existing key of the model (StrictlyLaravel\Testing\RouteKeyChecks).
  */
 #[Attribute(Attribute::TARGET_PROPERTY)]
 final readonly class RouteKeyOf

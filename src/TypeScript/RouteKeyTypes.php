@@ -13,13 +13,13 @@ use Spatie\TypeScriptTransformer\TypeScriptNodes\TypeScriptProperty;
 use Spatie\TypeScriptTransformer\TypeScriptNodes\TypeScriptRaw;
 use Spatie\TypeScriptTransformer\TypeScriptNodes\TypeScriptString;
 use Spatie\TypeScriptTransformer\TypeScriptNodes\TypeScriptUnion;
+use StrictlyLaravel\Routes\RouteKey;
 use StrictlyLaravel\Routes\RouteKeys;
-use StrictlyLaravel\Routes\WayfinderTemplates;
 
 /**
- * Problem P-003: a Data property that holds a model's route key (StrictlyLaravel\Routes\RouteKeys) is generated as
- * that model's brand, `RouteKey<'Project', number>`, the type the model's route parameters take. A list of keys is
- * branded per item; `null` stays `null`.
+ * Problems P-003, P-128: a Data property that holds a model's key (StrictlyLaravel\Routes\RouteKeys) is generated as
+ * that key's brand, `Key<'Issue', 'id', number>`: the type the model's route parameters take when bound by that field,
+ * and the inputs that declare it. A list of keys is branded per item; `null` stays `null`.
  */
 final class RouteKeyTypes implements ClassPropertyProcessor
 {
@@ -37,29 +37,24 @@ final class RouteKeyTypes implements ClassPropertyProcessor
         $key = $this->keys->forProperty($phpPropertyNode->getDeclaringClass()->getName(), $phpPropertyNode->getName());
 
         if ($key !== null) {
-            $property->type = self::brand($property->type, $key->brand());
+            $property->type = self::brand($property->type, $key);
         }
 
         return $property;
     }
 
-    private static function brand(TypeScriptNode $type, string $model): TypeScriptNode
+    private static function brand(TypeScriptNode $type, RouteKey $key): TypeScriptNode
     {
         if ($type instanceof TypeScriptUnion) {
-            return new TypeScriptUnion(array_map(fn (TypeScriptNode $member): TypeScriptNode => self::brand($member, $model), $type->types));
+            return new TypeScriptUnion(array_map(fn (TypeScriptNode $member): TypeScriptNode => self::brand($member, $key), $type->types));
         }
 
         if ($type instanceof TypeScriptArray) {
-            return new TypeScriptArray(array_map(fn (TypeScriptNode $item): TypeScriptNode => self::brand($item, $model), $type->types));
+            return new TypeScriptArray(array_map(fn (TypeScriptNode $item): TypeScriptNode => self::brand($item, $key), $type->types));
         }
 
         if ($type instanceof TypeScriptNumber || $type instanceof TypeScriptString) {
-            return new TypeScriptRaw(sprintf(
-                "import('%s').RouteKey<'%s', %s>",
-                WayfinderTemplates::TYPES_MODULE,
-                $model,
-                $type instanceof TypeScriptNumber ? 'number' : 'string',
-            ));
+            return new TypeScriptRaw($key->typeScript($type instanceof TypeScriptNumber ? 'number' : 'string'));
         }
 
         return $type;

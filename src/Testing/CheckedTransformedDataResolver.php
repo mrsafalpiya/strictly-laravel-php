@@ -7,7 +7,7 @@ use Spatie\LaravelData\Support\DataProperty;
 use Spatie\LaravelData\Support\Transformation\TransformationContext;
 
 /**
- * laravel-data's serialisation, checking every route-key property it sends (RouteKeyChecks). Bound in feature tests
+ * laravel-data's serialisation, checking every model-key property it sends (RouteKeyChecks). Bound in feature tests
  * only.
  */
 final class CheckedTransformedDataResolver extends TransformedDataResolver
