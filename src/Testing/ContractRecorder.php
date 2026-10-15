@@ -24,6 +24,7 @@ use StrictlyLaravel\Inertia\PageLocations;
 use StrictlyLaravel\Routes\FormEndpoints;
 use StrictlyLaravel\Routes\JsonEndpoints;
 use StrictlyLaravel\Routes\RouteInput;
+use StrictlyLaravel\Routes\RouteQuery;
 use StrictlyLaravel\Routes\RouteResponse;
 use StrictlyLaravel\Routes\WayfinderTemplates;
 use Symfony\Component\HttpFoundation\Response;
@@ -84,7 +85,11 @@ use Symfony\Component\HttpFoundation\Response;
  *     // Recorded by Tests\Feature\SearchTest > a search answers with its results: POST /search (JSON response)
  *     export const response = { "query": "Launch", "hits": [ … ] } satisfies Contract<import('@/generated').SearchResultsData>;
  *
- * Each Contract has a `.json` sidecar next to it describing what was recorded (`kind` is `page`, `flash`, `form` or `json`; a
+ * A GET to a route with a query class (QueryData, or one config/strictly.php declares for a vendor GET) records the
+ * query keys the action validated and read the same way, under resources/js/__contracts__/_queries, checked against the
+ * query class.
+ *
+ * Each Contract has a `.json` sidecar next to it describing what was recorded (`kind` is `page`, `flash`, `form`, `query` or `json`; a
  * partial reload's page record has `partial`), which Contract Coverage reads (records(), `strictly:coverage`). A `form`
  * record of a request that was neither refused nor validated nor read anything has only the sidecar.
  *
@@ -102,6 +107,9 @@ final class ContractRecorder
 
     /** Where the requests to form endpoints are recorded, under DIRECTORY. */
     private const string FORMS_DIRECTORY = '_forms';
+
+    /** Where the GETs to routes with a query class are recorded, under DIRECTORY. */
+    private const string QUERIES_DIRECTORY = '_queries';
 
     /** Where the responses of JSON endpoints are recorded, under DIRECTORY. */
     private const string JSON_DIRECTORY = '_json';
@@ -166,6 +174,7 @@ final class ContractRecorder
         self::$cleared = true;
 
         ValidatedFields::listen(app('validator'));
+        InputReads::trackFormRequests(app());
 
         Event::listen(RouteMatched::class, function (): void {
             InputReads::reset();
@@ -194,6 +203,12 @@ final class ContractRecorder
             self::recordForm($test, $request, $response, FormEndpoints::name($route), $input);
         }
 
+        $query = $route instanceof Route && $input === null && $request->isMethod('GET') ? RouteQuery::ofRoute($route) : null;
+
+        if ($route instanceof Route && $query !== null) {
+            self::recordQuery($test, $request, FormEndpoints::name($route), $query);
+        }
+
         $declared = $route instanceof Route ? RouteResponse::ofRoute($route) : null;
 
         if ($route instanceof Route && $declared !== null) {
@@ -202,11 +217,11 @@ final class ContractRecorder
     }
 
     /**
-     * A successful response of a JSON endpoint (Problem P-048), checked against the Data class its action declares. A
-     * refused request is a form endpoint's to record (its validation errors); any other failure sends no response
-     * of that type.
+     * A successful response of a JSON endpoint (Problem P-048), checked against the Data class its action declares, or
+     * the Data class or TypeScript type config/strictly.php declares for a vendor action (Problem P-050). A refused
+     * request is a form endpoint's to record (its validation errors); any other failure sends no response of that type.
      *
-     * @param  class-string  $declared
+     * @param  class-string|string  $declared
      */
     private static function recordJson(string $test, Request $request, Response $response, string $endpoint, string $declared): void
     {
@@ -226,7 +241,7 @@ final class ContractRecorder
             sprintf('// Recorded by %s: %s %s (JSON response)', $test, $request->method(), $request->getRequestUri()),
             "import type { Contract } from '@mrsafalpiya/strictly-laravel/contracts';",
             '',
-            sprintf('export const response = %s satisfies Contract<%s>;', self::json($body), WayfinderTemplates::generatedType($declared)),
+            sprintf('export const response = %s satisfies Contract<%s>;', self::json($body), RouteResponse::typeScript($declared)),
         ], [
             'kind' => 'json',
             'test' => $test,
@@ -235,6 +250,50 @@ final class ContractRecorder
             'response' => $declared,
             'body' => $body,
         ]);
+    }
+
+    /**
+     * A GET to a route whose action takes a query class, or whose vendor action has one declared (Problem P-025): the
+     * query keys the action validated and read, checked against the query class like a form's input. Contract Coverage
+     * reads the sidecar to report a declared vendor query field no test saw used.
+     *
+     * @param  class-string  $query
+     */
+    private static function recordQuery(string $test, Request $request, string $endpoint, string $query): void
+    {
+        $validated = self::fieldPaths(ValidatedFields::fields());
+        $read = self::fieldPaths(InputReads::keys());
+        $meta = [
+            'kind' => 'query',
+            'test' => $test,
+            'request' => $request->method().' '.$request->getRequestUri(),
+            'endpoint' => $endpoint,
+            'query' => $query,
+            'validated' => $validated,
+            'read' => $read,
+        ];
+
+        if ($validated === [] && $read === []) {
+            self::write(self::QUERIES_DIRECTORY, [], $meta);
+
+            return;
+        }
+
+        $type = WayfinderTemplates::generatedType($query);
+
+        self::write(self::QUERIES_DIRECTORY, [
+            sprintf('// Recorded by %s: %s %s (query string)', $test, $request->method(), $request->getRequestUri()),
+            sprintf("import type { InputKey } from '%s';", WayfinderTemplates::TYPES_MODULE),
+            '',
+            ...$validated === [] ? [] : [
+                '// Every query key the server validated: a rule on a key the query type lacks is never sent by the route function.',
+                sprintf('export const validated = %s satisfies InputKey<%s>[];', self::json($validated), $type),
+            ],
+            ...$read === [] ? [] : [
+                '// Every query key the action read: the route function never sends a key the query type lacks.',
+                sprintf('export const read = %s satisfies InputKey<%s>[];', self::json($read), $type),
+            ],
+        ], $meta);
     }
 
     /**

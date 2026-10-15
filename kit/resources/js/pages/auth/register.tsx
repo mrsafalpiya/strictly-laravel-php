@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
-import type { PageProps, RegisterData } from '@/generated';
+import type { PageProps } from '@/generated';
 
 export default function Register({
     passwordRules,
@@ -17,7 +17,7 @@ export default function Register({
     return (
         <>
             <Head title="Register" />
-            <TypedForm<RegisterData>
+            <TypedForm
                 {...store.form()}
                 resetOnSuccess={['password', 'password_confirmation']}
                 disableWhileProcessing

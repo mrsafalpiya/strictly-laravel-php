@@ -5,9 +5,9 @@ namespace App\Data\Auth;
 use StrictlyLaravel\Data\InputData;
 
 /**
- * The payload of Fortify's password reset form (`token` and `email` are added by its `transform`). Fortify validates
- * it (App\Actions\Fortify\ResetUserPassword); this class only types the form, which names it by hand
- * (`<TypedForm<ResetPasswordData>>`) until vendor payloads are declared (Problems P-025, P-100).
+ * The payload of Fortify's password reset form (`token` and `email` are added by its `transform`), declared for its
+ * action in config/strictly.php. Fortify validates it (App\Actions\Fortify\ResetUserPassword) and reads it; the
+ * feature tests check that every key it does is a field here.
  */
 final class ResetPasswordData extends InputData
 {

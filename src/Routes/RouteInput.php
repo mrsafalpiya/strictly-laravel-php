@@ -15,8 +15,8 @@ use StrictlyLaravel\Data\InputData;
  * its validation errors are checked against (ContractRecorder) and what makes its route a form endpoint (Contract
  * Coverage). It is the action's first parameter typed with an InputData subclass.
  *
- * This is the one place an action's payload is looked up, so a declared payload for a controller the app doesn't own
- * (Problem P-025) belongs here too.
+ * An action of a controller the app doesn't own (Fortify's) takes no input class: its payload is the one
+ * config/strictly.php declares for it (VendorDeclarations, Problem P-025), which wins over its parameters.
  */
 final class RouteInput
 {
@@ -31,7 +31,7 @@ final class RouteInput
             return null;
         }
 
-        return self::firstInputParameter(new ReflectionMethod($class, $method));
+        return VendorDeclarations::input($class, $method) ?? self::firstInputParameter(new ReflectionMethod($class, $method));
     }
 
     /**

@@ -7,16 +7,18 @@ use Illuminate\Routing\Router;
 use Spatie\LaravelData\Data;
 
 /**
- * The app's JSON endpoints: the routes whose action returns a Data class (RouteResponse). Each is named the same way
+ * The app's JSON endpoints: the routes whose action returns a Data class, or whose vendor action has a declared response
+ * (RouteResponse). Each is named the same way
  * by the Contracts that record its responses (ContractRecorder) and by Contract Coverage, which reports one no feature
  * test calls: `GET /search/stats`.
  */
 final class JsonEndpoints
 {
     /**
-     * Every JSON endpoint the router has, by name, with the Data class it responds with.
+     * Every JSON endpoint the router has, by name, with the Data class it responds with (or the TypeScript type a vendor
+     * action's response is declared as).
      *
-     * @return array<string, class-string<Data>>
+     * @return array<string, class-string<Data>|string>
      */
     public static function all(Router $router): array
     {

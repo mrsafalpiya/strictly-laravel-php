@@ -19,14 +19,15 @@ use StrictlyLaravel\Inertia\Page;
  *
  *     public function search(SearchQueryData $data): SearchResultsData
  *
- * This is the one place a route's response is looked up, so a declared response for a controller the app doesn't own
- * (Problem P-050) belongs here too. A nullable or union return type declares no response: the route's result stays
- * `unknown`.
+ * An action of a controller the app doesn't own (Fortify's two-factor endpoints) declares no return type: its response
+ * is the one config/strictly.php declares for it (VendorDeclarations, Problem P-050), a Data class or, for JSON that
+ * isn't one object, a TypeScript type such as `'string[]'` (typeScript() gives either as TypeScript). A nullable or
+ * union return type declares no response: the route's result stays `unknown`.
  */
 final class RouteResponse
 {
     /**
-     * @return class-string<Data>|null
+     * @return class-string<Data>|string|null a Data class, or a declared TypeScript type
      */
     public static function ofAction(string $controller, string $method): ?string
     {
@@ -36,13 +37,33 @@ final class RouteResponse
             return null;
         }
 
-        return self::declaredData(new ReflectionMethod($class, $method));
+        return VendorDeclarations::response($class, $method) ?? self::declaredData(new ReflectionMethod($class, $method));
+    }
+
+    /**
+     * The TypeScript of a response ofAction() or ofRoute() found: the generated type of a Data class
+     * (`import('@/generated').SearchResultsData`), or a declared TypeScript type as it is.
+     */
+    public static function typeScript(string $response): string
+    {
+        return VendorDeclarations::isTypeScript($response) ? $response : WayfinderTemplates::generatedType($response);
+    }
+
+    /**
+     * The Data class of a response, or null when it is declared as a TypeScript type, whose shapes Contract Coverage
+     * can't observe (Problem P-051).
+     *
+     * @return class-string<Data>|null
+     */
+    public static function dataClass(string $response): ?string
+    {
+        return ! VendorDeclarations::isTypeScript($response) && is_subclass_of($response, Data::class) ? $response : null;
     }
 
     /**
      * The response of the action a route runs, a controller method or a closure.
      *
-     * @return class-string<Data>|null
+     * @return class-string<Data>|string|null a Data class, or a declared TypeScript type
      */
     public static function ofRoute(Route $route): ?string
     {

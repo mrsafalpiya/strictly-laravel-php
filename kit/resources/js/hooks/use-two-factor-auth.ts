@@ -1,4 +1,4 @@
-import { useHttp } from '@inertiajs/react';
+import { useRouteHttp } from '@mrsafalpiya/strictly-laravel/react';
 import { useCallback, useState } from 'react';
 import { qrCode, recoveryCodes, secretKey } from '@/routes/two-factor';
 
@@ -20,8 +20,10 @@ export type UseTwoFactorAuthReturn = {
 export const OTP_MAX_LENGTH = 6;
 
 export const useTwoFactorAuth = (): UseTwoFactorAuthReturn => {
-    // oxlint-disable-next-line strictly/typed-requests -- Fortify's JSON endpoints declare no response type yet (P-050), so useRouteHttp() would only type them unknown
-    const { submit } = useHttp();
+    // Typed by the responses config/strictly.php declares for Fortify's endpoints.
+    const { submit: submitQrCode } = useRouteHttp(qrCode());
+    const { submit: submitSecretKey } = useRouteHttp(secretKey());
+    const { submit: submitRecoveryCodes } = useRouteHttp(recoveryCodes());
 
     const [qrCodeSvg, setQrCodeSvg] = useState<string | null>(null);
     const [manualSetupKey, setManualSetupKey] = useState<string | null>(null);
@@ -49,41 +51,50 @@ export const useTwoFactorAuth = (): UseTwoFactorAuthReturn => {
 
     const fetchQrCode = useCallback(async (): Promise<void> => {
         try {
-            const { svg } = (await submit(qrCode())) as {
-                svg: string;
-                url: string;
-            };
+            const result = await submitQrCode();
 
-            setQrCodeSvg(svg);
+            // Fortify answers `[]` while the user has no two-factor secret.
+            if (!result.ok || Array.isArray(result.response)) {
+                throw new Error('No QR code');
+            }
+
+            setQrCodeSvg(result.response.svg);
         } catch {
             setErrors((prev) => [...prev, 'Failed to fetch QR code']);
             setQrCodeSvg(null);
         }
-    }, [submit]);
+    }, [submitQrCode]);
 
     const fetchSetupKey = useCallback(async (): Promise<void> => {
         try {
-            const { secretKey: key } = (await submit(secretKey())) as {
-                secretKey: string;
-            };
+            const result = await submitSecretKey();
 
-            setManualSetupKey(key);
+            if (!result.ok) {
+                throw new Error('No setup key');
+            }
+
+            setManualSetupKey(result.response.secretKey);
         } catch {
             setErrors((prev) => [...prev, 'Failed to fetch a setup key']);
             setManualSetupKey(null);
         }
-    }, [submit]);
+    }, [submitSecretKey]);
 
     const fetchRecoveryCodes = useCallback(async (): Promise<void> => {
         try {
             setErrors([]);
-            const codes = (await submit(recoveryCodes())) as string[];
-            setRecoveryCodesList(codes);
+            const result = await submitRecoveryCodes();
+
+            if (!result.ok) {
+                throw new Error('No recovery codes');
+            }
+
+            setRecoveryCodesList(result.response);
         } catch {
             setErrors((prev) => [...prev, 'Failed to fetch recovery codes']);
             setRecoveryCodesList([]);
         }
-    }, [submit]);
+    }, [submitRecoveryCodes]);
 
     const fetchSetupData = useCallback(async (): Promise<void> => {
         try {

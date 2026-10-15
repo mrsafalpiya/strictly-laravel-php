@@ -1,6 +1,5 @@
 import { Head, setLayoutProps } from '@inertiajs/react';
 import { TypedForm } from '@mrsafalpiya/strictly-laravel/react';
-import type { TwoFactorChallengeData } from '@/generated';
 import { REGEXP_ONLY_DIGITS } from 'input-otp';
 import { useMemo, useState } from 'react';
 import InputError from '@/components/input-error';
@@ -56,7 +55,7 @@ export default function TwoFactorChallenge() {
             <Head title="Two-factor authentication" />
 
             <div className="space-y-6">
-                <TypedForm<TwoFactorChallengeData>
+                <TypedForm
                     {...store.form()}
                     className="space-y-4"
                     resetOnError

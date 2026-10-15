@@ -1,6 +1,5 @@
 import { Head } from '@inertiajs/react';
 import { TypedForm } from '@mrsafalpiya/strictly-laravel/react';
-import type { ConfirmPasswordData } from '@/generated';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import { Button } from '@/components/ui/button';
@@ -28,10 +27,7 @@ export default function ConfirmPassword() {
                 separator="Or confirm with password"
             />
 
-            <TypedForm<ConfirmPasswordData>
-                {...store.form()}
-                resetOnSuccess={['password']}
-            >
+            <TypedForm {...store.form()} resetOnSuccess={['password']}>
                 {({ processing, errors, field }) => (
                     <div className="space-y-6">
                         <div className="grid gap-2">

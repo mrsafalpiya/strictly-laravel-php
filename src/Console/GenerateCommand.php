@@ -9,6 +9,7 @@ use Spatie\TypeScriptTransformer\Enums\RunnerMode;
 use Spatie\TypeScriptTransformer\Runners\Runner;
 use Spatie\TypeScriptTransformer\TypeScriptTransformerConfig;
 use StrictlyLaravel\Routes\RouteKeys;
+use StrictlyLaravel\Routes\VendorDeclarations;
 use StrictlyLaravel\TypeScript\RawInertiaPropException;
 use StrictlyLaravel\Workarounds\TypeScriptTransformer\UnmappedClassException;
 use StrictlyLaravel\Workarounds\UnparsableFiles;
@@ -37,6 +38,18 @@ final class GenerateCommand extends Command
             $this->components->error('Cannot generate types while a PHP file has a syntax error:');
 
             foreach ($unparsable as $error) {
+                $this->line("  {$error}");
+            }
+
+            return self::FAILURE;
+        }
+
+        $declarations = VendorDeclarations::check($this->laravel->make(Router::class));
+
+        if ($declarations !== []) {
+            $this->components->error('config/strictly.php declares what doesn\'t exist, so these vendor routes would be untyped (Problems P-025, P-050):');
+
+            foreach ($declarations as $error) {
                 $this->line("  {$error}");
             }
 

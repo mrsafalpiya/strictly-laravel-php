@@ -137,6 +137,9 @@
         ],
         "earlierConversions": [
             "501a3853c985a1d3d344c4b857d2057ff2b37a01464a916c15d6873c8ab7027a"
+        ],
+        "adds": [
+            "app/Data/Auth/EnableTwoFactorData.php"
         ]
     },
     "resources/js/components/passkey-item.tsx": {
@@ -173,14 +176,20 @@
         "upstream": [
             "b13bca63e1e259c67300a31f3c76f05419bf70c9efe31163317c3c3a9372046d"
         ],
-        "earlierConversions": []
+        "earlierConversions": [
+            "89e43585641b587fb2319940523363d65c123763108372c9f4b0400ea8c8d731"
+        ],
+        "adds": [
+            "app/Data/Auth/TwoFactorSecretKeyData.php"
+        ]
     },
     "resources/js/pages/auth/login.tsx": {
         "upstream": [
             "c82a6db34b9a2deb47d2d8eb553d16d12619a43dbd313aa618e038cda8bbc22e"
         ],
         "earlierConversions": [
-            "14c3fb863c2b9f76056fb1bd39e1bc935165244aea72ded2ba1cb63f27f5e956"
+            "14c3fb863c2b9f76056fb1bd39e1bc935165244aea72ded2ba1cb63f27f5e956",
+            "55f9ed4c6131b3dee6eff02cb64167f139d4ecf24864a1df7d12e3d50a23dcb9"
         ],
         "adds": [
             "app/Data/Auth/LoginData.php"
@@ -191,10 +200,12 @@
             "30d78c3a675265c2afa4491f7d1aa7ebdeb39459fe86e157dd387d73e0e3762c"
         ],
         "earlierConversions": [
-            "fa7f4f4e742bf7061351e86c6737f4a0f958d9295405600329b569ea18a4d248"
+            "fa7f4f4e742bf7061351e86c6737f4a0f958d9295405600329b569ea18a4d248",
+            "963dec6d998f07cfdff6b69cfe59458935b860889c0479ddd671b0fde6e5658a"
         ],
         "adds": [
-            "app/Data/Auth/ResetPasswordData.php"
+            "app/Data/Auth/ResetPasswordData.php",
+            "app/Data/Auth/ResetPasswordQueryData.php"
         ]
     },
     "resources/js/pages/auth/register.tsx": {
@@ -202,7 +213,8 @@
             "b2444e4b06861e32667d2ec4066a6fe6451ef8fe80ba961ee87c8094dd750d4f"
         ],
         "earlierConversions": [
-            "d14314ff48f0f737e75934262d399bca2488d5c499f3087143f33b4c554c251c"
+            "d14314ff48f0f737e75934262d399bca2488d5c499f3087143f33b4c554c251c",
+            "d8a8febf6a6fea40cf74b97acfd080a3b79df57f248f10cdc76c484cc66dd3f4"
         ],
         "adds": [
             "app/Data/Auth/RegisterData.php"
@@ -221,7 +233,8 @@
             "e44f1262385e9fe0a88130917d89e061b4b9db3933270be8e7bc75ab22d00f0c"
         ],
         "earlierConversions": [
-            "efd53060dfdcfbeb7962289ff35f0262cf191519f8abcf39119fd79a677ca547"
+            "efd53060dfdcfbeb7962289ff35f0262cf191519f8abcf39119fd79a677ca547",
+            "2d4d04e27f64b5e6078f05a98d35ea7961d5b6a8c810ccd0a8f62e9a04448c78"
         ],
         "adds": [
             "app/Data/Auth/ForgotPasswordData.php"
@@ -337,7 +350,9 @@
         "upstream": [
             "566ead7dd75c5461c2795f312c06286a5df1286f7e52b4783ffb187d4a0a126b"
         ],
-        "earlierConversions": [],
+        "earlierConversions": [
+            "875fe5029ff8d2887dabbd8e2d5cfdee01af99618494278a6138be51a7529314"
+        ],
         "adds": [
             "app/Data/Auth/TwoFactorCodeData.php"
         ]
@@ -358,7 +373,9 @@
         "upstream": [
             "3bb751cb822bd690f3ba1e6fd2b95480b2c38a0acc3d097275ec28c5ea85d843"
         ],
-        "earlierConversions": [],
+        "earlierConversions": [
+            "e40f46530946fa77da566e971580568b31c37ebb48837ead805ff825e793d692"
+        ],
         "adds": [
             "app/Data/Auth/TwoFactorChallengeData.php"
         ]
@@ -367,7 +384,9 @@
         "upstream": [
             "e5790b3dfd69b8fe8a37e58d93d73a780bc4718129cd9f15541f22593399a791"
         ],
-        "earlierConversions": [],
+        "earlierConversions": [
+            "4734c651a64a36d03e2c69594ca21c23a0a561a63d4a5d65232b595b2f877419"
+        ],
         "adds": [
             "app/Data/Auth/ConfirmPasswordData.php"
         ]

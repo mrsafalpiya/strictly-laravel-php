@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import type { PageProps, ResetPasswordData } from '@/generated';
+import type { PageProps } from '@/generated';
 import { update } from '@/routes/password';
 
 export default function ResetPassword({
@@ -18,7 +18,7 @@ export default function ResetPassword({
         <>
             <Head title="Reset password" />
 
-            <TypedForm<ResetPasswordData>
+            <TypedForm
                 {...update.form()}
                 transform={(data) => ({ ...data, token, email })}
                 resetOnSuccess={['password', 'password_confirmation']}

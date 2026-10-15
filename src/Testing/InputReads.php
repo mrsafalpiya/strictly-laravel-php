@@ -2,7 +2,9 @@
 
 namespace StrictlyLaravel\Testing;
 
-use Illuminate\Http\Request;
+use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Foundation\Http\FormRequest;
+use ReflectionClass;
 use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 
 /**
@@ -10,6 +12,11 @@ use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
  * `boolean('notify')`, `only('a', 'b')`, `has('a')`, `$request->notify`, … A feature test's request is a
  * TrackedRequest (RecordsContracts), whose accessors report here. ContractRecorder checks the keys against the
  * action's input type.
+ *
+ * A FormRequest is a request object of its own, built from the test's request when an action takes one, so its reads
+ * would go unseen: trackFormRequests() makes the container build a subclass of each one that reports them too
+ * (TracksInputReads). That is how a vendor action's reads are seen (Problem P-025): Fortify reads its login payload
+ * through its own LoginRequest. A final FormRequest can't be subclassed, so its reads stay unseen (Problem P-026).
  *
  * Reading the whole input (`all()`, `input()`, `except()`) names no key, so it records nothing (Problem P-026).
  * Framework plumbing is never recorded:
@@ -25,6 +32,51 @@ final class InputReads
 
     /** @var list<string> */
     private static array $keys = [];
+
+    /**
+     * Build every FormRequest the app resolves from now on as a subclass that reports its reads, unless the app bound
+     * the class itself or it is final.
+     */
+    public static function trackFormRequests(Application $app): void
+    {
+        $app->beforeResolving(function (mixed $abstract) use ($app): void {
+            if (! is_string($abstract) || ! is_subclass_of($abstract, FormRequest::class) || $app->bound($abstract)) {
+                return;
+            }
+
+            $tracked = self::trackedSubclass($abstract);
+
+            if ($tracked !== null) {
+                $app->bind($abstract, $tracked);
+            }
+        });
+    }
+
+    /**
+     * A subclass of the FormRequest that uses TracksInputReads, declared once per class.
+     *
+     * @param  class-string<FormRequest>  $class
+     * @return class-string<FormRequest>|null
+     */
+    private static function trackedSubclass(string $class): ?string
+    {
+        $reflection = new ReflectionClass($class);
+
+        if ($reflection->isFinal() || $reflection->isAbstract() || in_array(TracksInputReads::class, class_uses_recursive($class), true)) {
+            return null;
+        }
+
+        $name = 'Tracked'.substr(sha1($class), 0, 16);
+        $tracked = __NAMESPACE__.'\\Tracked\\'.$name;
+
+        if (! class_exists($tracked, false)) {
+            // A class extending an arbitrary FormRequest can only be declared at runtime.
+            eval(sprintf('namespace %s\Tracked; final class %s extends \%s { use \%s; }', __NAMESPACE__, $name, $class, TracksInputReads::class));
+        }
+
+        /** @var class-string<FormRequest> $tracked */
+        return $tracked;
+    }
 
     /** Forget the keys of the previous request: called as a request reaches its route. */
     public static function reset(): void

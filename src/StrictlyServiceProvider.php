@@ -18,11 +18,15 @@ use StrictlyLaravel\Workarounds\WayfinderQueryVerb;
 
 final class StrictlyServiceProvider extends ServiceProvider
 {
-    public const string CONFIG_STUB = __DIR__.'/../config/strictly.php';
+    /** The package's defaults, merged under the app's config/strictly.php. */
+    public const string CONFIG_DEFAULTS = __DIR__.'/../config/strictly.php';
+
+    /** What `strictly:install` publishes as the app's config/strictly.php: the Base Kit's vendor declarations. */
+    public const string CONFIG_STUB = __DIR__.'/../stubs/strictly.php';
 
     public function register(): void
     {
-        $this->mergeConfigFrom(self::CONFIG_STUB, 'strictly');
+        $this->mergeConfigFrom(self::CONFIG_DEFAULTS, 'strictly');
 
         // Also what `typescript:transform` (and its --watch) runs.
         $this->app->singleton(TypeScriptTransformerConfig::class, TypeGeneration::config(...));

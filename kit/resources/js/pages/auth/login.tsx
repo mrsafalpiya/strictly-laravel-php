@@ -12,7 +12,7 @@ import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 import PasskeyVerify from '@/components/passkey-verify';
-import type { LoginData, PageProps } from '@/generated';
+import type { PageProps } from '@/generated';
 
 export default function Login({
     status,
@@ -24,7 +24,7 @@ export default function Login({
 
             <PasskeyVerify />
 
-            <TypedForm<LoginData>
+            <TypedForm
                 {...store.form()}
                 resetOnSuccess={['password']}
                 className="flex flex-col gap-6"

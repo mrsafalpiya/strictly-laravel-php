@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { login } from '@/routes';
 import { email } from '@/routes/password';
-import type { ForgotPasswordData, PageProps } from '@/generated';
+import type { PageProps } from '@/generated';
 
 export default function ForgotPassword({
     status,
@@ -25,7 +25,7 @@ export default function ForgotPassword({
             )}
 
             <div className="space-y-6">
-                <TypedForm<ForgotPasswordData> {...email.form()}>
+                <TypedForm {...email.form()}>
                     {({ processing, errors, field }) => (
                         <>
                             <div className="grid gap-2">

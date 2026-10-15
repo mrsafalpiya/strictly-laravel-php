@@ -6,6 +6,7 @@ use Spatie\LaravelData\Support\DataConfig;
 use stdClass;
 use StrictlyLaravel\Inertia\GlobalDataClasses;
 use StrictlyLaravel\Inertia\Page;
+use StrictlyLaravel\Routes\RouteResponse;
 
 /**
  * Contract Coverage (Problem P-066): what the recorded Contracts never exercised. `tsc` proves a generated type only
@@ -44,10 +45,11 @@ final readonly class ContractCoverage
      * @param  array<string, class-string<Page>>  $pages  page component => Page class (PageLocations::pages())
      * @param  GlobalDataClasses|null  $global  the shared props and flash Data classes (GlobalDataClasses::in())
      * @param  array<string, class-string>  $formEndpoints  endpoint => input Data class (FormEndpoints::all())
-     * @param  array<string, class-string>  $jsonEndpoints  endpoint => response Data class (JsonEndpoints::all())
+     * @param  array<string, string>  $jsonEndpoints  endpoint => response Data class or declared TypeScript type (JsonEndpoints::all())
+     * @param  list<array{action: string, kind: 'input'|'query', class: class-string, endpoints: list<string>}>  $vendorPayloads  the declared vendor inputs and queries (VendorDeclarations::payloads())
      * @return list<Gap>
      */
-    public function gaps(array $records, array $pages, ?GlobalDataClasses $global = null, array $formEndpoints = [], array $jsonEndpoints = []): array
+    public function gaps(array $records, array $pages, ?GlobalDataClasses $global = null, array $formEndpoints = [], array $jsonEndpoints = [], array $vendorPayloads = []): array
     {
         $shapes = new ShapeCoverage($this->config);
         $unexercised = [
@@ -56,9 +58,88 @@ final readonly class ContractCoverage
             ...$this->flash($records, $global?->flash, $shapes),
             ...$this->formEndpoints($records, $formEndpoints),
             ...$this->jsonEndpoints($records, $jsonEndpoints, $shapes),
+            ...$this->vendorFields($records, $vendorPayloads),
         ];
 
         return [...$unexercised, ...$shapes->gaps()];
+    }
+
+    /**
+     * Problem P-025: a field config/strictly.php declares for a vendor action must be one the vendor uses, or the
+     * declaration types a form with a field the server ignores. A field is used when some test saw the vendor validate
+     * it, read it or report an error for it (the `form` and `query` records of the action's routes). An input whose
+     * endpoint no test submits to is already a form endpoint gap.
+     *
+     * @param  list<stdClass>  $records
+     * @param  list<array{action: string, kind: 'input'|'query', class: class-string, endpoints: list<string>}>  $payloads
+     * @return list<Gap>
+     */
+    private function vendorFields(array $records, array $payloads): array
+    {
+        $used = [];
+
+        foreach ($records as $record) {
+            if (! in_array($record->kind, ['form', 'query'], true) || ! is_string($record->endpoint ?? null)) {
+                continue;
+            }
+
+            $keys = [...(array) ($record->validated ?? []), ...(array) ($record->read ?? []), ...(array) ($record->errors ?? [])];
+            $used[$record->kind][$record->endpoint] ??= [];
+
+            foreach ($keys as $key) {
+                if (is_string($key)) {
+                    $used[$record->kind][$record->endpoint][explode('.', $key, 2)[0]] = true;
+                }
+            }
+        }
+
+        $gaps = [];
+
+        foreach ($payloads as $payload) {
+            $kind = $payload['kind'] === 'input' ? 'form' : 'query';
+            $requested = array_values(array_filter($payload['endpoints'], fn (string $endpoint): bool => isset($used[$kind][$endpoint])));
+            $endpoints = implode(', ', $payload['endpoints']);
+
+            if ($requested === []) {
+                if ($kind === 'query' && $payload['endpoints'] !== []) {
+                    $gaps[] = new Gap(
+                        "{$endpoints}: no feature test requests this vendor route",
+                        [],
+                        "add a feature test that requests {$endpoints} with the query string {$payload['class']} declares",
+                        unexercised: true,
+                    );
+                }
+
+                continue;
+            }
+
+            $seen = [];
+
+            foreach ($requested as $endpoint) {
+                $seen += $used[$kind][$endpoint];
+            }
+
+            foreach ($this->config->getDataClass($payload['class'])->properties as $property) {
+                $name = $property->inputMappedName ?? $property->name;
+
+                if (! isset($seen[$name])) {
+                    $gaps[] = new Gap(
+                        sprintf('%s.%s is declared for a vendor action that never uses it', class_basename($payload['class']), $name),
+                        $requested,
+                        sprintf(
+                            'add a feature test that %s %s with %s, or remove it from the declaration in config/strictly.php if %s doesn\'t validate or read it',
+                            $kind === 'form' ? 'submits to' : 'requests',
+                            implode(', ', $requested),
+                            $name,
+                            $payload['action'],
+                        ),
+                        unexercised: true,
+                    );
+                }
+            }
+        }
+
+        return $gaps;
     }
 
     /**
@@ -236,7 +317,7 @@ final readonly class ContractCoverage
 
     /**
      * @param  list<stdClass>  $records
-     * @param  array<string, class-string>  $endpoints
+     * @param  array<string, string>  $endpoints
      * @return list<Gap>
      */
     private function jsonEndpoints(array $records, array $endpoints, ShapeCoverage $shapes): array
@@ -256,14 +337,19 @@ final readonly class ContractCoverage
                 $gaps[] = new Gap(
                     "{$endpoint}: no feature test calls this JSON endpoint",
                     [],
-                    "add a feature test that calls {$endpoint} and gets a successful {$class} response",
+                    sprintf('add a feature test that calls %s and gets a successful %s response', $endpoint, RouteResponse::dataClass($class) ?? "`{$class}`"),
                     unexercised: true,
                 );
 
                 continue;
             }
 
-            $shapes->observe($class, $responses[$endpoint], new Origin($endpoint, "calls {$endpoint}"));
+            // A vendor response declared as a TypeScript type has no shapes to observe (Problem P-051).
+            $dataClass = RouteResponse::dataClass($class);
+
+            if ($dataClass !== null) {
+                $shapes->observe($dataClass, $responses[$endpoint], new Origin($endpoint, "calls {$endpoint}"));
+            }
         }
 
         return $gaps;

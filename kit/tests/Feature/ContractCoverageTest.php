@@ -52,6 +52,57 @@ test('the security page lists passkeys', function () {
         ->assertInertia(fn (Assert $page) => $page->has('passkeys', 2));
 });
 
+/*
+ * Fortify's routes are typed by what config/strictly.php declares for them. Each one a test submits to or calls is
+ * checked against its declaration: every key Fortify validates, reads or reports an error for must be a field of it,
+ * and every response must match it. These tests reach the ones the behaviour tests don't.
+ */
+
+test('the password can be confirmed', function () {
+    $this->actingAs(User::factory()->create())
+        ->post(route('password.confirm.store'), ['password' => 'password'])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect();
+});
+
+test('the two-factor challenge takes a recovery code', function () {
+    $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
+
+    $user = User::factory()->withTwoFactor()->create();
+
+    $this->post(route('login.store'), ['email' => $user->email, 'password' => 'password'])
+        ->assertRedirect(route('two-factor.login'));
+
+    $this->post(route('two-factor.login.store'), ['recovery_code' => 'recovery-code-1'])
+        ->assertRedirect(route('dashboard', absolute: false));
+
+    $this->assertAuthenticatedAs($user);
+});
+
+test('two-factor authentication is enabled and set up with its JSON endpoints', function () {
+    $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
+
+    $user = User::factory()->create();
+    $this->actingAs($user)->withSession(['auth.password_confirmed_at' => time()]);
+
+    $this->post(route('two-factor.enable'))->assertRedirect();
+
+    $this->getJson(route('two-factor.qr-code'))->assertOk()->assertJsonStructure(['svg', 'url']);
+    $this->getJson(route('two-factor.secret-key'))->assertOk()->assertJsonStructure(['secretKey']);
+    $this->getJson(route('two-factor.recovery-codes'))->assertOk()->assertJsonCount(8);
+
+    // A wrong code is refused with an error on the confirmation form's field.
+    $this->post(route('two-factor.confirm'), ['code' => '000000'])
+        ->assertSessionHasErrors('code', errorBag: 'confirmTwoFactorAuthentication');
+});
+
+test('the password reset page reads the email from its link', function () {
+    $this->skipUnlessFortifyHas(Features::resetPasswords());
+
+    $this->get(route('password.reset', ['token' => 'token', 'email' => 'taylor@example.com']))
+        ->assertInertia(fn (Assert $page) => $page->where('email', 'taylor@example.com'));
+});
+
 test('the appearance page is displayed', function () {
     $this->actingAs(User::factory()->create())
         ->get(route('appearance.edit'))
