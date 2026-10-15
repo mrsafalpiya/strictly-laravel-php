@@ -127,7 +127,8 @@
             "03c333a929f641eaf98a52088fffe30994c294c82bce064af2af86bdc2aa4737"
         ],
         "earlierConversions": [
-            "188de6efbedfa2e86f7f4ae4c52ae38c30c44eb790b93046acae3c3aa6a5ebac"
+            "188de6efbedfa2e86f7f4ae4c52ae38c30c44eb790b93046acae3c3aa6a5ebac",
+            "469d0788d4ab0de7e97208ef7d3a25ee278ac92135fa26aeedb526fd35e4b23f"
         ]
     },
     "resources/js/components/manage-two-factor.tsx": {
@@ -142,7 +143,9 @@
         "upstream": [
             "b09a9db3c8f8ee697e5f8e31cb5990b882a5271535999cdc6544afdb59cf4089"
         ],
-        "earlierConversions": []
+        "earlierConversions": [
+            "3f04634ff35ac43a0a444f754c016d6ee0ec009f41eb13fdedabf251ffb9a9bd"
+        ]
     },
     "resources/js/types/auth.ts": {
         "upstream": [

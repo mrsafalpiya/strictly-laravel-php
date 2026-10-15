@@ -3,7 +3,9 @@
 namespace StrictlyLaravel\Routes;
 
 use Illuminate\Contracts\View\Factory;
+use Illuminate\Support\Collection;
 use Laravel\Wayfinder\GenerateCommand;
+use Laravel\Wayfinder\Parameter;
 use ReflectionClass;
 
 /**
@@ -21,11 +23,17 @@ use ReflectionClass;
  * The package's resources/wayfinder directory is prepended to the `wayfinder` view namespace, so its `method`
  * template is used instead of Wayfinder's. Rather than a copy that would drift from upstream, it renders Wayfinder's
  * own template and adds the brands to each return type (method()); a template it doesn't override (such as
- * `function-arguments`) is still Wayfinder's.
+ * `docblock`) is still Wayfinder's.
  *
- * A Type Boundary that brands routes with more (a JSON endpoint's response) adds its brand in brands(); one that
- * changes the route's arguments adds its own template to resources/wayfinder. A GET action's query class retypes the
- * last argument, `options`, in the rendered output instead (withQueryOptions()).
+ * Its `function-arguments` template does the same for the route parameters: a parameter bound to a model takes only
+ * that model's route key (functionArguments(), Problem P-003):
+ *
+ *     public function show(Project $project)
+ *       → show(args: { project: RouteKey<'Project', number> | { id: RouteKey<'Project', number> } } | …)
+ *
+ * A Type Boundary that brands routes with more (a JSON endpoint's response) adds its brand in brands(). A GET action's
+ * query class retypes the last argument, `options`, in the rendered output (withQueryOptions()), which
+ * functionArguments() leaves as Wayfinder writes it.
  */
 final class WayfinderTemplates
 {
@@ -68,6 +76,68 @@ final class WayfinderTemplates
             '/\): (RouteDefinition|RouteFormDefinition)<([^<>\n]+)> => \(/',
             '): $1<$2>'.str_replace(['\\', '$'], ['\\\\', '\\$'], $brands).' => (',
             $rendered,
+        );
+    }
+
+    /**
+     * Wayfinder's `function-arguments` template rendered with the template's data, with every route parameter bound to
+     * an Eloquent model (its action type-hints `Project $project`) typed as that model's route key,
+     * `RouteKey<'Project', number>` (RouteKeys), instead of any number or any object with an `id`. Everything after the
+     * parameters (the `options` argument) is Wayfinder's.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public static function functionArguments(array $data): string
+    {
+        $rendered = view()->file(self::upstream('function-arguments.blade.ts'), $data)->render();
+
+        $parameters = $data['parameters'] ?? null;
+        $args = $data['args'] ?? null;
+        $options = $data['options'] ?? null;
+
+        if (! $parameters instanceof Collection || ! is_string($args) || ! is_string($options)) {
+            return $rendered;
+        }
+
+        /** @var Collection<int, Parameter> $parameters */
+        if ($parameters->every(fn (Parameter $parameter): bool => RouteKeys::boundModel($parameter->bound) === null)) {
+            return $rendered;
+        }
+
+        $rest = strrpos($rendered, "{$options}?:");
+
+        return $rest === false ? $rendered : self::parameterArguments($parameters, $args).rtrim(substr($rendered, $rest));
+    }
+
+    /**
+     * The route parameters argument as Wayfinder's template writes it (`args: { project: … } | [project: …] | …, `),
+     * with each bound parameter branded.
+     *
+     * Problem P-004: it is written on one line. Wayfinder's output formatter collapses a multi-line argument list only
+     * up to its first `)`, which here is inside `import(…)`, and would mangle the signature.
+     *
+     * @param  Collection<int, Parameter>  $parameters
+     */
+    private static function parameterArguments(Collection $parameters, string $args): string
+    {
+        $type = function (Parameter $parameter): string {
+            $model = RouteKeys::boundModel($parameter->bound);
+            $type = $model === null
+                ? $parameter->types
+                : sprintf("import('%s').RouteKey<'%s', %s>", self::TYPES_MODULE, class_basename($model), $parameter->types);
+
+            return $parameter->key === null ? $type : sprintf('%s | { %s: %s }', $type, $parameter->key, $type);
+        };
+
+        $first = $parameters->first();
+
+        return sprintf(
+            '%s%s: { %s } | [%s]%s, ',
+            $args,
+            $parameters->every(fn (Parameter $parameter): bool => $parameter->optional) ? '?' : '',
+            $parameters->map(fn (Parameter $parameter): string => $parameter->name.($parameter->optional ? '?' : '').': '.$type($parameter))->implode(', '),
+            $parameters->map(fn (Parameter $parameter): string => $parameter->safeName().': '.$type($parameter))->implode(', '),
+            $parameters->count() === 1 && $first !== null ? ' | '.$type($first) : '',
         );
     }
 
