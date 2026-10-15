@@ -28,7 +28,8 @@ Activate the matching skill before you start; each one is a worked example that 
 - A **JSON endpoint** is an action whose declared return type is a Data class (not a Page class).
 - A **broadcast event** implements `ShouldBroadcast`, uses `StrictlyLaravel\Broadcasting\BroadcastsData` and declares `broadcastData(): SomeData`.
 - A `BelongsTo` relation whose foreign key is `NOT NULL` is declared non-nullable on the model, `/** @property-read Project $project */`, so PHPStan doesn't type it `Project|null`. Don't add `?->` or nullable Data properties for it.
-- A route parameter bound to a model type-hints the model (`Project $project`); its key is typed `RouteKey<'Project', number>` in TypeScript.
+- A route parameter bound to a model type-hints the model (`Project $project`); it takes the model's key by the field the route binds it by, `Key<'Project', 'id', number>` in TypeScript (`RouteKey<'Project', number>` names it too).
+- A Data property that holds a model's key declares the model, in input, query and output classes alike: `#[KeyOf(User::class)] public ?int $assigneeId` (`StrictlyLaravel\Data\KeyOf`; `#[KeyOf(Issue::class, 'number')]` for another field than the primary key). It is then `Key<'User', 'id', number>` in TypeScript, so it takes a member's `id` but not an issue's. A Data class built from a model brands its own `id` by itself. A property named `…Id`, `…Ids`, `…_id` or `…_ids`, or validated by an `exists` rule, must declare it (`strictly.keyOf`).
 - A setting or feature flag React needs is a property of `SharedProps`, read with `config()->boolean()`, `config()->string()` and friends. A build-time value is a `VITE_*` variable listed in `.env.example`.
 - Backed enums anywhere in `app/` become string or number unions; their values in case order are `enumValues.ProjectStatus` from `@/generated`.
 
@@ -39,6 +40,7 @@ Activate the matching skill before you start; each one is a worked example that 
 - Requests go through the route-typed helpers of `@mrsafalpiya/strictly-laravel/react`: `<TypedForm {...store.form()}>` with `name={field('name')}`, `useRouteForm(route, defaults)`, `submit(route, data)`, `visit(route)` and `useRouteHttp(route, init)`.
 - Prop names go through `const page = forPage<'projects/index'>()`: `page.only('stats')`, `page.reset('projects')`, `<page.Deferred>`, `<page.WhenVisible>`, `<page.InfiniteScroll>`, `page.optimistic(…)`. Call `usePage()` without a type argument.
 - Broadcasts: `useChannelEvent(channel('projects.{project}', { project }), 'ProjectUpdated', cb)` from `@/generated/broadcasting`. Text: `t('projects.index.title')` from `@/generated/translations`.
+- Model keys come from the Data the server sent (`member.id`, `issue.id`), never from `Number(value)`: look a select's value up among its options' keys.
 - Narrow with checks (`!== null`, `!== undefined`, `switch` on a discriminant) instead of `as` or `!`.
 - Every suppression names its rule and gives a reason: `// oxlint-disable-next-line strictly/typed-requests -- why`, `// @ts-expect-error why`, `@phpstan-ignore strictly.inertiaRender (why)`.
 
@@ -55,8 +57,8 @@ Every page, deferred prop, form endpoint, JSON endpoint and broadcast event need
 | `install` | `strictly:install --check` | A Strictly Laravel hook the app lost or hasn't picked up. Fix: `php artisan strictly:install`. |
 | `generate` | `strictly:generate` | PHP that can't be typed: a property of a class with no TypeScript type, a raw Inertia `DeferProp`, a `{project:slug}` route whose action doesn't type-hint the model. |
 | `lint` | oxlint with the `strictly/*` rules, oxfmt | Inertia's untyped APIs, raw prop-name lists, hard-coded URLs, hand-typed `usePage<T>()`, Echo's `useEcho()`, `useEchoNotification()` and `useEchoModel()`, suppressions without a reason, formatting. |
-| `test` | Pint, PHPStan max with the `strictly.*` rules, Pest | `Inertia::render()`, `Inertia::flash()`, a non-final Data class, an action input, or a nested Data class with `rules()` in one, that isn't an `InputData`, authorizing after validation, a query property without a default, a query read from the request, a broadcast without a Data payload, untyped PHP; plus behaviour and locale parity. |
+| `test` | Pint, PHPStan max with the `strictly.*` rules, Pest | `Inertia::render()`, `Inertia::flash()`, a non-final Data class, an action input, or a nested Data class with `rules()` in one, that isn't an `InputData`, authorizing after validation, a query property without a default, a query read from the request, a model key without `#[KeyOf]`, a broadcast without a Data payload, untyped PHP; plus behaviour and locale parity. |
 | `coverage` | `strictly:coverage --strict` | Contract Coverage: a page, deferred prop, form endpoint, JSON endpoint or broadcast event no test exercises, and a shape no test sent. |
-| `tsc` | `tsc --noEmit` | React using a prop, field, route, query key, error key or translation that doesn't exist; and every Contract the tests recorded checked against its generated type. |
+| `tsc` | `tsc --noEmit` | React using a prop, field, route, query key, error key or translation that doesn't exist, or one model's key where another's is expected; and every Contract the tests recorded checked against its generated type. |
 
 The generated TypeScript (`resources/js/generated`) and the recorded Contracts (`resources/js/__contracts__`) are gitignored: never edit them. `composer dev` regenerates them when you save a file they come from (a Data class, a page, a route, a lang file); `php artisan strictly:generate` does it by hand.
