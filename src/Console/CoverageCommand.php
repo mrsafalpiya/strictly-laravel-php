@@ -5,6 +5,7 @@ namespace StrictlyLaravel\Console;
 use Illuminate\Console\Command;
 use Spatie\LaravelData\Support\DataConfig;
 use StrictlyLaravel\Broadcasting\BroadcastEvents;
+use StrictlyLaravel\Broadcasting\PublicChannels;
 use StrictlyLaravel\Coverage\ContractCoverage;
 use StrictlyLaravel\Coverage\Gap;
 use StrictlyLaravel\Inertia\GlobalDataClasses;
@@ -45,6 +46,7 @@ final class CoverageCommand extends Command
         $formEndpoints = FormEndpoints::all(app('router'));
         $jsonEndpoints = JsonEndpoints::all(app('router'));
         $broadcasts = BroadcastEvents::in([app_path()]);
+        $publicChannels = array_keys(PublicChannels::declared());
 
         if ($records === [] && ($pages !== [] || $formEndpoints !== [] || $jsonEndpoints !== [] || $broadcasts !== [])) {
             $this->line('Contract Coverage: no Contracts are recorded. Run the feature tests first (composer ci:check:test), then this command.');
@@ -61,6 +63,7 @@ final class CoverageCommand extends Command
             $jsonEndpoints,
             VendorDeclarations::payloads(app('router')),
             $broadcasts,
+            $publicChannels,
         );
         $failing = array_filter($gaps, fn (Gap $gap): bool => $strict || $gap->unexercised);
 

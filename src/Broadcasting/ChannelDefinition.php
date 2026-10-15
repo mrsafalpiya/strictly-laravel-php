@@ -23,6 +23,33 @@ final readonly class ChannelDefinition
     ) {}
 
     /**
+     * Whether the server broadcasting on a channel of this name sends to this channel: its prefix is this channel's
+     * visibility (`private-`, `private-encrypted-`, `presence-`, none for a public one), and the rest matches the
+     * pattern as Laravel's broadcaster matches it when it authorizes a subscription, each parameter one segment.
+     */
+    public function matches(string $name): bool
+    {
+        $prefixes = match ($this->visibility) {
+            'public' => [''],
+            'presence' => ['presence-'],
+            default => ['private-encrypted-', 'private-'],
+        };
+        $regex = '/^'.preg_replace('/\\\\\{.*?\\\\\}/', '[^.]+', preg_quote($this->pattern, '/')).'$/';
+
+        foreach ($prefixes as $prefix) {
+            if ($prefix === '' && preg_match('/^(private|presence)-/', $name) === 1) {
+                continue;
+            }
+
+            if (str_starts_with($name, $prefix) && preg_match($regex, substr($name, strlen($prefix))) === 1) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * The names the server broadcasts on for it, as a TypeScript template literal type: `` `private-issues.${string}` ``
      * (and the encrypted variant of a private channel), `` `projects.${string}.public` `` for a public one.
      */

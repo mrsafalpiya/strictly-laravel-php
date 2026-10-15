@@ -34,7 +34,10 @@ use StrictlyLaravel\Routes\RouteResponse;
  *   one some test saw the vendor validate, read or report an error for (`form` and `query` records), and a declared
  *   vendor query must be requested by some test.
  * - broadcasts: some test must broadcast every event whose payload is a Data class (`broadcast` records), or its
- *   payload type was never checked, and the payloads' shapes are observed against that class.
+ *   payload type was never checked, and the payloads' shapes are observed against that class. Some test must also
+ *   broadcast it on every channel its #[BroadcastsOn] declares (the records' `patterns`), or the declaration may be
+ *   stale and its listeners never hear it (Problem P-144). A public channel config/strictly.php declares must be one
+ *   some event's #[BroadcastsOn] names, since listeners are all it is declared for.
  *
  * A Type Boundary that records Contracts of a new kind adds its dimension here: an unexercised Gap for what no test
  * reached, and its Data values fed to the same ShapeCoverage so their shapes are proven too.
@@ -55,9 +58,10 @@ final readonly class ContractCoverage
      * @param  array<string, string>  $jsonEndpoints  endpoint => response Data class or declared TypeScript type (JsonEndpoints::all())
      * @param  list<array{action: string, kind: 'input'|'query', class: class-string, endpoints: list<string>}>  $vendorPayloads  the declared vendor inputs and queries (VendorDeclarations::payloads())
      * @param  array<string, BroadcastEvent>  $broadcasts  the broadcast events by the name Echo listens for them (BroadcastEvents::in())
+     * @param  list<string>  $publicChannels  the patterns of the public channels config/strictly.php declares (PublicChannels::declared())
      * @return list<Gap>
      */
-    public function gaps(array $records, array $pages, ?GlobalDataClasses $global = null, array $formEndpoints = [], array $jsonEndpoints = [], array $vendorPayloads = [], array $broadcasts = []): array
+    public function gaps(array $records, array $pages, ?GlobalDataClasses $global = null, array $formEndpoints = [], array $jsonEndpoints = [], array $vendorPayloads = [], array $broadcasts = [], array $publicChannels = []): array
     {
         $shapes = new ShapeCoverage($this->config);
         $unexercised = [
@@ -68,6 +72,7 @@ final readonly class ContractCoverage
             ...$this->jsonEndpoints($records, $jsonEndpoints, $shapes),
             ...$this->vendorFields($records, $vendorPayloads),
             ...$this->broadcasts($records, $broadcasts, $shapes),
+            ...$this->publicChannels($broadcasts, $publicChannels),
         ];
 
         $this->accepted($records, $shapes);
@@ -399,10 +404,15 @@ final readonly class ContractCoverage
     private function broadcasts(array $records, array $events, ShapeCoverage $shapes): array
     {
         $payloads = [];
+        $patterns = [];
 
         foreach ($records as $record) {
             if ($record->kind === 'broadcast' && is_string($record->event ?? null)) {
                 $payloads[$record->event][] = $record->payload ?? null;
+
+                foreach (is_array($record->patterns ?? null) ? $record->patterns : [] as $pattern) {
+                    $patterns[$record->event][(string) $pattern] = true;
+                }
             }
         }
 
@@ -420,9 +430,48 @@ final readonly class ContractCoverage
                 continue;
             }
 
+            // Problem P-144: a declared channel no test broadcasts the event on may be one it is no longer sent on,
+            // whose listeners would never hear it. A broadcast on a channel the event doesn't declare already fails its
+            // Contract, which `tsc` reports after this step, so the gap would only hide that diagnostic.
+            $stray = array_diff(array_keys($patterns[$key] ?? []), $event->channels) !== [];
+
+            foreach ($stray ? [] : $event->channels as $pattern) {
+                if (! isset($patterns[$key][$pattern])) {
+                    $gaps[] = new Gap(
+                        "{$key} on {$pattern}: no feature test broadcasts this event on this channel",
+                        [],
+                        "add a feature test that broadcasts {$event->class} on it, or remove #[BroadcastsOn('{$pattern}')] if it is never sent there",
+                        unexercised: true,
+                    );
+                }
+            }
+
             $shapes->observe($event->payload, $payloads[$key], new Origin("broadcast {$key}", "broadcasts {$key}"));
         }
 
         return $gaps;
+    }
+
+    /**
+     * Problem P-144: a public channel config/strictly.php declares exists only for listeners to name, so one no event
+     * declares #[BroadcastsOn] for is a channel they would hear nothing on.
+     *
+     * @param  array<string, BroadcastEvent>  $events
+     * @param  list<string>  $publicChannels
+     * @return list<Gap>
+     */
+    private function publicChannels(array $events, array $publicChannels): array
+    {
+        $declared = array_merge([], ...array_values(array_map(fn (BroadcastEvent $event): array => $event->channels, $events)));
+
+        return array_values(array_map(
+            fn (string $pattern): Gap => new Gap(
+                "{$pattern}: no event's #[BroadcastsOn] names this public channel",
+                [],
+                'declare it on the events sent on it, or remove it from public_channels',
+                unexercised: true,
+            ),
+            array_diff($publicChannels, $declared),
+        ));
     }
 }

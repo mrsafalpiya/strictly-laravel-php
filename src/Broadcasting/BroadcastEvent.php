@@ -14,11 +14,13 @@ final readonly class BroadcastEvent
      * @param  string  $name  the name Laravel broadcasts it under (`App\Events\CommentPosted`, or its `broadcastAs()`)
      * @param  string  $key  the name Echo listens for it under, which `useChannelEvent()` takes (`CommentPosted`)
      * @param  class-string<Data>  $payload
+     * @param  list<string>  $channels  the patterns of the channels it is sent on, as its #[BroadcastsOn] declare them
      */
     public function __construct(
         public string $class,
         public string $name,
         public string $key,
         public string $payload,
+        public array $channels,
     ) {}
 }
