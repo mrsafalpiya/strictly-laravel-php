@@ -49,8 +49,10 @@ parameters:
 # sent on with #[BroadcastsOn] (P-144). A presence channel's callback declares the Data class its members share as its
 # return type (P-145). A translation call in PHP names a key of the default locale (or Laravel's own) with exactly its
 # message's params, and picks a pluralised message's form with a choice call (P-137). A Data property that holds a
-# model's key declares the model with #[KeyOf] (P-128). A Data property holds no array shape, list of a union or list of
-# lists, which Contract Coverage can't see inside, but a Data class for the item (P-084).
+# model's key declares the model with #[KeyOf] (P-128). A controller action that answers JSON declares one Data class
+# as its return type, never a list, a collection or a nullable or union type (P-108). A Data property holds no array
+# shape, list of a union or list of lists, which Contract Coverage can't see inside, but a Data class for the item
+# (P-084).
 rules:
     - StrictlyLaravel\PHPStan\DataClassFinalRule
     - StrictlyLaravel\PHPStan\DataNamespaceRule
@@ -64,6 +66,7 @@ rules:
     - StrictlyLaravel\PHPStan\QueryReadRule
     - StrictlyLaravel\PHPStan\InputReadRule
     - StrictlyLaravel\PHPStan\FormRequestRule
+    - StrictlyLaravel\PHPStan\JsonResponseRule
     - StrictlyLaravel\PHPStan\ClosureRouteRule
     - StrictlyLaravel\PHPStan\BroadcastDataRule
     - StrictlyLaravel\PHPStan\BroadcastsOnRule
