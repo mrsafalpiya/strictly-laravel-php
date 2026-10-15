@@ -32,7 +32,7 @@ return [
 ];
 ```
 
-`tests/Feature/LocaleParityTest.php` fails while any locale lacks a key or a `:param` of the default locale's, or has one it doesn't, and while a locale's message is pluralised where the default locale's isn't, or the other way round. The number of forms may differ: each locale has its own plural rule.
+`tests/Feature/LocaleParityTest.php` fails while any locale lacks a key or a `:param` of the default locale's, or has one it doesn't, and while a locale's message is pluralised where the default locale's isn't, or the other way round. The number of forms may differ: each locale has its own plural rule, and one whose rule has a single form (`ja`, `zh`, `ko`, `tr`) needn't pluralise at all.
 
 ## 3. Render it with `t()`, or `choice()` when it is pluralised
 
