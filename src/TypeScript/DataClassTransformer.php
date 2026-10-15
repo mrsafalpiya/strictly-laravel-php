@@ -3,14 +3,20 @@
 namespace StrictlyLaravel\TypeScript;
 
 use Spatie\LaravelTypeScriptTransformer\LaravelData\Transformers\DataClassTransformer as LaravelDataClassTransformer;
+use Spatie\TypeScriptTransformer\Data\TransformationContext;
+use Spatie\TypeScriptTransformer\PhpNodes\PhpClassNode;
+use Spatie\TypeScriptTransformer\Transformed\Transformed;
+use Spatie\TypeScriptTransformer\Transformed\Untransformable;
 use StrictlyLaravel\Routes\RouteKeys;
 use StrictlyLaravel\Workarounds\TypeScriptTransformer\EnumKeyedMaps;
 use StrictlyLaravel\Workarounds\TypeScriptTransformer\HiddenDataProperties;
 use StrictlyLaravel\Workarounds\TypeScriptTransformer\LiteralTypes;
+use StrictlyLaravel\Workarounds\TypeScriptTransformer\TemplateBounds;
 
 /**
  * laravel-typescript-transformer's transformer for laravel-data classes, with the Overlay's fixes to PHPDoc types and
- * to properties, and a model's route keys branded by the model (RouteKeyTypes). It replaces the stock one, so every Data class is transformed the same way.
+ * to properties, a generic Data class's template bounds (TemplateBounds), and a model's route keys branded by the model
+ * (RouteKeyTypes). It replaces the stock one, so every Data class is transformed the same way.
  */
 final class DataClassTransformer extends LaravelDataClassTransformer
 {
@@ -22,6 +28,17 @@ final class DataClassTransformer extends LaravelDataClassTransformer
                 new EnumKeyedMaps,
             ]),
         );
+    }
+
+    public function transform(PhpClassNode $phpClassNode, TransformationContext $context): Transformed|Untransformable
+    {
+        $transformed = parent::transform($phpClassNode, $context);
+
+        if ($transformed instanceof Transformed) {
+            TemplateBounds::apply($transformed, $phpClassNode, $this->transpilePhpStanTypeToTypeScriptTypeAction);
+        }
+
+        return $transformed;
     }
 
     protected function classPropertyProcessors(): array

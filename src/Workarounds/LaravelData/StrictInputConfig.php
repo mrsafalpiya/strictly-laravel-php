@@ -12,9 +12,10 @@ use Spatie\LaravelData\RuleInferrers\RequiredRuleInferrer;
  * published config/data.php or not, so the rules inferred from a Data class's property types match its generated
  * TypeScript and its iterables hold what their types say:
  *
- * - the rule inferrers IntegerRuleInferrer (P-019), PresentArrayRuleInferrer (P-018) and ListItemsRuleInferrer (P-022)
- *   run right after laravel-data's BuiltInTypesRuleInferrer, before AttributesRuleInferrer, so an attribute on the
- *   property still has the last word; LiteralRuleInferrer (P-020) runs last;
+ * - the rule inferrers IntegerRuleInferrer (P-019), PresentArrayRuleInferrer (P-018), ListItemsRuleInferrer (P-022)
+ *   and DateFormatRuleInferrer (P-075) run right after laravel-data's BuiltInTypesRuleInferrer, before
+ *   AttributesRuleInferrer, so an attribute on the property still has the last word; LiteralRuleInferrer (P-020) runs
+ *   last;
  *
  * - Problem P-021: `features.cast_and_transform_iterables` is turned on, so `/** @var list<IssueStatus> *\/ array`
  *   holds enums, not the raw strings laravel-data 4 leaves by default (upstream: off by default until its next major).
@@ -28,6 +29,7 @@ final class StrictInputConfig
         IntegerRuleInferrer::class,
         PresentArrayRuleInferrer::class,
         ListItemsRuleInferrer::class,
+        DateFormatRuleInferrer::class,
     ];
 
     public static function apply(Repository $config): void

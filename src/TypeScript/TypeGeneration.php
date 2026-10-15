@@ -12,6 +12,7 @@ use Spatie\TypeScriptTransformer\TypeScriptTransformerConfigFactory;
 use Spatie\TypeScriptTransformer\Writers\FlatModuleWriter;
 use StrictlyLaravel\Inertia\PageLocations;
 use StrictlyLaravel\Workarounds\TypeScriptTransformer\InertiaPropWrappers;
+use StrictlyLaravel\Workarounds\TypeScriptTransformer\MixedAsUnknown;
 use StrictlyLaravel\Workarounds\TypeScriptTransformer\PaginatorTypes;
 use StrictlyLaravel\Workarounds\TypeScriptTransformer\UnmappedClassCheck;
 use StrictlyLaravel\Workarounds\TypeScriptTransformer\UnmappedClassTypes;
@@ -59,6 +60,7 @@ final class TypeGeneration
             ->provider(new InertiaConfigProvider([$app->path()]))
             ->provider(new ViteEnvTypes($app->basePath('.env.example')))
             ->providedVisitorHook(new InertiaPropWrappers)
+            ->providedVisitorHook(new MixedAsUnknown)
             ->connectedVisitorHook(new RawInertiaPropCheck)
             ->connectedVisitorHook(new UnmappedClassCheck)
             ->writer(new FlatModuleWriter('index.ts'))

@@ -20,7 +20,7 @@ Activate the matching skill before you start; each one is a worked example that 
 ## PHP
 
 - Everything React receives is a **Data class** (spatie/laravel-data): `final`, in the `App\Data` namespace, which holds only Data classes. Build it from a model with a named constructor, `ProjectData::fromModel($project)`. Send Data, never models, arrays or JsonResources.
-- An array property names its item type: `@param array<int, ProjectData> $projects` (or `@var`). Dates are `CarbonInterface` (an ISO string in TypeScript).
+- An array property names its item type: `@param array<int, ProjectData> $projects` (or `@var`). Dates are `CarbonInterface` (an ISO string in TypeScript, validated in an input against the format its cast reads, DATE_ATOM by default); a calendar date is `#[DateOnly]`.
 - A page is rendered by returning its **Page class** (`App\Pages\Projects\IndexPage` is the page `projects/index`) from a controller action. `php artisan make:page projects/index` creates the class and its component.
 - Props every page gets are properties of `App\Data\SharedProps`. Flash with `FlashData::toast(ToastType::Success, '…')`; add a property to `App\Data\FlashData` to flash something new.
 - A request's payload is an **input class**: the action type-hints a Data class extending `StrictlyLaravel\Data\InputData`, which validates the request with rules inferred from its types. Authorize in the input's `public static function authorize(...): bool`. Its `authorize()` and `rules()` receive the route's bound models by parameter name (`authorize(Project $project)`), so never read `$request->route()` there. Never take a FormRequest, and never read input from the request (`$request->input()`, `$request->name`) in an action without an input class.
@@ -43,7 +43,7 @@ Activate the matching skill before you start; each one is a worked example that 
 - Prop names go through `const page = forPage<'projects/index'>()`: `page.only('stats')`, `page.reset('projects')`, `<page.Deferred>`, `<page.WhenVisible>`, `<page.InfiniteScroll>`, `page.optimistic(…)`. Call `usePage()` without a type argument.
 - Broadcasts: `useChannelEvent(channel('projects.{project}', { project }), 'ProjectUpdated', cb)` from `@/generated/broadcasting`, and a presence channel's members with `usePresence(channel('projects.{project}.viewers', { project }), { here, joining, leaving })`. Text: `t('projects.index.title')` from `@/generated/translations`, and `choice('projects.index.count', count)` for a pluralised (`|`) message. In PHP, `__('projects.flash.saved', ['key' => $key])` and `trans_choice(…)` are checked the same way.
 - Model keys come from the Data the server sent (`member.id`, `issue.id`), never from `Number(value)`: look a select's value up among its options' keys.
-- Narrow with checks (`!== null`, `!== undefined`, `switch` on a discriminant) instead of `as` or `!`.
+- Narrow with checks (`!== null`, `!== undefined`, `switch` on a discriminant) instead of `as` or `!`. A PHP `mixed` is `unknown`: narrow it with `typeof` or a type guard before reading it, or give the PHP property a precise type.
 - Every suppression names its rule and gives a reason: `// oxlint-disable-next-line strictly/typed-requests -- why`, `// @ts-expect-error why`, `@phpstan-ignore strictly.inertiaRender (why)`.
 
 ## Tests

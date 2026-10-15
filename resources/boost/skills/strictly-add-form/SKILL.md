@@ -8,7 +8,7 @@ The worked example adds a form that creates a `Project` (`name`, nullable `descr
 
 ## 1. Write the input class
 
-An input class extends `StrictlyLaravel\Data\InputData`. Its types are the rules: non-null is required, `int` is `integer`, an array is `present`, each item of a typed list is validated, a literal union is `in:`. Add attributes for anything else:
+An input class extends `StrictlyLaravel\Data\InputData`. Its types are the rules: non-null is required, `int` is `integer`, an array is `present`, each item of a typed list is validated, a literal union is `in:`, a date must be in the format its cast reads. Add attributes for anything else:
 
 ```php title="app/Data/StoreProjectData.php"
 final class StoreProjectData extends InputData
@@ -23,6 +23,7 @@ final class StoreProjectData extends InputData
 ```
 
 - A nested object is a property typed by a plain `Data` class; a list is `public array $tasks` with `@param list<TaskInputData> $tasks` on the constructor. A nested class that has `rules()` extends `InputData` too, or its `rules()` replace the ones inferred from its types.
+- A timestamp is a `CarbonImmutable` (or `CarbonInterface`) property, sent as `2026-10-14T09:30:00+00:00` (DATE_ATOM, what the server sends back; `toISOString()`'s milliseconds get a 422); a calendar date is `#[DateOnly]`, sent as `2026-10-14`. Their format rule is inferred, so don't add `#[DateFormat]`.
 - For an update where a field may be left out, type it `Optional|string` (`Spatie\LaravelData\Optional`); the key is then optional in TypeScript.
 - Extra rules go in `public static function rules(): array`; they are merged with the inferred ones.
 - A field that holds a model's key declares the model: `#[KeyOf(User::class)] public ?int $assigneeId`, or `#[KeyOf(Label::class)] public array $labelIds` for a list (`StrictlyLaravel\Data\KeyOf`; `#[KeyOf(Issue::class, 'number')]` for a key by another field). TypeScript then takes only that model's key for it, so fill it from the Data the server sent (`member.id`); for a select, look its string value up among the options' keys instead of `Number(value)`. Keep the `exists` rule: it checks the row exists for this user.
