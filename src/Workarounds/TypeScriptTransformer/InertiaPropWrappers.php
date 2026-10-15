@@ -22,6 +22,9 @@ use Spatie\TypeScriptTransformer\Visitor\VisitorOperation;
  * writes `never<…>`. This replaces the generic with its argument for the wrappers whose value is always sent:
  * `ScrollProp`, `MergeProp` and `OnceProp`. Deferred and optional props are absent on the first load, so they stay
  * unmapped and fail generation (P-061, P-043). Delete this class once upstream unwraps generic wrappers.
+ *
+ * It runs after the wrapper's argument has been visited: a visitor that replaces a node before visiting it skips the
+ * replacement's children, so `OnceProp<array<string, mixed>>` would keep the `any` that MixedAsUnknown removes (P-062).
  */
 final class InertiaPropWrappers extends VisitorClosure
 {
@@ -30,7 +33,7 @@ final class InertiaPropWrappers extends VisitorClosure
 
     public function __construct()
     {
-        parent::__construct(fn () => null, [TypeScriptGeneric::class], VisitorClosureType::Before);
+        parent::__construct(fn () => null, [TypeScriptGeneric::class], VisitorClosureType::After);
     }
 
     public function run(TypeScriptNode $node, array &$metadata): VisitorOperation
