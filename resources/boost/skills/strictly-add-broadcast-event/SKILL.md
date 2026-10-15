@@ -116,7 +116,7 @@ export function ProjectTitle({ project }: { project: ProjectData }) {
 
 A public channel is `publicChannel('status')`, or `publicChannel('projects.{project}.public', { project })` with its parameters filled as `channel()` fills them; it takes only a channel `config/strictly.php` declares.
 
-Follow a presence channel's members with `usePresence(channel, { here, joining, leaving })`: each callback is optional and receives the Data class the channel's callback returns. Don't use Echo's `usePresenceChannel()`, whose members are typed by hand:
+Follow a presence channel's members with `usePresence(channel, { here, joining, leaving })`: each callback is optional and receives the Data class the channel's callback returns. Don't use Echo's `usePresenceChannel()` or `useChannel(name, 'presence')`, whose members are typed by hand:
 
 ```tsx title="resources/js/components/projects/project-viewers.tsx"
 import { useState } from 'react';
@@ -177,6 +177,7 @@ Done when `composer ci:check` passes. `php artisan reverb:start` serves the even
 - `ci:check:lint` fails with ``Echo's `useEcho()` takes any event name and a hand-typed payload``: listen with `useChannelEvent()` from `@/generated/broadcasting`.
 - `ci:check:lint` fails with ``Echo's `useEchoNotification()` reads a broadcast notification's hand-typed payload``: broadcast an app event with a `BroadcastsData` payload alongside the notification and listen for it with `useChannelEvent()`; the same for `useEchoModel()` and a model change.
 - `ci:check:lint` fails with ``Echo's `usePresenceChannel()` hands out a presence channel whose members are typed by hand``: follow the members with `usePresence()` from `@/generated/broadcasting`.
+- `ci:check:lint` fails with ``Echo's `useChannel(name, 'presence')` hands out a presence channel whose members are typed by hand``: follow the members with `usePresence()` from `@/generated/broadcasting`.
 - `ci:check:tsc` fails with `error TS2345: Argument of type '"project.{project}"' is not assignable to parameter of type '"projects.{project}"'.`: the pattern isn't defined in `routes/channels.php`.
 - `ci:check:tsc` fails with `error TS2345: Argument of type '"ProjectUpdatd"' is not assignable to parameter of type '"ProjectUpdated"'.`: use the event's Echo name.
 - `ci:check:tsc` fails with `error TS2339: Property 'title' does not exist on type 'ProjectData'.`: the callback reads a field the payload class doesn't have.
