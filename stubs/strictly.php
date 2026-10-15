@@ -84,4 +84,17 @@ return [
         RecoveryCodeController::class.'@index' => 'string[]',
     ],
 
+    /*
+    | The app's public broadcast channels, which need no definition in
+    | routes/channels.php: a name (`'status'`), or a pattern whose
+    | `{parameters}` the client fills (`'projects.{project}.public'`). Key a
+    | pattern by itself with the models its parameters hold the route key
+    | of (`'projects.{project}.public' => ['project' => Project::class]`)
+    | to type them as that key, as `channel()` types a bound parameter.
+    | `publicChannel()` from `@/generated/broadcasting` takes only these,
+    | and an event broadcast on any other public channel fails its Contract.
+    */
+
+    'public_channels' => [],
+
 ];

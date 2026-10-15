@@ -13,6 +13,7 @@ use Spatie\TypeScriptTransformer\TypeScriptTransformerConfig;
 use StrictlyLaravel\Broadcasting\BroadcastChannels;
 use StrictlyLaravel\Broadcasting\BroadcastEvents;
 use StrictlyLaravel\Broadcasting\BroadcastingModule;
+use StrictlyLaravel\Broadcasting\PublicChannels;
 use StrictlyLaravel\Routes\RouteKeys;
 use StrictlyLaravel\Routes\VendorDeclarations;
 use StrictlyLaravel\Translations\Translations;
@@ -82,6 +83,18 @@ final class GenerateCommand extends Command
             TranslationsModule::write(Translations::ofApp(), TypeGeneration::outputDirectory(), $files);
         } catch (RuntimeException $exception) {
             $this->components->error('Cannot generate the translations: '.$exception->getMessage());
+
+            return self::FAILURE;
+        }
+
+        $publicChannels = PublicChannels::check(BroadcastChannels::defined($this->laravel));
+
+        if ($publicChannels !== []) {
+            $this->components->error('config/strictly.php declares public channels that don\'t name one, so publicChannel() would take any name (Problem P-143):');
+
+            foreach ($publicChannels as $error) {
+                $this->line("  {$error}");
+            }
 
             return self::FAILURE;
         }
