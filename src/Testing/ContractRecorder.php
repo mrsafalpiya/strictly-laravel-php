@@ -89,9 +89,13 @@ use Symfony\Component\HttpFoundation\Response;
  * query keys the action validated and read the same way, under resources/js/__contracts__/_queries, checked against the
  * query class.
  *
- * Each Contract has a `.json` sidecar next to it describing what was recorded (`kind` is `page`, `flash`, `form`, `query` or `json`; a
- * partial reload's page record has `partial`), which Contract Coverage reads (records(), `strictly:coverage`). A `form`
- * record of a request that was neither refused nor validated nor read anything has only the sidecar.
+ * A vendor action's input, query class and response are the ones config/strictly.php declares for it (Problems P-025,
+ * P-050), and a FormRequest the action takes reports its reads too (InputReads::trackFormRequests()).
+ *
+ * Each Contract has a `.json` sidecar next to it describing what was recorded (`kind` is `page`, `flash`, `form`,
+ * `query` or `json`; a partial reload's page record has `partial`), which Contract Coverage reads (records(),
+ * `strictly:coverage`). A `form` or `query` record of a request that was neither refused nor validated nor read
+ * anything has only the sidecar.
  *
  * The directory is gitignored and type-checked by `tsc` (the tsconfig includes resources/js), which `ci:check` runs
  * after the tests. A test run that isn't parallel starts from an empty directory, so a Contract no test produces any more
@@ -129,7 +133,8 @@ final class ContractRecorder
 
     /**
      * Every recorded Contract's sidecar, decoded with objects as stdClass (so `{}` and `[]` stay apart), in no
-     * particular order: what Contract Coverage reads. Each has a `kind` (`page`, `flash` or `form`) and the payload it recorded.
+     * particular order: what Contract Coverage reads. Each has a `kind` (`page`, `flash`, `form`, `query` or `json`) and
+     * the payload it recorded.
      *
      * @return list<stdClass>
      */

@@ -25,12 +25,15 @@ use StrictlyLaravel\Routes\RouteResponse;
  * - form endpoints: some test must send a request to every route whose action takes an input Data class (`form`
  *   records), or the validation errors it can return were never checked against the input's fields.
  *
- * - JSON endpoints: some test must get a successful response from every route whose action returns a Data class
- *   (`json` records), and the responses' shapes are observed against that class.
+ * - JSON endpoints: some test must get a successful response from every route whose action returns a Data class, or
+ *   whose vendor action has a declared response (`json` records), and the responses' shapes are observed against a
+ *   Data class (a response declared as a TypeScript type has none to observe, Problem P-051).
+ * - declared vendor fields: every field config/strictly.php declares for a vendor action's input or query must be
+ *   one some test saw the vendor validate, read or report an error for (`form` and `query` records), and a declared
+ *   vendor query must be requested by some test.
  *
- * A Type Boundary that records Contracts of a new kind (declared
- * vendor fields, broadcasts) adds its dimension here: an unexercised Gap for what no test reached, and its Data
- * values fed to the same ShapeCoverage so their shapes are proven too.
+ * A Type Boundary that records Contracts of a new kind (broadcasts) adds its dimension here: an unexercised Gap for
+ * what no test reached, and its Data values fed to the same ShapeCoverage so their shapes are proven too.
  */
 final readonly class ContractCoverage
 {
