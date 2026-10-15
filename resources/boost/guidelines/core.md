@@ -41,7 +41,7 @@ Activate the matching skill before you start; each one is a worked example that 
 - Prop names go through `const page = forPage<'projects/index'>()`: `page.only('stats')`, `page.reset('projects')`, `<page.Deferred>`, `<page.WhenVisible>`, `<page.InfiniteScroll>`, `page.optimistic(…)`. Call `usePage()` without a type argument.
 - Broadcasts: `useChannelEvent(channel('projects.{project}', { project }), 'ProjectUpdated', cb)` from `@/generated/broadcasting`. Text: `t('projects.index.title')` from `@/generated/translations`, and `choice('projects.index.count', count)` for a pluralised (`|`) message. In PHP, `__('projects.flash.saved', ['key' => $key])` and `trans_choice(…)` are checked the same way.
 - Model keys come from the Data the server sent (`member.id`, `issue.id`), never from `Number(value)`: look a select's value up among its options' keys.
-- Narrow with checks (`!== null`, `!== undefined`, `switch` on a discriminant) instead of `as` or `!`.
+- Narrow with checks (`!== null`, `!== undefined`, `switch` on a discriminant) instead of `as` or `!`. A PHP `mixed` is `unknown`: narrow it with `typeof` or a type guard before reading it, or give the PHP property a precise type.
 - Every suppression names its rule and gives a reason: `// oxlint-disable-next-line strictly/typed-requests -- why`, `// @ts-expect-error why`, `@phpstan-ignore strictly.inertiaRender (why)`.
 
 ## Tests
