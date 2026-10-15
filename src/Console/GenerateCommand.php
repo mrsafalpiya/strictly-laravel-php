@@ -22,6 +22,7 @@ use StrictlyLaravel\Translations\TranslationsModule;
 use StrictlyLaravel\TypeScript\RawInertiaPropException;
 use StrictlyLaravel\TypeScript\TypeGeneration;
 use StrictlyLaravel\Workarounds\TypeScriptTransformer\DuplicateTypeNamesException;
+use StrictlyLaravel\Workarounds\TypeScriptTransformer\UnloadableClasses;
 use StrictlyLaravel\Workarounds\TypeScriptTransformer\UnmappedClassException;
 use StrictlyLaravel\Workarounds\UnparsableFiles;
 use StrictlyLaravel\Workarounds\WayfinderQueryVerb;
@@ -56,6 +57,14 @@ final class GenerateCommand extends Command
 
         if ($declarations !== []) {
             return $this->failWith('config/strictly.php declares what doesn\'t exist, so these vendor routes would be untyped (Problems P-025, P-050):', $declarations);
+        }
+
+        // After the vendor declarations: this loads every app class, and PHP's class names are case-insensitive, so a
+        // declared class whose name differs only in case from a loaded one would then pass their class_exists().
+        $unloadable = UnloadableClasses::in([$this->laravel->path()], $this->laravel->basePath());
+
+        if ($unloadable !== []) {
+            return $this->failWith('Cannot generate types while a class that gets one can\'t be loaded, so its type would be missing (Problem P-073):', $unloadable);
         }
 
         try {
