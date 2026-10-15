@@ -24,7 +24,7 @@ Activate the matching skill before you start; each one is a worked example that 
 - A page is rendered by returning its **Page class** (`App\Pages\Projects\IndexPage` is the page `projects/index`) from a controller action. `php artisan make:page projects/index` creates the class and its component.
 - Props every page gets are properties of `App\Data\SharedProps`. Flash with `FlashData::toast(ToastType::Success, '…')`; add a property to `App\Data\FlashData` to flash something new.
 - A request's payload is an **input class**: the action type-hints a Data class extending `StrictlyLaravel\Data\InputData`, which validates the request with rules inferred from its types. Authorize in the input's `public static function authorize(...): bool`.
-- A GET's query string is a **query class** extending `StrictlyLaravel\Data\QueryData`, every property with a default.
+- A GET's query string is a **query class** extending `StrictlyLaravel\Data\QueryData`, every property with a default. A route whose action takes none takes no query string, and a controller reads keys only from its query class, never with `$request->query()`.
 - A **JSON endpoint** is an action whose declared return type is a Data class (not a Page class).
 - A **broadcast event** implements `ShouldBroadcast`, uses `StrictlyLaravel\Broadcasting\BroadcastsData` and declares `broadcastData(): SomeData`.
 - A `BelongsTo` relation whose foreign key is `NOT NULL` is declared non-nullable on the model, `/** @property-read Project $project */`, so PHPStan doesn't type it `Project|null`. Don't add `?->` or nullable Data properties for it.
@@ -55,7 +55,7 @@ Every page, deferred prop, form endpoint, JSON endpoint and broadcast event need
 | `install` | `strictly:install --check` | A Strictly Laravel hook the app lost or hasn't picked up. Fix: `php artisan strictly:install`. |
 | `generate` | `strictly:generate` | PHP that can't be typed: a property of a class with no TypeScript type, a raw Inertia `DeferProp`, a `{project:slug}` route whose action doesn't type-hint the model. |
 | `lint` | oxlint with the `strictly/*` rules, oxfmt | Inertia's untyped APIs, raw prop-name lists, hard-coded URLs, hand-typed `usePage<T>()`, Echo's `useEcho()`, `useEchoNotification()` and `useEchoModel()`, suppressions without a reason, formatting. |
-| `test` | Pint, PHPStan max with the `strictly.*` rules, Pest | `Inertia::render()`, `Inertia::flash()`, a non-final Data class, an action input that isn't an `InputData`, authorizing after validation, a query property without a default, a broadcast without a Data payload, untyped PHP; plus behaviour and locale parity. |
+| `test` | Pint, PHPStan max with the `strictly.*` rules, Pest | `Inertia::render()`, `Inertia::flash()`, a non-final Data class, an action input, or a nested Data class with `rules()` in one, that isn't an `InputData`, authorizing after validation, a query property without a default, a query read from the request, a broadcast without a Data payload, untyped PHP; plus behaviour and locale parity. |
 | `coverage` | `strictly:coverage --strict` | Contract Coverage: a page, deferred prop, form endpoint, JSON endpoint or broadcast event no test exercises, and a shape no test sent. |
 | `tsc` | `tsc --noEmit` | React using a prop, field, route, query key, error key or translation that doesn't exist; and every Contract the tests recorded checked against its generated type. |
 
