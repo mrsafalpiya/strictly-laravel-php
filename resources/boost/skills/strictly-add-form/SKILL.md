@@ -50,7 +50,7 @@ final class StoreProjectData extends InputData
     Route::post('projects', [ProjectController::class, 'store'])->name('projects.store');
 ```
 
-Read the payload only through `$data`. Never take a FormRequest (`strictly.formRequest`): its `rules()` and `authorize()` belong in the input class. An action without an input class reads no input from the request (`strictly.inputRead`), since nothing types it. Route the form to a controller action, never a closure: Wayfinder types a route function only from a controller action, so a closure route may neither take an input class nor read input (`strictly.closureRoute`). Every validation error must be a field of the input; a refusal that isn't about a field is a toast: `FlashData::toast(ToastType::Error, '…'); return back();`.
+Read the payload only through `$data`. Never take a FormRequest (`strictly.formRequest`): its `rules()` and `authorize()` belong in the input class. An action without an input class reads no input from the request (`strictly.inputRead`), since nothing types it. Route the form to a controller action, never a closure: Wayfinder types a route function only from a controller action, so a closure route may neither take an input class (`strictly.closureRoute`) nor read input (`strictly.inputRead`). Every validation error must be a field of the input; a refusal that isn't about a field is a toast: `FlashData::toast(ToastType::Error, '…'); return back();`.
 
 ## 3. Build the form from the route
 
