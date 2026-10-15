@@ -1,0 +1,246 @@
+<?php
+
+namespace StrictlyLaravel\PHPStan;
+
+use PhpParser\Node;
+use PHPStan\Analyser\Scope;
+use PHPStan\Node\ClassPropertyNode;
+use PHPStan\Rules\IdentifierRuleError;
+use PHPStan\Rules\Rule;
+use PHPStan\Rules\RuleErrorBuilder;
+use PHPStan\Type\Generic\TemplateType;
+use PHPStan\Type\ObjectType;
+use PHPStan\Type\Type;
+use PHPStan\Type\UnionType;
+use PHPStan\Type\VerbosityLevel;
+use Spatie\LaravelData\Attributes\Hidden;
+use Spatie\LaravelData\Contracts\BaseData;
+
+/**
+ * Problem P-084: Contract Coverage reads a property's shapes from laravel-data's description of its Data class, which
+ * knows one item type per list or map and nothing inside a PHPDoc array shape. So a public property of a Data class
+ * (Page, input and query classes included) may not hold, at any depth:
+ *
+ * - an array shape (`array{lead: ?string}`), whose fields' shapes no test has to send;
+ * - a list or map whose item type is a union (`list<IssueData|MilestoneData>`, `list<int|string>`, `list<?string>`),
+ *   whose members no test has to send (and laravel-data reads every item of a union of Data classes as the first);
+ * - a list or map of lists or maps (`list<list<MemberData>>`), whose inner items Contract Coverage never walks.
+ *
+ * Each is modelled as a Data class instead, whose properties Contract Coverage checks. For input and query classes the
+ * same shapes are also unvalidated: laravel-data infers only `array` for them. Items of literals of one scalar type
+ * (`list<'low'|'high'>`) or of `int|float` stay allowed, since Contract Coverage counts a scalar union's members by
+ * their TypeScript type (`string`, `number`) at the top level too, and so do items of a template type with a union
+ * bound, which each use of the class decides.
+ *
+ * @implements Rule<ClassPropertyNode>
+ */
+final class DataShapeRule implements Rule
+{
+    public function getNodeType(): string
+    {
+        return ClassPropertyNode::class;
+    }
+
+    /**
+     * @return list<IdentifierRuleError>
+     */
+    public function processNode(Node $node, Scope $scope): array
+    {
+        $class = $node->getClassReflection();
+        $name = $node->getName();
+
+        if (! $node->isPublic() || $node->isStatic() || ! $class->implementsInterface(BaseData::class)
+            || ! $class->hasNativeProperty($name)) {
+            return [];
+        }
+
+        $native = $class->getNativeReflection();
+
+        if ($native->hasProperty($name) && $native->getProperty($name)->getAttributes(Hidden::class) !== []) {
+            return []; // never sent, so never generated nor covered
+        }
+
+        $problem = $this->problem($class->getNativeProperty($name)->getReadableType(), item: false);
+
+        if ($problem === null) {
+            return [];
+        }
+
+        [$kind, $type] = $problem;
+        $property = "{$class->getName()}::\${$name}";
+        $described = $type->describe(VerbosityLevel::value());
+
+        [$message, $tip] = match ($kind) {
+            'shape' => [
+                "{$property} has an array shape ({$described}) in its type, inside which Contract Coverage can't see.",
+                'Model the shape as a Data class, whose every property Contract Coverage checks: list<ProjectSummaryData> with public ?string $lead on ProjectSummaryData, instead of list<array{lead: ?string}>.',
+            ],
+            'data union' => [
+                "{$property} holds items of a union type ({$described}), whose members Contract Coverage can't tell apart.",
+                "Model the item as a Data class whose one property is the union, its variants told apart by a literal discriminant (/** @var 'issue' */ public string \$type): list<FocusItemData> with public IssueData|MilestoneData \$subject on FocusItemData. Contract Coverage checks each variant of such a property (P-132).",
+            ],
+            'union' => [
+                "{$property} holds items of a union type ({$described}), whose members Contract Coverage can't tell apart.",
+                'Model the item as a Data class whose property has the union type: list<EstimateData> with public int|string $value on EstimateData, whose every member Contract Coverage checks.',
+            ],
+            default => [
+                "{$property} holds items that are lists or maps themselves ({$described}), inside which Contract Coverage can't see.",
+                'Model the item as a Data class that holds the inner list or map: list<ColumnData> with /** @var list<IssueData> */ public array $issues on ColumnData, instead of list<list<IssueData>>.',
+            ],
+        };
+
+        return [RuleErrorBuilder::message($message)->identifier('strictly.dataShape')->tip($tip)->build()];
+    }
+
+    /**
+     * The first shape Contract Coverage can't see in a type, and the part of the type that is it: an array shape
+     * anywhere comes first, then an item that is a union, then an item that is a list or map.
+     *
+     * @return array{'shape'|'data union'|'union'|'nested', Type}|null
+     */
+    private function problem(Type $type, bool $item): ?array
+    {
+        $shape = $this->shape($type);
+
+        if ($shape !== null) {
+            return ['shape', $shape];
+        }
+
+        if ($item && ! $type instanceof TemplateType && $type instanceof UnionType && count($this->kinds($type)) > 1) {
+            return [$this->allData($type) ? 'data union' : 'union', $type];
+        }
+
+        foreach ($this->members($type) as $member) {
+            if ($item && $this->isCollection($member)) {
+                return ['nested', $member];
+            }
+
+            $problem = $this->isCollection($member)
+                ? $this->problem($member->getIterableValueType(), item: true)
+                : $this->inGenerics($member);
+
+            if ($problem !== null) {
+                return $problem;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * A problem in a wrapper's type arguments (`ScrollProp<…>`, a generic Data class), which are values, not items.
+     *
+     * @return array{'shape'|'data union'|'union'|'nested', Type}|null
+     */
+    private function inGenerics(Type $type): ?array
+    {
+        foreach ($this->typeArguments($type) as $argument) {
+            $problem = $this->problem($argument, item: false);
+
+            if ($problem !== null) {
+                return $problem;
+            }
+        }
+
+        return null;
+    }
+
+    /** The first array shape at any depth of a type. */
+    private function shape(Type $type): ?Type
+    {
+        foreach ($this->members($type) as $member) {
+            if ($member->isConstantArray()->yes()) {
+                return $member;
+            }
+
+            $inner = match (true) {
+                $this->isCollection($member) => [$member->getIterableValueType()],
+                default => $this->typeArguments($member),
+            };
+
+            foreach ($inner as $type) {
+                $shape = $this->shape($type);
+
+                if ($shape !== null) {
+                    return $shape;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * A generic object's type arguments (`ScrollProp<…>`, `ListingData<IssueData>`).
+     *
+     * @return list<Type>
+     */
+    private function typeArguments(Type $type): array
+    {
+        $arguments = [];
+
+        foreach ($type->getObjectClassReflections() as $class) {
+            foreach ($class->getActiveTemplateTypeMap()->getTypes() as $argument) {
+                $arguments[] = $argument;
+            }
+        }
+
+        return $arguments;
+    }
+
+    /**
+     * An array, or an iterable object such as a DataCollection or a Collection; a Data object isn't one.
+     */
+    private function isCollection(Type $type): bool
+    {
+        return $type->isArray()->yes() || ($type->isObject()->yes() && $type->isIterable()->yes()
+            && ! (new ObjectType(BaseData::class))->isSuperTypeOf($type)->yes());
+    }
+
+    /**
+     * @return list<Type>
+     */
+    private function members(Type $type): array
+    {
+        return $type instanceof UnionType && ! $type instanceof TemplateType ? $type->getTypes() : [$type];
+    }
+
+    /**
+     * The TypeScript types a union's members are: literals of one scalar type are one, as are `int` and `float`.
+     *
+     * @return array<string, true>
+     */
+    private function kinds(UnionType $union): array
+    {
+        $kinds = [];
+
+        foreach ($union->getTypes() as $member) {
+            $kind = match (true) {
+                $member->isNull()->yes() => ['null'],
+                $member->isString()->yes() => ['string'],
+                $member->isInteger()->yes(), $member->isFloat()->yes() => ['number'],
+                $member->isBoolean()->yes() => ['boolean'],
+                $member->isArray()->yes() => ['array'],
+                $member->getObjectClassNames() !== [] => $member->getObjectClassNames(),
+                default => [$member->describe(VerbosityLevel::typeOnly())],
+            };
+
+            foreach ($kind as $name) {
+                $kinds[$name] = true;
+            }
+        }
+
+        return $kinds;
+    }
+
+    private function allData(UnionType $union): bool
+    {
+        foreach ($union->getTypes() as $member) {
+            if (! (new ObjectType(BaseData::class))->isSuperTypeOf($member)->yes()) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+}
