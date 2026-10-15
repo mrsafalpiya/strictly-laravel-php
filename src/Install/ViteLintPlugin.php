@@ -22,6 +22,7 @@ final class ViteLintPlugin
         'strictly/typed-forms',
         'strictly/typed-inertia-components',
         'strictly/typed-optimistic-updates',
+        'strictly/typed-page-props',
         'strictly/typed-prop-names',
         'strictly/typed-requests',
     ];
