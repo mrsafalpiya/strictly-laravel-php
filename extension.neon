@@ -41,7 +41,7 @@ parameters:
 # in an input (P-099). Such an action authorizes in the input's authorize(), which runs before validation (P-030).
 # Every property of a query Data class has the default an absent query key means (P-104, P-105), and a controller reads
 # the query string only through one (P-106). A broadcast event's payload is the Data class its broadcastData() declares
-# (P-052).
+# (P-052). A Data property that holds a model's key declares the model with #[KeyOf] (P-128).
 rules:
     - StrictlyLaravel\PHPStan\DataClassFinalRule
     - StrictlyLaravel\PHPStan\DataNamespaceRule
@@ -53,3 +53,4 @@ rules:
     - StrictlyLaravel\PHPStan\QueryDefaultRule
     - StrictlyLaravel\PHPStan\QueryReadRule
     - StrictlyLaravel\PHPStan\BroadcastDataRule
+    - StrictlyLaravel\PHPStan\KeyOfRule

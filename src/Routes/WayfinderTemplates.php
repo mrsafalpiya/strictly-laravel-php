@@ -29,10 +29,10 @@ use ReflectionClass;
  * `docblock`) is still Wayfinder's.
  *
  * Its `function-arguments` template does the same for the route parameters: a parameter bound to a model takes only
- * that model's route key (functionArguments(), Problem P-003):
+ * that model's key by the field the route binds it by (functionArguments(), Problems P-003, P-128):
  *
  *     public function show(Project $project)
- *       → show(args: { project: RouteKey<'Project', number> | { id: RouteKey<'Project', number> } } | …)
+ *       → show(args: { project: Key<'Project', 'id', number> | { id: Key<'Project', 'id', number> } } | …)
  *
  * A Type Boundary that brands routes with more (a JSON endpoint's response) adds its brand in brands(). The action's
  * query class, or its lack of one, retypes the last argument, `options`, in the rendered output (withQueryOptions()),
@@ -84,9 +84,9 @@ final class WayfinderTemplates
 
     /**
      * Wayfinder's `function-arguments` template rendered with the template's data, with every route parameter bound to
-     * an Eloquent model (its action type-hints `Project $project`) typed as that model's route key,
-     * `RouteKey<'Project', number>` (RouteKeys), instead of any number or any object with an `id`. Everything after the
-     * parameters (the `options` argument) is Wayfinder's.
+     * an Eloquent model (its action type-hints `Project $project`) typed as that model's key by the field the route
+     * binds it by, `Key<'Project', 'id', number>` (RouteKeys), instead of any number or any object with an `id`.
+     * Everything after the parameters (the `options` argument) is Wayfinder's.
      *
      * @param  array<string, mixed>  $data
      */
@@ -126,9 +126,10 @@ final class WayfinderTemplates
     {
         $type = function (Parameter $parameter): string {
             $model = RouteKeys::boundModel($parameter->bound);
-            $type = $model === null
+            // Wayfinder resolves the key to the binding field, or the model's route key name when the route names none.
+            $type = $model === null || $parameter->key === null
                 ? $parameter->types
-                : sprintf("import('%s').RouteKey<'%s', %s>", self::TYPES_MODULE, class_basename($model), $parameter->types);
+                : (new RouteKey($model, $parameter->key))->typeScript($parameter->types);
 
             return $parameter->key === null ? $type : sprintf('%s | { %s: %s }', $type, $parameter->key, $type);
         };

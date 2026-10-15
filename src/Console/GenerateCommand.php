@@ -13,6 +13,7 @@ use Spatie\TypeScriptTransformer\TypeScriptTransformerConfig;
 use StrictlyLaravel\Broadcasting\BroadcastChannels;
 use StrictlyLaravel\Broadcasting\BroadcastEvents;
 use StrictlyLaravel\Broadcasting\BroadcastingModule;
+use StrictlyLaravel\Routes\RouteKeyFieldsModule;
 use StrictlyLaravel\Routes\RouteKeys;
 use StrictlyLaravel\Routes\VendorDeclarations;
 use StrictlyLaravel\Translations\Translations;
@@ -27,7 +28,8 @@ use Symfony\Component\Console\Attribute\AsCommand;
 /**
  * Generates every TypeScript file the app's React code imports from PHP: the Data and enum types (`@/generated`), the
  * translations and their typed `t()` (`@/generated/translations`, from lang/), the broadcast events and channels with
- * their typed Echo helpers (`@/generated/broadcasting`, from the events and routes/channels.php) and Wayfinder's routes
+ * their typed Echo helpers (`@/generated/broadcasting`, from the events and routes/channels.php), the route key name of
+ * each bound model (`@/generated/route-keys`, which `RouteKey<'Issue', number>` reads) and Wayfinder's routes
  * and actions. All of it is gitignored, so build, typecheck and `ci:check` run this first. The npm package's Vite plugin
  * runs it with `--skip-routes` whenever a PHP file under app/ or lang/, or routes/channels.php, changes, since the Base
  * Kit's Wayfinder plugin already regenerates the routes in dev.
@@ -93,6 +95,8 @@ final class GenerateCommand extends Command
 
             return self::FAILURE;
         }
+
+        RouteKeyFieldsModule::write(RouteKeys::of($this->laravel->make(Router::class))->routeKeyFields(), TypeGeneration::outputDirectory(), $files);
 
         if (! $this->option('skip-routes')) {
             $untyped = RouteKeys::untypedBindings($this->laravel->make(Router::class));

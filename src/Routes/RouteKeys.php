@@ -15,31 +15,42 @@ use ReflectionParameter;
 use ReflectionProperty;
 use StrictlyLaravel\Broadcasting\BroadcastChannels;
 use StrictlyLaravel\Data\InputData;
+use StrictlyLaravel\Data\KeyOf;
 use StrictlyLaravel\Data\QueryData;
 use StrictlyLaravel\Data\RouteKeyOf;
 use Throwable;
 
 /**
- * Nominal route keys (Problem P-003). Wayfinder types a route parameter bound to a model structurally, as
- * `number | { id: number }`, so any number, or any object with an `id`, fits: an issue where a project is expected
- * type-checks. Instead a model's route key is branded with the model on both sides of the call:
+ * Nominal model keys (Problems P-003, P-128). Wayfinder types a route parameter bound to a model structurally, as
+ * `number | { id: number }`, and laravel-data a key property as a plain `number`, so any number, or any object with an
+ * `id`, fits: an issue where a project is expected, or an issue's per-project `number` where its `id` is, type-checks.
+ * Instead a model's key is branded with the model and the field it is a key of, `Key<'Issue', 'id', number>`, on both
+ * sides of the call:
  *
- *  - a route parameter whose action type-hints the model (`show(Project $project)`) takes `RouteKey<'Project', number>`
- *    or `{ id: RouteKey<'Project', number> }` (the Wayfinder template override, WayfinderTemplates::functionArguments());
- *  - a Data class built from the model (a static `from…(Project $project)` method, such as `fromModel()`) has the
- *    properties named after the binding fields the routes use for it (`id`, or `slug` for `{project:slug}`) generated
- *    as `RouteKey<'Project', …>`, and so does a property declared `#[RouteKeyOf(Project::class)]` (TypeScript\RouteKeyTypes);
+ *  - a route parameter whose action type-hints the model (`show(Issue $issue)`) takes the key of the field the route
+ *    binds by, `Key<'Issue', 'number', number>` or `{ number: Key<'Issue', 'number', number> }` (the Wayfinder template
+ *    override, WayfinderTemplates::functionArguments());
+ *  - a Data class built from the model (a static `from…(Issue $issue)` method, such as `fromModel()`) has its primary
+ *    key (`id`) and the properties named after the binding fields the routes use for the model (`number` for
+ *    `{issue}` bound by it) generated as that field's key (TypeScript\RouteKeyTypes);
+ *  - a property declared `#[KeyOf(User::class)]` (its primary key, or `#[KeyOf(Issue::class, 'number')]`) or
+ *    `#[RouteKeyOf(Project::class)]` (its route key name) is generated as that key, in input, query and output classes
+ *    alike, so an input takes the keys the server sent;
  *  - a broadcast channel parameter whose callback type-hints the model (`fn (User $user, Project $project)`) binds it
  *    like a route, so `channel('projects.{project}', …)` takes the key too (Broadcasting\BroadcastChannels).
  *
- * So `show(project)` takes a ProjectData, its `id`, or an issue's declared `project_id`, but not an IssueData, its `id`
- * or a plain number. Feature tests check that every branded value sent is an existing key of its model
- * (Testing\RouteKeyChecks). Input and query classes are never branded: they hold what the user sent.
+ * So `show(issue)` takes an IssueData, its `number`, or a property declared the issue's route key, but not a
+ * ProjectData, the issue's `id` or a plain number, and an input's `#[KeyOf(User::class)] $assigneeId` takes a member's
+ * `id` but not an issue's. Feature tests check that every branded value the server sends is an existing key of its
+ * model (Testing\RouteKeyChecks).
  */
 final class RouteKeys
 {
     /** @var array<string, ?class-string<Model>> */
     private array $models = [];
+
+    /** @var array<class-string<Model>, string> Each model's primary key name. */
+    private static array $keyNames = [];
 
     /**
      * @param  array<class-string<Model>, list<string>>  $fields  The binding fields the routes use for each model.
@@ -116,30 +127,77 @@ final class RouteKeys
     }
 
     /**
-     * The model (and the column) whose route key a Data class property holds, if any: declared with #[RouteKeyOf], or
-     * the property is named after a binding field the routes use for the model the class is built from.
+     * The model (and the field) whose key a Data class property holds, if any: declared with #[KeyOf] or #[RouteKeyOf]
+     * (in any Data class), or, in an output class built from a model, the property is named after the model's primary
+     * key or a binding field the routes use for the model. Input and query classes hold what the user sent, so only a
+     * declared key is branded there.
      */
     public function forProperty(string $dataClass, string $property): ?RouteKey
     {
-        if (! class_exists($dataClass) || ! property_exists($dataClass, $property) || is_subclass_of($dataClass, InputData::class) || is_subclass_of($dataClass, QueryData::class)) {
+        if (! class_exists($dataClass) || ! property_exists($dataClass, $property)) {
             return null;
         }
 
-        $declared = (new ReflectionProperty($dataClass, $property))->getAttributes(RouteKeyOf::class)[0] ?? null;
+        $declared = self::declaredKey(new ReflectionProperty($dataClass, $property));
 
-        if ($declared !== null) {
-            $key = $declared->newInstance();
-
-            return new RouteKey($key->model, $key->field ?? self::routeKeyName($key->model));
+        if ($declared !== null || is_subclass_of($dataClass, InputData::class) || is_subclass_of($dataClass, QueryData::class)) {
+            return $declared;
         }
 
         $model = $this->modelOf($dataClass);
 
-        return $model !== null && in_array($property, $this->fields[$model] ?? [], true) ? new RouteKey($model, $property) : null;
+        if ($model === null) {
+            return null;
+        }
+
+        return $property === self::keyName($model) || in_array($property, $this->fields[$model] ?? [], true) ? new RouteKey($model, $property) : null;
     }
 
     /**
-     * The properties of a Data class that hold a route key (forProperty()), by property name.
+     * The key a property declares with #[KeyOf] (the model's primary key unless it names a field) or #[RouteKeyOf] (its
+     * route key name unless it names a field).
+     */
+    public static function declaredKey(ReflectionProperty $property): ?RouteKey
+    {
+        foreach ($property->getAttributes() as $attribute) {
+            $declared = match ($attribute->getName()) {
+                KeyOf::class, RouteKeyOf::class => $attribute->newInstance(),
+                default => null,
+            };
+
+            if ($declared instanceof KeyOf) {
+                return new RouteKey($declared->model, $declared->field ?? self::keyName($declared->model));
+            }
+
+            if ($declared instanceof RouteKeyOf) {
+                return new RouteKey($declared->model, $declared->field ?? self::routeKeyName($declared->model));
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The field a route binds each model by when it names none (its route key name), by brand: what
+     * `RouteKey<'Issue', number>` names in TypeScript. Every model a route or broadcast channel binds.
+     *
+     * @return array<string, string>
+     */
+    public function routeKeyFields(): array
+    {
+        $fields = [];
+
+        foreach (array_keys($this->fields) as $model) {
+            $fields[class_basename($model)] ??= self::routeKeyName($model);
+        }
+
+        ksort($fields);
+
+        return $fields;
+    }
+
+    /**
+     * The properties of a Data class that hold a model key (forProperty()), by property name.
      *
      * @return array<string, RouteKey>
      */
@@ -219,5 +277,13 @@ final class RouteKeys
     private static function routeKeyName(string $model): string
     {
         return (new $model)->getRouteKeyName();
+    }
+
+    /**
+     * @param  class-string<Model>  $model
+     */
+    private static function keyName(string $model): string
+    {
+        return self::$keyNames[$model] ??= (new $model)->getKeyName();
     }
 }
