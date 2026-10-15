@@ -58,4 +58,4 @@ Every page, deferred prop, form endpoint, JSON endpoint and broadcast event need
 | `coverage` | `strictly:coverage --strict` | Contract Coverage: a page, deferred prop, form endpoint, JSON endpoint or broadcast event no test exercises, and a shape no test sent. |
 | `tsc` | `tsc --noEmit` | React using a prop, field, route, query key, error key or translation that doesn't exist; and every Contract the tests recorded checked against its generated type. |
 
-The generated TypeScript (`resources/js/generated`) and the recorded Contracts (`resources/js/__contracts__`) are gitignored: never edit them. `composer dev` regenerates the types when you save a PHP or lang file; `php artisan strictly:generate` does it by hand.
+The generated TypeScript (`resources/js/generated`) and the recorded Contracts (`resources/js/__contracts__`) are gitignored: never edit them. `composer dev` regenerates them when you save a file they come from (a Data class, a page, a route, a lang file); `php artisan strictly:generate` does it by hand.
