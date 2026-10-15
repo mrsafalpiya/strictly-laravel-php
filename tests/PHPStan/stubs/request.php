@@ -28,7 +28,6 @@ class Request
 
     /** @var object */
     public $headers;
-
 }
 
 namespace Illuminate\Foundation\Http;
