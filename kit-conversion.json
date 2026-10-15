@@ -33,7 +33,8 @@
         "earlierConversions": [
             "55f5333025a5ab4c54df393a4d084258345adab54f7b473534e0c0662aca98c9",
             "058b4c419c090076dcda55cc03ad7c2bb6cd844ee4d33ceea9eaaecb9850f0a6",
-            "e2d7da2078102a5103637ec0df86bbcee742c8a2e45d326b60c2dd5195925991"
+            "e2d7da2078102a5103637ec0df86bbcee742c8a2e45d326b60c2dd5195925991",
+            "4461bf5aa0b523b75365789abdc4d8d4586634796239dc2fe63359a5527fa678"
         ],
         "adds": [
             "app/Pages/Settings/SecurityPage.php",
