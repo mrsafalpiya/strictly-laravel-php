@@ -30,7 +30,7 @@ final class DataClassTransformer extends LaravelDataClassTransformer
             new HiddenDataProperties,
             new DateOnlyTypes,
             ...parent::classPropertyProcessors(),
-            // Last, on the final type: brands its number or string (`?int` → `RouteKey<'Project', number> | null`).
+            // Last, on the final type: brands its number or string (`?int` → `Key<'Project', 'id', number> | null`).
             new RouteKeyTypes(fn (): RouteKeys => RouteKeys::of(app('router'))),
         ];
     }

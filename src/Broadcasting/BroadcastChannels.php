@@ -24,15 +24,34 @@ use Throwable;
  *
  * A callback that returns user data (an `array` return type) authorizes a presence channel, any other a private one,
  * so the client subscribes with the visibility the server answers for.
+ *
+ * Public channels need no definition, so they come from config/strictly.php instead (PublicChannels, Problem P-143).
  */
 final class BroadcastChannels
 {
     /**
-     * Every channel the app's broadcaster has registered, by pattern; none when broadcasting isn't set up.
+     * Every channel the app knows: the private and presence ones routes/channels.php defines, and the public ones
+     * config/strictly.php declares, by pattern. A public declaration of a pattern routes/channels.php defines too is
+     * left out (PublicChannels::check() fails `strictly:generate` on it).
      *
      * @return array<string, ChannelDefinition>
      */
     public static function of(Application $app): array
+    {
+        $channels = self::defined($app) + PublicChannels::declared();
+
+        ksort($channels);
+
+        return $channels;
+    }
+
+    /**
+     * Every channel the app's broadcaster has registered from routes/channels.php, by pattern; none when broadcasting
+     * isn't set up.
+     *
+     * @return array<string, ChannelDefinition>
+     */
+    public static function defined(Application $app): array
     {
         if (! $app->resolved(BroadcastManager::class)) {
             // Nothing has registered a channel: routes/channels.php resolves the manager to register them.

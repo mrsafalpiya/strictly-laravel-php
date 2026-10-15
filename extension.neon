@@ -39,6 +39,7 @@ parameters:
 # through Page classes (Problems P-009, P-011), and flash data is written only through the flash Data class (P-047).
 # A Data class a controller action takes extends InputData (P-014, P-017), and so does a Data class with rules() nested
 # in an input (P-099). Such an action authorizes in the input's authorize(), which runs before validation (P-030).
+# Only an input's authorize() and rules() receive the route's bound models, so no other Data class's take one (P-126).
 # Every property of a query Data class has the default an absent query key means (P-104, P-105), and a controller reads
 # the query string only through one (P-106). A broadcast event's payload is the Data class its broadcastData() declares
 # (P-052). A Data property that holds a model's key declares the model with #[KeyOf] (P-128).
@@ -50,6 +51,7 @@ rules:
     - StrictlyLaravel\PHPStan\InputDataRule
     - StrictlyLaravel\PHPStan\NestedInputDataRule
     - StrictlyLaravel\PHPStan\AuthorizeInInputRule
+    - StrictlyLaravel\PHPStan\RouteModelParameterRule
     - StrictlyLaravel\PHPStan\QueryDefaultRule
     - StrictlyLaravel\PHPStan\QueryReadRule
     - StrictlyLaravel\PHPStan\BroadcastDataRule

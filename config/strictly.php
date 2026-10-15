@@ -16,4 +16,5 @@ return [
     'vendor_inputs' => [],
     'vendor_queries' => [],
     'vendor_responses' => [],
+    'public_channels' => [],
 ];
