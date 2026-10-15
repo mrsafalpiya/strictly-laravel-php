@@ -16,12 +16,18 @@ use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
  *
  * Laravel's test case calls setUpRecordsContracts() once the application is booted, as it does for every trait, and
  * after it has migrated the database (RefreshDatabase), so each table can be given its own id range. Each request the
- * test makes is a TrackedRequest, which reports the input keys the app reads (Problem P-024).
+ * test makes is a TrackedRequest, which reports the input keys the app reads (Problem P-024). Feature tests render
+ * pages without the Vite build (Problem P-124).
  */
 trait RecordsContracts
 {
     protected function setUpRecordsContracts(): void
     {
+        // Problem P-124: a page's HTML links its assets through the Vite manifest, which only a build writes, so in a
+        // fresh clone (public/build is gitignored) every page a test renders would fail. Contracts check payloads, not
+        // assets; a test that needs the real tags calls $this->withVite().
+        $this->withoutVite();
+
         ContractRecorder::listen(method_exists($this, 'getPrintableTestCaseMethodName')
             ? static::getPrintableTestCaseName().' > '.$this->getPrintableTestCaseMethodName()   // Pest
             : static::class.'::'.$this->name());
