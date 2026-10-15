@@ -27,6 +27,7 @@ Activate the matching skill before you start; each one is a worked example that 
 - A GET's query string is a **query class** extending `StrictlyLaravel\Data\QueryData`, every property with a default.
 - A **JSON endpoint** is an action whose declared return type is a Data class (not a Page class).
 - A **broadcast event** implements `ShouldBroadcast`, uses `StrictlyLaravel\Broadcasting\BroadcastsData` and declares `broadcastData(): SomeData`.
+- A `BelongsTo` relation whose foreign key is `NOT NULL` is declared non-nullable on the model, `/** @property-read Project $project */`, so PHPStan doesn't type it `Project|null`. Don't add `?->` or nullable Data properties for it.
 - A route parameter bound to a model type-hints the model (`Project $project`); its key is typed `RouteKey<'Project', number>` in TypeScript.
 - A setting or feature flag React needs is a property of `SharedProps`, read with `config()->boolean()`, `config()->string()` and friends. A build-time value is a `VITE_*` variable listed in `.env.example`.
 - Backed enums anywhere in `app/` become string or number unions; their values in case order are `enumValues.ProjectStatus` from `@/generated`.

@@ -114,7 +114,8 @@ final class WayfinderTemplates
      * with each bound parameter branded.
      *
      * Problem P-004: it is written on one line. Wayfinder's output formatter collapses a multi-line argument list only
-     * up to its first `)`, which here is inside `import(…)`, and would mangle the signature.
+     * up to its first `)`, which here is inside `import(…)`, and leaves the rest unformatted.
+     * Upstream: https://github.com/laravel/wayfinder/issues/328
      *
      * @param  Collection<int, Parameter>  $parameters
      */

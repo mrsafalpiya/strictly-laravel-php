@@ -34,7 +34,7 @@ final class ProjectStatsData extends Data
 
 ## 2. Build them in the action
 
-`Lazy::inertiaDeferred(fn () => …)` loads right after the first render; `Lazy::inertia(fn () => …)` only when the page asks for it in a partial reload. A `ScrollProp` over a laravel-data collection needs the paginator's metadata passed explicitly:
+`Lazy::inertiaDeferred(fn () => …)` loads right after the first render; `Lazy::inertia(fn () => …)` only when the page asks for it in a partial reload. Use `Lazy` only for props that can be missing. A prop that is always sent is a plain property (`public ProjectStatsData $stats`), not `Lazy::closure()` or `->defaultIncluded()`, which are generated as optional. A `ScrollProp` over a laravel-data collection needs the paginator's metadata passed explicitly:
 
 ```php title="app/Http/Controllers/ProjectController.php"
     public function index(): IndexPage
