@@ -20,6 +20,9 @@ use ReflectionClass;
  *     public function index(ProjectFiltersData $filters)   (a QueryData)
  *       → index(options?: QueryOptions<ProjectFiltersData>): `index({ query: { sort: 'name' } })` typed by it
  *
+ *     public function edit()   (no QueryData, or a closure)
+ *       → edit(options?: NoQueryOptions): `edit({ query: { tab: 'password' } })` fails
+ *
  * The package's resources/wayfinder directory is prepended to the `wayfinder` view namespace, so its `method`
  * template is used instead of Wayfinder's. Rather than a copy that would drift from upstream, it renders Wayfinder's
  * own template and adds the brands to each return type (method()); a template it doesn't override (such as
@@ -31,9 +34,9 @@ use ReflectionClass;
  *     public function show(Project $project)
  *       → show(args: { project: RouteKey<'Project', number> | { id: RouteKey<'Project', number> } } | …)
  *
- * A Type Boundary that brands routes with more (a JSON endpoint's response) adds its brand in brands(). A GET action's
- * query class retypes the last argument, `options`, in the rendered output (withQueryOptions()), which
- * functionArguments() leaves as Wayfinder writes it.
+ * A Type Boundary that brands routes with more (a JSON endpoint's response) adds its brand in brands(). The action's
+ * query class, or its lack of one, retypes the last argument, `options`, in the rendered output (withQueryOptions()),
+ * which functionArguments() leaves as Wayfinder writes it.
  */
 final class WayfinderTemplates
 {
@@ -169,20 +172,28 @@ final class WayfinderTemplates
     /**
      * Problem P-006: the route functions of an action that takes a query Data class (RouteQuery) type their `options`
      * argument by it, `options?: QueryOptions<ProjectFiltersData>` instead of Wayfinder's `RouteQueryOptions` (any
-     * key, any value). Wayfinder writes that argument last in every route function (`function-arguments`), so this
-     * keeps working when another template override changes the arguments before it.
+     * key, any value).
+     *
+     * Problem P-106: the route functions of every other route (an action without a query class, a closure, a vendor
+     * action config/strictly.php declares no query class for) take `options?: NoQueryOptions`, which no query string
+     * fits, so `dashboard({ query: { tab: 'stats' } })` fails `tsc`.
+     *
+     * Wayfinder writes that argument last in every route function (`function-arguments`), so this keeps working when
+     * another template override changes the arguments before it.
      */
     private static function withQueryOptions(string $rendered, string $controller, string $method, mixed $options): string
     {
-        $query = RouteQuery::ofAction($controller, $method);
-
-        if ($query === null || ! is_string($options) || $options === '') {
+        if (! is_string($options) || $options === '') {
             return $rendered;
         }
 
+        $query = RouteQuery::ofAction($controller, $method);
+
         return (string) preg_replace(
             '/\b'.preg_quote($options, '/').'\?: RouteQueryOptions\b/',
-            sprintf("%s?: import('%s').QueryOptions<%s>", $options, self::TYPES_MODULE, self::generatedType($query)),
+            $query === null
+                ? sprintf("%s?: import('%s').NoQueryOptions", $options, self::TYPES_MODULE)
+                : sprintf("%s?: import('%s').QueryOptions<%s>", $options, self::TYPES_MODULE, self::generatedType($query)),
             $rendered,
         );
     }
