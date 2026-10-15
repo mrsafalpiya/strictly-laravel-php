@@ -5,6 +5,8 @@ namespace StrictlyLaravel\Testing;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 
 /**
  * Records every request a feature test makes as Contracts (ContractRecorder, Problem P-065), and checks every route
@@ -13,7 +15,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
  *     pest()->use(RecordsContracts::class)->in('Feature');
  *
  * Laravel's test case calls setUpRecordsContracts() once the application is booted, as it does for every trait, and
- * after it has migrated the database (RefreshDatabase), so each table can be given its own id range.
+ * after it has migrated the database (RefreshDatabase), so each table can be given its own id range. Each request the
+ * test makes is a TrackedRequest, which reports the input keys the app reads (Problem P-024).
  */
 trait RecordsContracts
 {
@@ -30,5 +33,13 @@ trait RecordsContracts
         if ((isset($uses[RefreshDatabase::class]) && ! isset($uses[LazilyRefreshDatabase::class])) || isset($uses[DatabaseMigrations::class])) {
             RouteKeyChecks::useDisjointIds();
         }
+    }
+
+    /**
+     * @param  SymfonyRequest  $symfonyRequest
+     */
+    protected function createTestRequest($symfonyRequest): Request
+    {
+        return TrackedRequest::createFromBase($symfonyRequest);
     }
 }
