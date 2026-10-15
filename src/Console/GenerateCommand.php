@@ -53,18 +53,18 @@ final class GenerateCommand extends Command
             return $this->failWith('Cannot generate types while a PHP file has a syntax error:', $unparsable);
         }
 
-        $declarations = VendorDeclarations::check($this->laravel->make(Router::class));
-
-        if ($declarations !== []) {
-            return $this->failWith('config/strictly.php declares what doesn\'t exist, so these vendor routes would be untyped (Problems P-025, P-050):', $declarations);
-        }
-
-        // After the vendor declarations: this loads every app class, and PHP's class names are case-insensitive, so a
-        // declared class whose name differs only in case from a loaded one would then pass their class_exists().
+        // Before the vendor declarations, which load the app's input and query classes they declare (the Kit's
+        // App\Data\Auth\*): one saved mid-edit is reported here with the others.
         $unloadable = UnloadableClasses::in([$this->laravel->path()], $this->laravel->basePath());
 
         if ($unloadable !== []) {
             return $this->failWith('Cannot generate types while a class that gets one can\'t be loaded, so its type would be missing (Problem P-073):', $unloadable);
+        }
+
+        $declarations = VendorDeclarations::check($this->laravel->make(Router::class));
+
+        if ($declarations !== []) {
+            return $this->failWith('config/strictly.php declares what doesn\'t exist, so these vendor routes would be untyped (Problems P-025, P-050):', $declarations);
         }
 
         try {

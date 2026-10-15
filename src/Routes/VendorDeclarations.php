@@ -3,10 +3,12 @@
 namespace StrictlyLaravel\Routes;
 
 use Illuminate\Routing\Router;
+use ReflectionClass;
 use Spatie\LaravelData\Data;
 use StrictlyLaravel\Data\InputData;
 use StrictlyLaravel\Data\QueryData;
 use StrictlyLaravel\Inertia\Page;
+use Throwable;
 
 /**
  * What config/strictly.php declares for the actions of controllers the app doesn't own (Problems P-025, P-050), such as
@@ -81,7 +83,8 @@ final class VendorDeclarations
     /** Whether a declared response is a TypeScript type rather than a class name. */
     public static function isTypeScript(string $response): bool
     {
-        return ! class_exists($response) && ! str_contains($response, '\\');
+        // A class name has a namespace: checked first, so a TypeScript type never loads a class.
+        return ! str_contains($response, '\\') && ! class_exists($response);
     }
 
     /**
@@ -157,12 +160,12 @@ final class VendorDeclarations
                     continue; // a TypeScript type
                 }
 
-                $valid = class_exists($declared) && is_subclass_of($declared, $base) && ! is_subclass_of($declared, Page::class);
+                $missing = self::missing($declared);
 
-                if (! $valid) {
-                    $errors[] = class_exists($declared)
-                        ? "{$where}: {$declared} isn't {$description}."
-                        : "{$where}: the class {$declared} doesn't exist.";
+                if ($missing !== null) {
+                    $errors[] = "{$where}: {$missing}";
+                } elseif (! is_subclass_of($declared, $base) || is_subclass_of($declared, Page::class)) {
+                    $errors[] = "{$where}: {$declared} isn't {$description}.";
                 }
             }
         }
@@ -225,6 +228,30 @@ final class VendorDeclarations
     {
         [$class, $method] = array_pad(explode('@', self::normalise($action), 2), 2, '');
 
-        return $method !== '' && class_exists($class) && method_exists($class, $method);
+        return $method !== '' && self::missing($class) === null && method_exists($class, $method);
+    }
+
+    /**
+     * Why a declared class can't be used, or null when it loads under exactly the declared name. PHP's class names
+     * ignore case but autoloading doesn't, so class_exists() alone would accept `LogInData` only while `LoginData`
+     * happens to be loaded already; and a class saved mid-edit throws while it loads.
+     */
+    private static function missing(string $class): ?string
+    {
+        $class = self::normalise($class);
+
+        try {
+            $exists = class_exists($class);
+        } catch (Throwable $exception) {
+            return "the class {$class} can't be loaded: {$exception->getMessage()}";
+        }
+
+        if (! $exists) {
+            return "the class {$class} doesn't exist.";
+        }
+
+        $name = (new ReflectionClass($class))->getName();
+
+        return $name === $class ? null : "the class {$class} doesn't exist. Did you mean {$name}?";
     }
 }
