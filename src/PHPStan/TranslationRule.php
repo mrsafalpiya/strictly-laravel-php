@@ -115,6 +115,18 @@ final class TranslationRule implements Rule
 
             $message = $messages[$key] ?? null;
 
+            if ($message === null && isset($this->catalog->groups()[$key])) {
+                // __() returns the group's messages as an array; trans_choice() has no one message to pick a form of.
+                if ($choice) {
+                    $errors[] = RuleErrorBuilder::message("Translation key '{$key}' names a group of messages, not one.")
+                        ->identifier('strictly.translationKey')
+                        ->tip("{$function}() picks a form of one message: name a key inside the group.")
+                        ->build();
+                }
+
+                continue;
+            }
+
             if ($message === null) {
                 if (preg_match(self::GROUP_KEY, $key) === 1) {
                     $errors[] = RuleErrorBuilder::message("Translation key '{$key}' isn't defined in locale {$locale}.")

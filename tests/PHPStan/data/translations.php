@@ -52,4 +52,12 @@ final class Messages
         $translator->get('projects.flash.saved', ['key' => 'TL']);
         $translator->choice('projects.title', $count);
     }
+
+    public function groups(int $count): void
+    {
+        // A key naming a group of messages returns them all, as an array.
+        __('projects.flash');
+        trans('validation.attributes');
+        trans_choice('projects.flash', $count);
+    }
 }

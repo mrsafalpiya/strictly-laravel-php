@@ -48,6 +48,7 @@ final class TranslationRuleTest extends RuleTestCase
             ["Translation 'issues.count' is pluralised: use Lang::choice().", 50, 'Lang::get() renders every form of it, separated by |.'],
             ["Translation key 'projects.titel' isn't defined in locale en.", 51, $unknown],
             ["Translation 'projects.title' isn't pluralised: use Translator::get().", 53, 'It has no | forms for Translator::choice() to pick from.'],
+            ["Translation key 'projects.flash' names a group of messages, not one.", 61, 'trans_choice() picks a form of one message: name a key inside the group.'],
         ]);
     }
 }

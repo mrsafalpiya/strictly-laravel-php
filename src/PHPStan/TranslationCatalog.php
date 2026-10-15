@@ -18,6 +18,9 @@ final class TranslationCatalog
     /** @var array<string, string>|null */
     private ?array $messages = null;
 
+    /** @var array<string, true>|null */
+    private ?array $groups = null;
+
     public function __construct(
         private ?string $langPath = null,
         private ?string $defaultLocale = null,
@@ -44,6 +47,20 @@ final class TranslationCatalog
             (new Translations($this->frameworkLangPath(), 'en'))->messages('en'),
             (new Translations($this->langPath(), $this->defaultLocale()))->messages($this->defaultLocale()),
         );
+    }
+
+    /**
+     * The keys that name a group of messages rather than one (`validation.attributes`), which `__()` returns as an
+     * array.
+     *
+     * @return array<string, true>
+     */
+    public function groups(): array
+    {
+        return $this->groups ??= array_fill_keys([
+            ...(new Translations($this->frameworkLangPath(), 'en'))->groups('en'),
+            ...(new Translations($this->langPath(), $this->defaultLocale()))->groups($this->defaultLocale()),
+        ], true);
     }
 
     private function frameworkLangPath(): string
