@@ -3,6 +3,7 @@
 namespace StrictlyLaravel\Workarounds\LaravelData;
 
 use Illuminate\Support\Arr;
+use LogicException;
 use Spatie\LaravelData\Resolvers\DataValidationRulesResolver;
 use Spatie\LaravelData\Support\DataClass;
 use Spatie\LaravelData\Support\Validation\ValidationContext;
@@ -34,6 +35,12 @@ final class RulesWithRouteModels extends DataValidationRulesResolver
             $path,
         );
 
-        return app()->call([$class->name, 'rules'], [...RouteModelArguments::of($class->name, 'rules'), 'context' => $context]);
+        $rules = app()->call([$class->name, 'rules'], [...RouteModelArguments::of($class->name, 'rules'), 'context' => $context]);
+
+        if (! is_array($rules)) {
+            throw new LogicException("{$class->name}::rules() returned ".get_debug_type($rules).', not an array of rules.');
+        }
+
+        return $rules;
     }
 }

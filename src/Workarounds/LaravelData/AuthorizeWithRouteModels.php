@@ -13,7 +13,9 @@ final class AuthorizeWithRouteModels extends AuthorizedDataPipe
 {
     protected function ensureRequestIsAuthorized(string $class): void
     {
-        if (method_exists($class, 'authorize') && app()->call([$class, 'authorize'], RouteModelArguments::of($class, 'authorize')) === false) {
+        $authorize = [$class, 'authorize'];
+
+        if (is_callable($authorize) && app()->call($authorize, RouteModelArguments::of($class, 'authorize')) === false) {
             throw new AuthorizationException;
         }
     }
