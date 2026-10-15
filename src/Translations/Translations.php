@@ -13,9 +13,10 @@ use Symfony\Component\Finder\SplFileInfo;
  * takes (`auth.throttle` for lang/en/auth.php, `admin/users.title` for lang/en/admin/users.php, the message itself
  * for lang/en.json), and the `:param` names each message takes.
  *
- * The default locale (`app.locale`) is the Source of Truth for keys and params: the generated `t()` takes its keys
- * (Problems P-055, P-056), and every other locale must have exactly its keys and params (Problem P-057). Package
- * translations under lang/vendor/ are not read.
+ * The default locale (`app.locale`) is the Source of Truth for keys, params and which messages are pluralised: the
+ * generated `t()` and `choice()` take its keys (Problems P-055, P-056, P-136), and every other locale must have
+ * exactly its keys and params, pluralised where it is (Problem P-057). Package translations under lang/vendor/ are not
+ * read.
  */
 final class Translations
 {
@@ -125,8 +126,21 @@ final class Translations
     }
 
     /**
+     * Problem P-136: whether the message is pluralised, its forms separated by `|` (`'apple|apples'`,
+     * `'{0} No issues|{1} One issue|[2,*] :count issues'`). Laravel's `trans_choice()` picks one of its forms, and
+     * `__()` renders it whole, so the client renders it with `choice()`, never `t()`. Laravel has no escape for a
+     * literal `|` (Problem P-161).
+     */
+    public static function isPlural(string $message): bool
+    {
+        return str_contains($message, '|');
+    }
+
+    /**
      * Problem P-057: what each locale other than the default lacks or adds compared to it, one line per key. Empty
-     * when every locale has exactly the default locale's keys, each with the same params.
+     * when every locale has exactly the default locale's keys, each with the same params and pluralised where the
+     * default locale's message is (Problem P-136). The number of forms may differ: each locale's plural rule has its
+     * own.
      *
      * @return list<string>
      */
@@ -143,6 +157,12 @@ final class Translations
                     $problems[] = "{$locale}: {$key} is missing";
 
                     continue;
+                }
+
+                if (self::isPlural($message) && ! self::isPlural($messages[$key])) {
+                    $problems[] = "{$locale}: {$key} isn't plural, but the {$this->defaultLocale} message is, so choice() can't pick its form";
+                } elseif (! self::isPlural($message) && self::isPlural($messages[$key])) {
+                    $problems[] = "{$locale}: {$key} is plural, but the {$this->defaultLocale} message isn't, so t() renders every form";
                 }
 
                 $expected = self::params($message);

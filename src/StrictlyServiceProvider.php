@@ -7,6 +7,7 @@ use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
+use Spatie\LaravelData\Resolvers\DataValidationRulesResolver;
 use Spatie\TypeScriptTransformer\TypeScriptTransformerConfig;
 use StrictlyLaravel\Boost\BoostGuidance;
 use StrictlyLaravel\Console\CoverageCommand;
@@ -15,6 +16,7 @@ use StrictlyLaravel\Console\InstallCommand;
 use StrictlyLaravel\Console\MakePageCommand;
 use StrictlyLaravel\Routes\WayfinderTemplates;
 use StrictlyLaravel\TypeScript\TypeGeneration;
+use StrictlyLaravel\Workarounds\LaravelData\RulesWithRouteModels;
 use StrictlyLaravel\Workarounds\LaravelData\StrictInputConfig;
 use StrictlyLaravel\Workarounds\WayfinderQueryVerb;
 
@@ -38,6 +40,9 @@ final class StrictlyServiceProvider extends ServiceProvider
 
         // Before any provider boots, so laravel-data reads the config with the workarounds applied.
         $this->app->booting(fn () => StrictInputConfig::apply($this->app->make('config')));
+
+        // Problem P-126: an input's rules() receive the route's bound models.
+        $this->app->bind(DataValidationRulesResolver::class, RulesWithRouteModels::class);
     }
 
     public function boot(): void
