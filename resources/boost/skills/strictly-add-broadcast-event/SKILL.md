@@ -42,7 +42,7 @@ final class ViewerData extends Data
 }
 ```
 
-A channel class's `join()` declares its return type the same way.
+A channel class's `join()` declares its return type the same way. `make:channel` writes `array|bool`, which fits either kind: change it to `bool` for a private channel, or the Data class for a presence channel.
 
 A public channel (`new Channel('status')`, which guests can listen on too) has no definition in `routes/channels.php`. Declare it in `config/strictly.php`'s `public_channels` instead, by its name, or by its pattern keyed by itself with the models its parameters hold the route key of:
 
@@ -173,6 +173,7 @@ Done when `composer ci:check` passes. `php artisan reverb:start` serves the even
 - `ci:check:test` fails with `Broadcast event App\Events\ProjectUpdated sends a payload that has no`: return a Data class from `broadcastData()` instead of public properties or `broadcastWith()`.
 - `ci:check:test` fails with `Broadcast event App\Events\ProjectUpdated declares no channel it is`: add a `#[BroadcastsOn('projects.{project}')]` for each channel pattern `broadcastOn()` sends it to.
 - `ci:check:test` fails with `Presence channel projects.{project}.viewers returns its members' data`: return a Data class from the channel's callback and declare it as the return type.
+- `ci:check:test` fails with `Channel projects.{project} returns an array or a bool`: `make:channel`'s `array|bool` return type fits a private channel and a presence channel alike. Declare `bool` for a private channel, or a Data class for a presence channel.
 - `ci:check:lint` fails with ``Echo's `useEcho()` takes any event name and a hand-typed payload``: listen with `useChannelEvent()` from `@/generated/broadcasting`.
 - `ci:check:lint` fails with ``Echo's `useEchoNotification()` reads a broadcast notification's hand-typed payload``: broadcast an app event with a `BroadcastsData` payload alongside the notification and listen for it with `useChannelEvent()`; the same for `useEchoModel()` and a model change.
 - `ci:check:lint` fails with ``Echo's `usePresenceChannel()` hands out a presence channel whose members are typed by hand``: follow the members with `usePresence()` from `@/generated/broadcasting`.
