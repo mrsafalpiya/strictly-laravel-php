@@ -11,6 +11,7 @@ use Spatie\TypeScriptTransformer\TypeScriptTransformerConfig;
 use Spatie\TypeScriptTransformer\TypeScriptTransformerConfigFactory;
 use Spatie\TypeScriptTransformer\Writers\FlatModuleWriter;
 use StrictlyLaravel\Inertia\PageLocations;
+use StrictlyLaravel\Workarounds\TypeScriptTransformer\DuplicateTypeNames;
 use StrictlyLaravel\Workarounds\TypeScriptTransformer\InertiaPropWrappers;
 use StrictlyLaravel\Workarounds\TypeScriptTransformer\MixedAsUnknown;
 use StrictlyLaravel\Workarounds\TypeScriptTransformer\PaginatorTypes;
@@ -26,8 +27,8 @@ use StrictlyLaravel\Workarounds\TypeScriptTransformer\UnmappedClassTypes;
  *
  * Every PHP type form generates the type that tells the truth: the fixes for typescript-transformer's defects each live
  * in their own class under StrictlyLaravel\Workarounds\TypeScriptTransformer (citing their Problem and upstream issue;
- * among them, a PHP class with no TypeScript type fails generation, UnmappedClassCheck), and `#[DateOnly]` dates get
- * their own type (DateOnlyTypes).
+ * among them, a PHP class with no TypeScript type fails generation, UnmappedClassCheck, and so do two classes that
+ * generate the same type name, DuplicateTypeNames), and `#[DateOnly]` dates get their own type (DateOnlyTypes).
  */
 final class TypeGeneration
 {
@@ -63,7 +64,7 @@ final class TypeGeneration
             ->providedVisitorHook(new MixedAsUnknown)
             ->connectedVisitorHook(new RawInertiaPropCheck)
             ->connectedVisitorHook(new UnmappedClassCheck)
-            ->writer(new FlatModuleWriter('index.ts'))
+            ->writer(new DuplicateTypeNames(new FlatModuleWriter('index.ts')))
             // Always write the file, so a deleted output is regenerated even when the PHP is unchanged.
             ->withoutManifest();
 

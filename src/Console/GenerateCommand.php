@@ -21,6 +21,7 @@ use StrictlyLaravel\Translations\Translations;
 use StrictlyLaravel\Translations\TranslationsModule;
 use StrictlyLaravel\TypeScript\RawInertiaPropException;
 use StrictlyLaravel\TypeScript\TypeGeneration;
+use StrictlyLaravel\Workarounds\TypeScriptTransformer\DuplicateTypeNamesException;
 use StrictlyLaravel\Workarounds\TypeScriptTransformer\UnmappedClassException;
 use StrictlyLaravel\Workarounds\UnparsableFiles;
 use StrictlyLaravel\Workarounds\WayfinderQueryVerb;
@@ -48,25 +49,13 @@ final class GenerateCommand extends Command
         $unparsable = UnparsableFiles::in($config->directoriesToWatch, $this->laravel->basePath());
 
         if ($unparsable !== []) {
-            $this->components->error('Cannot generate types while a PHP file has a syntax error:');
-
-            foreach ($unparsable as $error) {
-                $this->line("  {$error}");
-            }
-
-            return self::FAILURE;
+            return $this->failWith('Cannot generate types while a PHP file has a syntax error:', $unparsable);
         }
 
         $declarations = VendorDeclarations::check($this->laravel->make(Router::class));
 
         if ($declarations !== []) {
-            $this->components->error('config/strictly.php declares what doesn\'t exist, so these vendor routes would be untyped (Problems P-025, P-050):');
-
-            foreach ($declarations as $error) {
-                $this->line("  {$error}");
-            }
-
-            return self::FAILURE;
+            return $this->failWith('config/strictly.php declares what doesn\'t exist, so these vendor routes would be untyped (Problems P-025, P-050):', $declarations);
         }
 
         try {
@@ -75,6 +64,8 @@ final class GenerateCommand extends Command
             $this->components->error($exception->getMessage());
 
             return self::FAILURE;
+        } catch (DuplicateTypeNamesException $exception) {
+            return $this->failWith('PHP classes generate the same TypeScript type name, which @/generated can declare only once (Problem P-063):', $exception->clashes);
         }
 
         if ($exitCode !== self::SUCCESS) {
@@ -92,13 +83,7 @@ final class GenerateCommand extends Command
         $publicChannels = PublicChannels::check(BroadcastChannels::defined($this->laravel));
 
         if ($publicChannels !== []) {
-            $this->components->error('config/strictly.php declares public channels that don\'t name one, so publicChannel() would take any name (Problem P-143):');
-
-            foreach ($publicChannels as $error) {
-                $this->line("  {$error}");
-            }
-
-            return self::FAILURE;
+            return $this->failWith('config/strictly.php declares public channels that don\'t name one, so publicChannel() would take any name (Problem P-143):', $publicChannels);
         }
 
         try {
@@ -113,13 +98,7 @@ final class GenerateCommand extends Command
         $undeclared = BroadcastEvents::check($events, $channels);
 
         if ($undeclared !== []) {
-            $this->components->error('A broadcast event declares a channel the app doesn\'t know, so no listener could name it (Problem P-144):');
-
-            foreach ($undeclared as $error) {
-                $this->line("  {$error}");
-            }
-
-            return self::FAILURE;
+            return $this->failWith('A broadcast event declares a channel the app doesn\'t know, so no listener could name it (Problem P-144):', $undeclared);
         }
 
         BroadcastingModule::write($events, $channels, TypeGeneration::outputDirectory(), $files);
@@ -130,13 +109,7 @@ final class GenerateCommand extends Command
             $untyped = RouteKeys::untypedBindings($this->laravel->make(Router::class));
 
             if ($untyped !== []) {
-                $this->components->error('A route parameter names a binding field, but its action doesn\'t type-hint the model, so its route function takes any value instead of that model\'s key (Problem P-002). Type-hint the bound model in the action, such as show(Workspace $workspace):');
-
-                foreach ($untyped as $binding) {
-                    $this->line("  {$binding}");
-                }
-
-                return self::FAILURE;
+                return $this->failWith('A route parameter names a binding field, but its action doesn\'t type-hint the model, so its route function takes any value instead of that model\'s key (Problem P-002). Type-hint the bound model in the action, such as show(Workspace $workspace):', $untyped);
             }
         }
 
@@ -148,5 +121,22 @@ final class GenerateCommand extends Command
         }
 
         return $exitCode;
+    }
+
+    /**
+     * Fails generation with a headline and one indented line per problem it found. Every check that can find more than
+     * one problem at once reports them this way, so the Vite plugin's log shows them all.
+     *
+     * @param  list<string>  $problems
+     */
+    private function failWith(string $headline, array $problems): int
+    {
+        $this->components->error($headline);
+
+        foreach ($problems as $problem) {
+            $this->line("  {$problem}");
+        }
+
+        return self::FAILURE;
     }
 }
