@@ -30,7 +30,7 @@ use StrictlyLaravel\Workarounds\LaravelData\AuthorizeWithRouteModels;
  *
  * The PHPStan rule `strictly.inputData` requires every Data class an action takes to extend this class, and every Data
  * class with `rules()` nested in an input too: laravel-data reads #[MergeValidationRules] from each nested class, so a
- * plain one's `rules()` replace its inferred ones (Problem P-099).
+ * plain one's `rules()` replace its inferred ones (Problem P-099), unless it carries the attribute itself.
  */
 #[MergeValidationRules]
 abstract class InputData extends Data

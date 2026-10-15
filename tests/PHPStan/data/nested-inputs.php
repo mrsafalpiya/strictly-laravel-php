@@ -3,6 +3,7 @@
 namespace App\Data\Nested;
 
 use Spatie\LaravelData\Attributes\DataCollectionOf;
+use Spatie\LaravelData\Attributes\MergeValidationRules;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\DataCollection;
 use StrictlyLaravel\Data\InputData;
@@ -90,4 +91,41 @@ final class StoreChecklistData extends InputData
 final class TaskFiltersData extends QueryData
 {
     public ?TaskData $task = null;
+}
+
+/** Carries #[MergeValidationRules] itself, so its rules() merge with the inferred ones like an input's. */
+#[MergeValidationRules]
+final class StepData extends Data
+{
+    public string $title;
+
+    /** @return array<string, list<string>> */
+    public static function rules(): array
+    {
+        return ['title' => ['max:50']];
+    }
+}
+
+/** laravel-data reads the attribute from parent classes too. */
+#[MergeValidationRules]
+abstract class MergedData extends Data {}
+
+final class SubtaskData extends MergedData
+{
+    public string $title;
+
+    /** @return array<string, list<string>> */
+    public static function rules(): array
+    {
+        return ['title' => ['max:50']];
+    }
+}
+
+final class StoreStepsData extends InputData
+{
+    /** @param list<SubtaskData> $subtasks */
+    public function __construct(
+        public StepData $step,
+        public array $subtasks,
+    ) {}
 }

@@ -15,7 +15,9 @@ use PHPStan\Rules\RuleErrorBuilder;
 use PHPStan\Type\Constant\ConstantStringType;
 use PHPStan\Type\Type;
 use PHPStan\Type\TypeTraverser;
+use ReflectionAttribute;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
+use Spatie\LaravelData\Attributes\MergeValidationRules;
 use Spatie\LaravelData\Contracts\BaseData;
 use StrictlyLaravel\Data\InputData;
 
@@ -24,7 +26,8 @@ use StrictlyLaravel\Data\InputData;
  * has #[MergeValidationRules], and it reads the attribute from each nested Data class separately. So a plain Data class
  * with rules() nested in an input (a property of its type, or an item of a list, a map or a DataCollection of it, at
  * any depth) replaces the rules inferred for it: `['title' => ['max:50']]` drops `required|string` for `task.title`.
- * Such a class must extend InputData too, like the input itself (strictly.inputData, InputDataRule).
+ * Such a class must extend InputData too, like the input itself (strictly.inputData, InputDataRule), unless it carries
+ * #[MergeValidationRules] itself or through a parent class, which laravel-data reads too.
  *
  * Every input class and query class (InputDataRule::REQUEST_DATA) is checked from its own properties. A nested class
  * that extends one of them is checked as its own input, so the walk stops there.
@@ -108,7 +111,7 @@ final readonly class NestedInputDataRule implements Rule
         }
 
         $seen[$data->getName()] = true;
-        $offenders = $data->hasNativeMethod('rules') ? [[$data->getName(), $through]] : [];
+        $offenders = $data->hasNativeMethod('rules') && ! $this->mergesRules($data) ? [[$data->getName(), $through]] : [];
 
         foreach ($this->nestedDataClasses($data) as $classes) {
             foreach ($classes as $nested) {
@@ -117,6 +120,18 @@ final readonly class NestedInputDataRule implements Rule
         }
 
         return $offenders;
+    }
+
+    /** Whether laravel-data merges the class's rules() with its inferred ones: #[MergeValidationRules] on it or a parent. */
+    private function mergesRules(ClassReflection $data): bool
+    {
+        foreach ([$data, ...$data->getParents()] as $class) {
+            if ($class->getNativeReflection()->getAttributes(MergeValidationRules::class, ReflectionAttribute::IS_INSTANCEOF) !== []) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
