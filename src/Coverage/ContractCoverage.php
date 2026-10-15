@@ -24,7 +24,10 @@ use StrictlyLaravel\Inertia\Page;
  * - form endpoints: some test must send a request to every route whose action takes an input Data class (`form`
  *   records), or the validation errors it can return were never checked against the input's fields.
  *
- * A Type Boundary that records Contracts of a new kind (deferred props, JSON responses, declared
+ * - JSON endpoints: some test must get a successful response from every route whose action returns a Data class
+ *   (`json` records), and the responses' shapes are observed against that class.
+ *
+ * A Type Boundary that records Contracts of a new kind (declared
  * vendor fields, broadcasts) adds its dimension here: an unexercised Gap for what no test reached, and its Data
  * values fed to the same ShapeCoverage so their shapes are proven too.
  */
@@ -41,9 +44,10 @@ final readonly class ContractCoverage
      * @param  array<string, class-string<Page>>  $pages  page component => Page class (PageLocations::pages())
      * @param  GlobalDataClasses|null  $global  the shared props and flash Data classes (GlobalDataClasses::in())
      * @param  array<string, class-string>  $formEndpoints  endpoint => input Data class (FormEndpoints::all())
+     * @param  array<string, class-string>  $jsonEndpoints  endpoint => response Data class (JsonEndpoints::all())
      * @return list<Gap>
      */
-    public function gaps(array $records, array $pages, ?GlobalDataClasses $global = null, array $formEndpoints = []): array
+    public function gaps(array $records, array $pages, ?GlobalDataClasses $global = null, array $formEndpoints = [], array $jsonEndpoints = []): array
     {
         $shapes = new ShapeCoverage($this->config);
         $unexercised = [
@@ -51,6 +55,7 @@ final readonly class ContractCoverage
             ...$this->shared($records, $global?->shared, $shapes),
             ...$this->flash($records, $global?->flash, $shapes),
             ...$this->formEndpoints($records, $formEndpoints),
+            ...$this->jsonEndpoints($records, $jsonEndpoints, $shapes),
         ];
 
         return [...$unexercised, ...$shapes->gaps()];
@@ -224,6 +229,41 @@ final readonly class ContractCoverage
                     unexercised: true,
                 );
             }
+        }
+
+        return $gaps;
+    }
+
+    /**
+     * @param  list<stdClass>  $records
+     * @param  array<string, class-string>  $endpoints
+     * @return list<Gap>
+     */
+    private function jsonEndpoints(array $records, array $endpoints, ShapeCoverage $shapes): array
+    {
+        $responses = [];
+
+        foreach ($records as $record) {
+            if ($record->kind === 'json' && is_string($record->endpoint ?? null)) {
+                $responses[$record->endpoint][] = $record->body ?? null;
+            }
+        }
+
+        $gaps = [];
+
+        foreach ($endpoints as $endpoint => $class) {
+            if (! isset($responses[$endpoint])) {
+                $gaps[] = new Gap(
+                    "{$endpoint}: no feature test calls this JSON endpoint",
+                    [],
+                    "add a feature test that calls {$endpoint} and gets a successful {$class} response",
+                    unexercised: true,
+                );
+
+                continue;
+            }
+
+            $shapes->observe($class, $responses[$endpoint], new Origin($endpoint, "calls {$endpoint}"));
         }
 
         return $gaps;

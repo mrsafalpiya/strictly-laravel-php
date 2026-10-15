@@ -22,7 +22,9 @@ use stdClass;
 use StrictlyLaravel\Inertia\Page;
 use StrictlyLaravel\Inertia\PageLocations;
 use StrictlyLaravel\Routes\FormEndpoints;
+use StrictlyLaravel\Routes\JsonEndpoints;
 use StrictlyLaravel\Routes\RouteInput;
+use StrictlyLaravel\Routes\RouteResponse;
 use StrictlyLaravel\Routes\WayfinderTemplates;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -76,7 +78,13 @@ use Symfony\Component\HttpFoundation\Response;
  * read by name (InputReads, Problem P-024), both since the request reached its route: a rule or a read on a key the
  * input type lacks fails `tsc`, since the typed form never sends that key.
  *
- * Each Contract has a `.json` sidecar next to it describing what was recorded (`kind` is `page`, `flash` or `form`; a
+ * A successful response of a JSON endpoint (a route whose action returns a Data class, RouteResponse) becomes
+ * resources/js/__contracts__/_json/<hash>.ts, checked against that class (Problem P-048):
+ *
+ *     // Recorded by Tests\Feature\SearchTest > a search answers with its results: POST /search (JSON response)
+ *     export const response = { "query": "Launch", "hits": [ … ] } satisfies Contract<import('@/generated').SearchResultsData>;
+ *
+ * Each Contract has a `.json` sidecar next to it describing what was recorded (`kind` is `page`, `flash`, `form` or `json`; a
  * partial reload's page record has `partial`), which Contract Coverage reads (records(), `strictly:coverage`). A `form`
  * record of a request that was neither refused nor validated nor read anything has only the sidecar.
  *
@@ -94,6 +102,9 @@ final class ContractRecorder
 
     /** Where the requests to form endpoints are recorded, under DIRECTORY. */
     private const string FORMS_DIRECTORY = '_forms';
+
+    /** Where the responses of JSON endpoints are recorded, under DIRECTORY. */
+    private const string JSON_DIRECTORY = '_json';
 
     /**
      * The shared props Inertia types itself rather than through the shared props Data class: the validation errors
@@ -182,6 +193,48 @@ final class ContractRecorder
         if ($route instanceof Route && $input !== null) {
             self::recordForm($test, $request, $response, FormEndpoints::name($route), $input);
         }
+
+        $declared = $route instanceof Route ? RouteResponse::ofRoute($route) : null;
+
+        if ($route instanceof Route && $declared !== null) {
+            self::recordJson($test, $request, $response, JsonEndpoints::name($route), $declared);
+        }
+    }
+
+    /**
+     * A successful response of a JSON endpoint (Problem P-048), checked against the Data class its action declares. A
+     * refused request is a form endpoint's to record (its validation errors); any other failure sends no response
+     * of that type.
+     *
+     * @param  class-string  $declared
+     */
+    private static function recordJson(string $test, Request $request, Response $response, string $endpoint, string $declared): void
+    {
+        $content = $response->getContent();
+
+        if (! $response->isSuccessful() || ! is_string($content) || $content === '') {
+            return;
+        }
+
+        $body = self::decode($content);
+
+        if ($body === null) {
+            return;
+        }
+
+        self::write(self::JSON_DIRECTORY, [
+            sprintf('// Recorded by %s: %s %s (JSON response)', $test, $request->method(), $request->getRequestUri()),
+            "import type { Contract } from '@mrsafalpiya/strictly-laravel/contracts';",
+            '',
+            sprintf('export const response = %s satisfies Contract<%s>;', self::json($body), WayfinderTemplates::generatedType($declared)),
+        ], [
+            'kind' => 'json',
+            'test' => $test,
+            'request' => $request->method().' '.$request->getRequestUri(),
+            'endpoint' => $endpoint,
+            'response' => $declared,
+            'body' => $body,
+        ]);
     }
 
     /**
