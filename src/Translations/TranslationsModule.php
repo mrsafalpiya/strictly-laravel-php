@@ -7,10 +7,12 @@ use Illuminate\Filesystem\Filesystem;
 /**
  * Writes the app's translations into the generated directory (ADR-0006): each locale's messages as
  * `lang/<locale>.json`, which Vite bundles, and `translations.ts` (`@/generated/translations`), which binds the npm
- * package's `t()` to them, typed by the default locale's keys and `:param` names (Problems P-055, P-056):
+ * package's `t()` and `choice()` to them, typed by the default locale's keys, `:param` names and pluralised messages
+ * (Problems P-055, P-056, P-136):
  *
- *     export type TranslationKeys = { 'auth.throttle': 'seconds'; 'auth.failed': never };
- *     export const { t, locale, setLocale } = createTranslator<TranslationKeys, TranslationLocale>('en', …);
+ *     export type TranslationKeys = { 'auth.throttle': 'seconds'; 'auth.failed': never; 'issues.count': 'count' };
+ *     export type PluralTranslationKey = 'issues.count';
+ *     export const { t, choice, locale, setLocale } = createTranslator<TranslationKeys, TranslationLocale, PluralTranslationKey>('en', …);
  *
  * Messages never travel as shared props: the page only needs the locale's name.
  */
@@ -41,11 +43,18 @@ final class TranslationsModule
     {
         $default = $translations->defaultLocale;
         $keys = [];
+        $plural = [];
 
         foreach ($translations->messages($default) as $key => $message) {
             $params = Translations::params($message);
             $keys[] = '    '.self::literal($key).': '.($params === [] ? 'never' : implode(' | ', array_map(self::literal(...), $params))).';';
+
+            if (Translations::isPlural($message)) {
+                $plural[] = self::literal($key);
+            }
         }
+
+        $pluralKeys = $plural === [] ? 'never' : implode(' | ', $plural);
 
         $locales = implode(' | ', array_map(self::literal(...), $translations->locales()));
         $defaultLiteral = self::literal($default);
@@ -58,18 +67,25 @@ final class TranslationsModule
 
             /**
              * Every translation key of the default locale ({$default}), with the names of the `:params` its message takes
-             * (`never` when it takes none). The other locales have exactly these keys and params (the locale parity test).
+             * (`never` when it takes none). The other locales have exactly these keys and params, each pluralised where it
+             * is here (the locale parity test).
              */
             export type TranslationKeys = {{$keyLines}};
+
+            /**
+             * The keys whose message is pluralised (its forms separated by `|`): `choice()` takes them, `t()` doesn't.
+             */
+            export type PluralTranslationKey = {$pluralKeys};
 
             /** Every locale the app has lang files for. */
             export type TranslationLocale = {$locales};
 
             /**
              * `t(key, params)` translates a key into the current locale, falling back to {$default}.
-             * `setLocale()` switches the locale `t()` translates into, such as from a shared prop when the app starts.
+             * `choice(key, count, params)` picks a pluralised message's form for `count`, as `trans_choice()` does.
+             * `setLocale()` switches the locale they translate into, such as from a shared prop when the app starts.
              */
-            export const { t, locale, setLocale } = createTranslator<TranslationKeys, TranslationLocale>(
+            export const { t, choice, locale, setLocale } = createTranslator<TranslationKeys, TranslationLocale, PluralTranslationKey>(
                 {$defaultLiteral},
                 import.meta.glob<Record<string, string>>('./{$directory}/*.json', { eager: true, import: 'default' }),
             );

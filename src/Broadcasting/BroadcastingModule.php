@@ -8,15 +8,19 @@ use StrictlyLaravel\Routes\WayfinderTemplates;
 
 /**
  * Writes `broadcasting.ts` into the generated directory (`@/generated/broadcasting`): the app's broadcast events and
- * channels, and the npm package's Echo helpers bound to them (Problems P-052, P-053, P-054, P-143):
+ * channels, which events are sent on which channel, and the npm package's Echo helpers bound to them (Problems P-052,
+ * P-053, P-054, P-143, P-144):
  *
  *     export type BroadcastEvents = { CommentPosted: import('@/generated').CommentData };
  *     export type BroadcastChannels = { 'issues.{issue}': { visibility: 'private'; params: { issue: Key<'Issue', 'number', number> | … } } };
- *     export const { channel, publicChannel, useChannelEvent } = createBroadcasting<BroadcastEvents, BroadcastChannels>({ … });
+ *     export type ChannelEvents = { 'issues.{issue}': 'CommentPosted' };
+ *     export type EventChannels = { CommentPosted: 'issues.{issue}' };
+ *     export const { channel, publicChannel, useChannelEvent } = createBroadcasting<BroadcastEvents, BroadcastChannels, ChannelEvents>({ … });
  *
  * so `useChannelEvent(channel('issues.{issue}', { issue: issue.id }), 'CommentPosted', (comment) => …)` takes only a
- * defined channel with its parameters, only an event the app broadcasts, and types the payload from its Data class;
- * `publicChannel('projects.{project}.public', { project })` takes only a public channel config/strictly.php declares.
+ * defined channel with its parameters, only an event its #[BroadcastsOn] declares on that channel (Problem P-144), and
+ * types the payload from its Data class; `publicChannel('projects.{project}.public', { project })` takes only a public
+ * channel config/strictly.php declares.
  * `BroadcastChannelName` is every name the server may broadcast on a channel the app knows under, which the broadcast
  * Contracts check.
  */
@@ -46,10 +50,25 @@ final class BroadcastingModule
             fn (BroadcastEvent $event): string => sprintf('    %s: %s;', self::literal($event->key), WayfinderTemplates::generatedType($event->payload)),
             array_values($events),
         );
+        $eventChannelLines = array_map(
+            fn (BroadcastEvent $event): string => sprintf(
+                '    %s: %s;',
+                self::literal($event->key),
+                $event->channels === [] ? 'never' : implode(' | ', array_map(self::literal(...), $event->channels)),
+            ),
+            array_values($events),
+        );
         $channelLines = [];
         $definitionLines = [];
+        $channelEventLines = [];
 
         foreach ($channels as $definition) {
+            $sent = array_values(array_map(
+                fn (BroadcastEvent $event): string => self::literal($event->key),
+                array_filter($events, fn (BroadcastEvent $event): bool => in_array($definition->pattern, $event->channels, true)),
+            ));
+            $channelEventLines[] = sprintf('    %s: %s;', self::literal($definition->pattern), $sent === [] ? 'never' : implode(' | ', $sent));
+
             $params = [];
             $keys = [];
 
@@ -99,17 +118,27 @@ final class BroadcastingModule
                 export type BroadcastChannelName = %s;
 
                 /**
-                 * `channel(pattern, params)` names a channel routes/channels.php defines, `publicChannel(pattern, params)` a public
-                 * one config/strictly.php declares, and `useChannelEvent(channel, event, callback)` listens on it for an event the
-                 * app broadcasts, typing the payload.
+                 * The events sent on each channel the app knows, by its pattern: those whose #[BroadcastsOn] declare it.
                  */
-                export const { channel, publicChannel, useChannelEvent } = createBroadcasting<BroadcastEvents, BroadcastChannels>({%s});
+                export type ChannelEvents = {%s};
+
+                /** The patterns of the channels each event is sent on, as its #[BroadcastsOn] declare them. */
+                export type EventChannels = {%s};
+
+                /**
+                 * `channel(pattern, params)` names a channel routes/channels.php defines, `publicChannel(pattern, params)` a public
+                 * one config/strictly.php declares, and `useChannelEvent(channel, event, callback)` listens on it for an event sent
+                 * on it, typing the payload.
+                 */
+                export const { channel, publicChannel, useChannelEvent } = createBroadcasting<BroadcastEvents, BroadcastChannels, ChannelEvents>({%s});
 
                 TS,
             $echo,
             self::block($eventLines),
             self::block($channelLines),
             $names === [] ? 'never' : implode(' | ', $names),
+            self::block($channelEventLines),
+            self::block($eventChannelLines),
             self::block($definitionLines),
         );
     }

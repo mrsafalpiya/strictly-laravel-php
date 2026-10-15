@@ -65,7 +65,7 @@ final class BroadcastEvents
                 throw new RuntimeException(sprintf('%s and %s are both broadcast as %s, so a listener can\'t tell them apart: give one of them another name.', $events[$key]->class, $class, $name));
             }
 
-            $events[$key] = new BroadcastEvent($class, $name, $key, $payload);
+            $events[$key] = new BroadcastEvent($class, $name, $key, $payload, self::channels($class));
         }
 
         ksort($events);
@@ -87,7 +87,57 @@ final class BroadcastEvents
 
         $name = self::name($event);
 
-        return new BroadcastEvent($event::class, $name, self::key($name), $payload);
+        return new BroadcastEvent($event::class, $name, self::key($name), $payload, self::channels($event::class));
+    }
+
+    /**
+     * The channel patterns an event class declares it is sent on (#[BroadcastsOn], Problem P-144), in the order
+     * declared, each once.
+     *
+     * @param  class-string  $class
+     * @return list<string>
+     */
+    public static function channels(string $class): array
+    {
+        $patterns = [];
+
+        foreach ((new ReflectionClass($class))->getAttributes(BroadcastsOn::class) as $attribute) {
+            $arguments = $attribute->getArguments();
+            $pattern = $arguments['pattern'] ?? $arguments[0] ?? null;
+
+            if (is_string($pattern)) {
+                $patterns[] = $pattern;
+            }
+        }
+
+        return array_values(array_unique($patterns));
+    }
+
+    /**
+     * What is wrong with the events' declarations, one line each: a #[BroadcastsOn] pattern that names no channel the
+     * app knows, which no listener could name either. `strictly:generate` fails on any.
+     *
+     * @param  array<string, BroadcastEvent>  $events  in()
+     * @param  array<string, ChannelDefinition>  $channels  BroadcastChannels::of()
+     * @return list<string>
+     */
+    public static function check(array $events, array $channels): array
+    {
+        $errors = [];
+
+        foreach ($events as $event) {
+            foreach ($event->channels as $pattern) {
+                if (! isset($channels[$pattern])) {
+                    $errors[] = sprintf(
+                        "%s: #[BroadcastsOn('%s')] names no channel. Define it in routes/channels.php, or declare it in config/strictly.php's public_channels if it is public.",
+                        $event->class,
+                        $pattern,
+                    );
+                }
+            }
+        }
+
+        return $errors;
     }
 
     /** The name Laravel broadcasts an event under: what its `broadcastAs()` returns, or its class name. */

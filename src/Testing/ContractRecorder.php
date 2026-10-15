@@ -21,7 +21,9 @@ use JsonException;
 use Spatie\LaravelData\Support\DataConfig;
 use Spatie\LaravelData\Support\DataProperty;
 use stdClass;
+use StrictlyLaravel\Broadcasting\BroadcastChannels;
 use StrictlyLaravel\Broadcasting\BroadcastEvents;
+use StrictlyLaravel\Broadcasting\ChannelDefinition;
 use StrictlyLaravel\Inertia\Page;
 use StrictlyLaravel\Inertia\PageLocations;
 use StrictlyLaravel\Routes\FormEndpoints;
@@ -99,10 +101,12 @@ use Symfony\Component\HttpFoundation\Response;
  * Every event broadcast during the test whose payload is a Data class (BroadcastsData), from a request or not, becomes
  * resources/js/__contracts__/_broadcasts/<hash>.ts, checked against the type `@/generated/broadcasting` maps its name to
  * (Problems P-052, P-053), and its channels against the ones the app knows: the private and presence ones
- * routes/channels.php defines (Problem P-054) and the public ones config/strictly.php declares (Problem P-143):
+ * routes/channels.php defines (Problem P-054) and the public ones config/strictly.php declares (Problem P-143). Each
+ * channel's pattern must be one the event's #[BroadcastsOn] declares (Problem P-144):
  *
  *     // Recorded by Tests\Feature\CommentTest > a comment is broadcast: broadcast App\Events\CommentPosted on private-issues.4000001
  *     export const channels = [ "private-issues.4000001" ] satisfies BroadcastChannelName[];
+ *     export const patterns = [ "issues.{issue}" ] satisfies EventChannels['CommentPosted'][];
  *     export const payload = { "id": 7000001, "body": "…" } satisfies Contract<BroadcastEvents['CommentPosted']>;
  *
  * Each Contract has a `.json` sidecar next to it describing what was recorded (`kind` is `page`, `flash`, `form`,
@@ -240,13 +244,17 @@ final class ContractRecorder
         }
 
         $payload = self::decode(self::json($event->broadcastWith()));
+        $known = BroadcastChannels::of(app());
+        $patterns = array_map(fn (string $channel): string => self::channelPattern($channel, $known, $broadcast->channels), $channels);
         self::write(self::BROADCASTS_DIRECTORY, [
             sprintf('// Recorded by %s: broadcast %s on %s', $test, $broadcast->name, implode(', ', $channels)),
             "import type { Contract } from '@mrsafalpiya/strictly-laravel/contracts';",
-            "import type { BroadcastChannelName, BroadcastEvents } from '@/generated/broadcasting';",
+            "import type { BroadcastChannelName, BroadcastEvents, EventChannels } from '@/generated/broadcasting';",
             '',
             '// Every channel it was broadcast on: a private or presence one routes/channels.php doesn\'t define is never authorized, and nothing listens on a public one config/strictly.php doesn\'t declare.',
             sprintf('export const channels = %s satisfies BroadcastChannelName[];', self::json($channels)),
+            '// The pattern of each, which listeners name it by: one the event\'s #[BroadcastsOn] doesn\'t declare is a channel no typed listener hears it on.',
+            sprintf('export const patterns = %s satisfies EventChannels[%s][];', self::json($patterns), self::quote($broadcast->key)),
             sprintf('export const payload = %s satisfies Contract<BroadcastEvents[%s]>;', self::json($payload), self::quote($broadcast->key)),
         ], [
             'kind' => 'broadcast',
@@ -255,8 +263,24 @@ final class ContractRecorder
             'class' => $event::class,
             'payloadClass' => $broadcast->payload,
             'channels' => $channels,
+            'patterns' => $patterns,
             'payload' => $payload,
         ]);
+    }
+
+    /**
+     * The pattern of the channel a broadcast went to (Problem P-144): one of the patterns the event declares if the
+     * name matches one, else the first channel the app knows that it matches, else the name itself, which matches no
+     * pattern the event could declare.
+     *
+     * @param  array<string, ChannelDefinition>  $known  BroadcastChannels::of()
+     * @param  list<string>  $declared  the event's #[BroadcastsOn] patterns
+     */
+    private static function channelPattern(string $channel, array $known, array $declared): string
+    {
+        $matching = array_keys(array_filter($known, fn (ChannelDefinition $definition): bool => $definition->matches($channel)));
+
+        return array_values(array_intersect($declared, $matching))[0] ?? $matching[0] ?? $channel;
     }
 
     private static function record(string $test, Request $request, Response $response): void
