@@ -97,7 +97,8 @@ final class InstallCommand extends Command
         $packageManager = PackageManager::detect($root);
 
         return [
-            'config/strictly.php' => fn () => $this->publishConfig($files, "{$root}/config/strictly.php"),
+            'config/strictly.php' => fn () => $this->publish($files, StrictlyServiceProvider::CONFIG_STUB, "{$root}/config/strictly.php"),
+            'tests/Feature/LocaleParityTest.php' => fn () => $this->publish($files, StrictlyServiceProvider::LOCALE_PARITY_TEST_STUB, "{$root}/tests/Feature/LocaleParityTest.php"),
             "Composer scripts: ci:check and its steps (using {$packageManager->value})" => fn () => $this->writeCiCheck("{$root}/composer.json", $packageManager),
             'tsconfig.json: strictness flags' => fn () => TsconfigFlags::patch("{$root}/tsconfig.json"),
             'tsconfig.json: narrowed JSX types' => fn () => JsxTypes::patchTsconfig("{$root}/tsconfig.json"),
@@ -235,13 +236,15 @@ final class InstallCommand extends Command
         return $result['changed'];
     }
 
-    private function publishConfig(Filesystem $files, string $target): bool
+    /** Write a file the app owns from then on, unless it exists: the installer never overwrites it. */
+    private function publish(Filesystem $files, string $stub, string $target): bool
     {
         if ($files->exists($target)) {
             return false;
         }
 
-        $files->copy(StrictlyServiceProvider::CONFIG_STUB, $target);
+        $files->ensureDirectoryExists(dirname($target));
+        $files->copy($stub, $target);
 
         return true;
     }

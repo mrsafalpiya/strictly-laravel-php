@@ -3,34 +3,40 @@
 namespace StrictlyLaravel\Console;
 
 use Illuminate\Console\Command;
+use Illuminate\Filesystem\Filesystem;
 use Illuminate\Routing\Router;
+use RuntimeException;
 use Spatie\LaravelTypeScriptTransformer\Support\LaravelConsoleLogger;
 use Spatie\TypeScriptTransformer\Enums\RunnerMode;
 use Spatie\TypeScriptTransformer\Runners\Runner;
 use Spatie\TypeScriptTransformer\TypeScriptTransformerConfig;
 use StrictlyLaravel\Routes\RouteKeys;
 use StrictlyLaravel\Routes\VendorDeclarations;
+use StrictlyLaravel\Translations\Translations;
+use StrictlyLaravel\Translations\TranslationsModule;
 use StrictlyLaravel\TypeScript\RawInertiaPropException;
+use StrictlyLaravel\TypeScript\TypeGeneration;
 use StrictlyLaravel\Workarounds\TypeScriptTransformer\UnmappedClassException;
 use StrictlyLaravel\Workarounds\UnparsableFiles;
 use StrictlyLaravel\Workarounds\WayfinderQueryVerb;
 use Symfony\Component\Console\Attribute\AsCommand;
 
 /**
- * Generates every TypeScript file the app's React code imports from PHP: the Data and enum types (`@/generated`) and
- * Wayfinder's routes and actions. All of it is gitignored, so build, typecheck and `ci:check` run this first. The npm
- * package's Vite plugin runs it with `--skip-routes` whenever a PHP file under app/ changes, since the Base Kit's
- * Wayfinder plugin already regenerates the routes in dev.
+ * Generates every TypeScript file the app's React code imports from PHP: the Data and enum types (`@/generated`), the
+ * translations and their typed `t()` (`@/generated/translations`, from lang/) and Wayfinder's routes and actions. All
+ * of it is gitignored, so build, typecheck and `ci:check` run this first. The npm package's Vite plugin runs it with
+ * `--skip-routes` whenever a PHP file under app/ or lang/ changes, since the Base Kit's Wayfinder plugin already
+ * regenerates the routes in dev.
  */
 #[AsCommand(name: 'strictly:generate')]
 final class GenerateCommand extends Command
 {
     protected $signature = 'strictly:generate
-        {--skip-routes : Generate only the Data and enum types, not Wayfinder\'s routes and actions}';
+        {--skip-routes : Generate only the Data and enum types and the translations, not Wayfinder\'s routes and actions}';
 
-    protected $description = 'Generate the TypeScript types for Data classes, enums and routes';
+    protected $description = 'Generate the TypeScript types for Data classes, enums, translations and routes';
 
-    public function handle(Runner $runner, TypeScriptTransformerConfig $config): int
+    public function handle(Runner $runner, TypeScriptTransformerConfig $config, Filesystem $files): int
     {
         $unparsable = UnparsableFiles::in($config->directoriesToWatch, $this->laravel->basePath());
 
@@ -66,6 +72,14 @@ final class GenerateCommand extends Command
 
         if ($exitCode !== self::SUCCESS) {
             return $exitCode;
+        }
+
+        try {
+            TranslationsModule::write(Translations::ofApp(), TypeGeneration::outputDirectory(), $files);
+        } catch (RuntimeException $exception) {
+            $this->components->error('Cannot generate the translations: '.$exception->getMessage());
+
+            return self::FAILURE;
         }
 
         if (! $this->option('skip-routes')) {
