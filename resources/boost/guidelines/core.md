@@ -55,7 +55,7 @@ Every page, deferred prop, form endpoint, JSON endpoint and broadcast event need
 | `install` | `strictly:install --check` | A Strictly Laravel hook the app lost or hasn't picked up. Fix: `php artisan strictly:install`. |
 | `generate` | `strictly:generate` | PHP that can't be typed: a property of a class with no TypeScript type, a raw Inertia `DeferProp`, a `{project:slug}` route whose action doesn't type-hint the model. |
 | `lint` | oxlint with the `strictly/*` rules, oxfmt | Inertia's untyped APIs, raw prop-name lists, hard-coded URLs, hand-typed `usePage<T>()`, Echo's `useEcho()`, `useEchoNotification()` and `useEchoModel()`, suppressions without a reason, formatting. |
-| `test` | Pint, PHPStan max with the `strictly.*` rules, Pest | `Inertia::render()`, `Inertia::flash()`, a non-final Data class, an action input that isn't an `InputData`, authorizing after validation, a query property without a default, a broadcast without a Data payload, untyped PHP; plus behaviour and locale parity. |
+| `test` | Pint, PHPStan max with the `strictly.*` rules, Pest | `Inertia::render()`, `Inertia::flash()`, a non-final Data class, an action input, or a nested Data class with `rules()` in one, that isn't an `InputData`, authorizing after validation, a query property without a default, a broadcast without a Data payload, untyped PHP; plus behaviour and locale parity. |
 | `coverage` | `strictly:coverage --strict` | Contract Coverage: a page, deferred prop, form endpoint, JSON endpoint or broadcast event no test exercises, and a shape no test sent. |
 | `tsc` | `tsc --noEmit` | React using a prop, field, route, query key, error key or translation that doesn't exist; and every Contract the tests recorded checked against its generated type. |
 
