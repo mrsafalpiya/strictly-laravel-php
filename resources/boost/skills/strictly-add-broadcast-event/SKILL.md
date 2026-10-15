@@ -87,6 +87,8 @@ export function ProjectTitle({ project }: { project: ProjectData }) {
 
 A public channel is `publicChannel('name')`.
 
+A broadcast notification (`toBroadcast()`) or a model broadcast (`BroadcastsEvents`) has no generated payload type, so don't read it with Echo's `useEchoNotification()` or `useEchoModel()`. Broadcast an app event like `ProjectUpdated` alongside the notification or model change, and listen for that with `useChannelEvent()`.
+
 ## 5. Broadcast every payload shape in a feature test
 
 Every event a feature test broadcasts is recorded as a Contract (its payload, and its channels against `routes/channels.php`). A test must broadcast each event, with each nullable payload field both `null` and set, or `ci:check:coverage` fails. Spy with `Event::listen()`; `Event::fake()` stops the broadcast, so nothing is recorded:
@@ -116,6 +118,7 @@ Done when `composer ci:check` passes. `php artisan reverb:start` serves the even
 
 - `ci:check:test` fails with `Broadcast event App\Events\ProjectUpdated sends a payload that has no`: return a Data class from `broadcastData()` instead of public properties or `broadcastWith()`.
 - `ci:check:lint` fails with ``Echo's `useEcho()` takes any event name and a hand-typed payload``: listen with `useChannelEvent()` from `@/generated/broadcasting`.
+- `ci:check:lint` fails with ``Echo's `useEchoNotification()` reads a broadcast notification's hand-typed payload``: broadcast an app event with a `BroadcastsData` payload alongside the notification and listen for it with `useChannelEvent()`; the same for `useEchoModel()` and a model change.
 - `ci:check:tsc` fails with `error TS2345: Argument of type '"project.{project}"' is not assignable to parameter of type '"projects.{project}"'.`: the pattern isn't defined in `routes/channels.php`.
 - `ci:check:tsc` fails with `error TS2345: Argument of type '"ProjectUpdatd"' is not assignable to parameter of type '"ProjectUpdated"'.`: use the event's Echo name.
 - `ci:check:tsc` fails with `error TS2339: Property 'title' does not exist on type 'ProjectData'.`: the callback reads a field the payload class doesn't have.
