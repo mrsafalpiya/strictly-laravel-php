@@ -3,6 +3,7 @@
 namespace StrictlyLaravel\Translations;
 
 use Illuminate\Support\Arr;
+use ParseError;
 use RuntimeException;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\Finder\SplFileInfo;
@@ -169,7 +170,11 @@ final class Translations
      */
     private function requireLangFile(SplFileInfo $file): array
     {
-        $contents = (static fn (string $path): mixed => require $path)($file->getPathname());
+        try {
+            $contents = (static fn (string $path): mixed => require $path)($file->getPathname());
+        } catch (ParseError $error) {
+            throw new RuntimeException("{$this->relative($file->getPathname())}:{$error->getLine()}: {$error->getMessage()}", previous: $error);
+        }
 
         if (! is_array($contents)) {
             throw new RuntimeException("{$this->relative($file->getPathname())} doesn't return an array of messages.");
