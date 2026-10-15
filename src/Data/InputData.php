@@ -15,7 +15,7 @@ use StrictlyLaravel\Workarounds\LaravelData\AuthorizeWithRouteModels;
  *
  * - The rules inferred from the property types match the generated TypeScript (Workarounds\LaravelData): non-null is
  *   required (`present` for arrays, so `[]` is accepted), `int` is `integer`, every item of a typed list is
- *   validated, and a PHPDoc literal union is `in:`.
+ *   validated, a PHPDoc literal union is `in:`, and a date must be in the format its cast reads (Problem P-075).
  * - Rules returned from `rules()` are merged with the inferred ones, not replacing them (Problem P-017). Plain
  *   laravel-data replaces them per key, so adding `'unique:projects'` for `$slug` would drop `required|string`.
  * - Declare `public static function authorize(...): bool` (its parameters are injected) to authorize the request: it
