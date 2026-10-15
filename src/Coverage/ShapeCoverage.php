@@ -7,6 +7,7 @@ use Spatie\LaravelData\Enums\DataTypeKind;
 use Spatie\LaravelData\Support\DataConfig;
 use Spatie\LaravelData\Support\DataProperty;
 use stdClass;
+use StrictlyLaravel\Data\InputData;
 
 /**
  * Compares a Data class with every value the feature tests recorded for it, at any depth, and finds the states its
@@ -28,9 +29,14 @@ use stdClass;
 final class ShapeCoverage
 {
     /**
-     * @var array<string, array{what: string, at: list<string>, fix: string, seen: bool}>
+     * A shape is reported only when some observe() required it; observeAccepted() can only mark one seen.
+     *
+     * @var array<string, array{what: string, at: list<string>, fix: string, seen: bool, required: bool}>
      */
     private array $shapes = [];
+
+    /** Whether the values being walked are accepted submissions (observeAccepted()). */
+    private bool $accepted = false;
 
     public function __construct(
         private readonly DataConfig $config,
@@ -50,6 +56,27 @@ final class ShapeCoverage
     }
 
     /**
+     * Requests a form endpoint accepted (validated without errors), keyed by input name, for its input class. Problem
+     * P-125: an input class is also a page's form defaults, which a create page sends empty by design, so no page can
+     * show its nullable fields filled in. The same type is what the form sends back, so a value the server accepted
+     * shows that state too. These values only mark states as seen: a field the tests never submit is no gap of its
+     * own, since a form endpoint's whole input is checked by its `form` Contracts.
+     *
+     * @param  class-string<Data>  $class
+     * @param  list<mixed>  $values
+     */
+    public function observeAccepted(string $class, array $values, Origin $origin): void
+    {
+        $this->accepted = true;
+
+        try {
+            $this->walk($class, $values, $origin, '');
+        } finally {
+            $this->accepted = false;
+        }
+    }
+
+    /**
      * The states no recorded value showed, sorted.
      *
      * @return list<Gap>
@@ -59,7 +86,7 @@ final class ShapeCoverage
         $gaps = [];
 
         foreach ($this->shapes as $key => $shape) {
-            if (! $shape['seen']) {
+            if ($shape['required'] && ! $shape['seen']) {
                 $gaps["{$shape['what']}\0{$key}"] = new Gap($shape['what'], $shape['at'], $shape['fix'], unexercised: false);
             }
         }
@@ -87,7 +114,8 @@ final class ShapeCoverage
                 continue;
             }
 
-            $name = $property->outputMappedName ?? $property->name;
+            // A submission names its fields as the input class reads them, a page prop as the class writes them.
+            $name = $this->accepted ? ($property->inputMappedName ?? $property->name) : ($property->outputMappedName ?? $property->name);
             $path = $prefix === '' ? $name : "{$prefix}.{$name}";
             $present = [];
 
@@ -268,8 +296,23 @@ final class ShapeCoverage
         $at = "{$origin->label} › {$path}";
         $fix = sprintf('add a feature test that %s with %s', $origin->action, $fixIsComplete ? $wanted : "{$path} {$wanted}");
 
-        $this->shapes[$key] ??= ['what' => $what, 'at' => [], 'fix' => $fix, 'seen' => false];
+        if (is_subclass_of($class, InputData::class)) {
+            // observeAccepted(): a submission the server accepted shows the state as well.
+            $field = $property->inputMappedName ?? $property->name;
+            $fix .= sprintf(', or one whose request a form endpoint accepts with %s\'s %s %s', class_basename($class), $field, $fixIsComplete ? 'not empty' : $wanted);
+        }
+
+        $this->shapes[$key] ??= ['what' => $what, 'at' => [], 'fix' => $fix, 'seen' => false, 'required' => false];
         $this->shapes[$key]['seen'] = $this->shapes[$key]['seen'] || $seen;
+
+        if ($this->accepted) {
+            return;
+        }
+
+        if (! $this->shapes[$key]['required']) {
+            $this->shapes[$key]['required'] = true;
+            $this->shapes[$key]['fix'] = $fix;
+        }
 
         if (! in_array($at, $this->shapes[$key]['at'], true)) {
             $this->shapes[$key]['at'][] = $at;

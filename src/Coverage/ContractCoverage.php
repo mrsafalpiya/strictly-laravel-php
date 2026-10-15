@@ -2,6 +2,7 @@
 
 namespace StrictlyLaravel\Coverage;
 
+use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Support\DataConfig;
 use stdClass;
 use StrictlyLaravel\Inertia\GlobalDataClasses;
@@ -64,7 +65,34 @@ final readonly class ContractCoverage
             ...$this->vendorFields($records, $vendorPayloads),
         ];
 
+        $this->accepted($records, $shapes);
+
         return [...$unexercised, ...$shapes->gaps()];
+    }
+
+    /**
+     * Problem P-125: what form endpoints accepted (`form` records' `accepted`) shows the states of their input
+     * classes, which pages also send as a form's defaults, empty on a create page by design.
+     *
+     * @param  list<stdClass>  $records
+     */
+    private function accepted(array $records, ShapeCoverage $shapes): void
+    {
+        $accepted = [];
+
+        foreach ($records as $record) {
+            $input = $record->input ?? null;
+
+            if ($record->kind === 'form' && ($record->accepted ?? null) instanceof stdClass && is_string($input) && is_subclass_of($input, Data::class)) {
+                $accepted[$input][(string) ($record->endpoint ?? '')][] = $record->accepted;
+            }
+        }
+
+        foreach ($accepted as $input => $endpoints) {
+            foreach ($endpoints as $endpoint => $values) {
+                $shapes->observeAccepted($input, $values, new Origin($endpoint, "submits to {$endpoint}"));
+            }
+        }
     }
 
     /**

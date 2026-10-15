@@ -320,6 +320,8 @@ final class ContractRecorder
             'errors' => $errors === null ? null : array_keys($errors),
             'validated' => $validated,
             'read' => $read,
+            // What the server accepted: Contract Coverage counts its shapes for the input class (Problem P-125).
+            'accepted' => $errors === null && $response->getStatusCode() < 400 ? (object) self::payload($request) : null,
         ];
 
         if ($errors === null && $validated === [] && $read === []) {
@@ -345,6 +347,19 @@ final class ContractRecorder
                 sprintf('export const read = %s satisfies InputKey<%s>[];', self::json($read), $type),
             ],
         ], $meta);
+    }
+
+    /**
+     * The input a request sent, as Laravel merges it for the input class (the query string, then the body), read from
+     * the parameter bags so that no read is recorded. Uploaded files are left out.
+     *
+     * @return array<array-key, mixed>
+     */
+    private static function payload(Request $request): array
+    {
+        $body = $request->isJson() ? json_decode($request->getContent(), true) : $request->request->all();
+
+        return array_replace($request->query->all(), is_array($body) ? $body : []);
     }
 
     /**
