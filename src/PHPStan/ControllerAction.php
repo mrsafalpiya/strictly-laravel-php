@@ -28,6 +28,17 @@ final class ControllerAction
         return $class;
     }
 
+    /**
+     * The controller a node is in, in any of its methods (a private helper reading the request is its action reading
+     * it) or a closure inside one; null outside a controller.
+     */
+    public static function enclosing(Scope $scope): ?ClassReflection
+    {
+        $class = $scope->getClassReflection();
+
+        return $class !== null && self::isController($class) ? $class : null;
+    }
+
     /** Whether a class is a controller: a concrete class in a `Controllers` namespace or named `…Controller`. */
     public static function isController(ClassReflection $class): bool
     {

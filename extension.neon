@@ -41,11 +41,12 @@ parameters:
 # in an input (P-099). Such an action authorizes in the input's authorize(), which runs before validation (P-030).
 # Only an input's authorize() and rules() receive the route's bound models, so no other Data class's take one (P-126).
 # Every property of a query Data class has the default an absent query key means (P-104, P-105), and a controller reads
-# the query string only through one (P-106). A broadcast event's payload is the Data class its broadcastData() declares
-# (P-052), and it declares the channels it is sent on with #[BroadcastsOn] (P-144). A translation call in PHP names a
-# key of the default locale (or Laravel's own) with exactly its message's params, and picks a pluralised message's form
-# with a choice call (P-137). A Data property that holds a model's key declares the model with #[KeyOf]
-# (P-128).
+# the query string only through one (P-106). A controller action takes an input class, never a FormRequest, and reads
+# input from the request only beside an input or query class, whose Contract checks the keys it reads (P-112). A
+# broadcast event's payload is the Data class its broadcastData() declares (P-052), and it declares the channels it is
+# sent on with #[BroadcastsOn] (P-144). A translation call in PHP names a key of the default locale (or Laravel's own)
+# with exactly its message's params, and picks a pluralised message's form with a choice call (P-137). A Data property
+# that holds a model's key declares the model with #[KeyOf] (P-128).
 rules:
     - StrictlyLaravel\PHPStan\DataClassFinalRule
     - StrictlyLaravel\PHPStan\DataNamespaceRule
@@ -57,6 +58,8 @@ rules:
     - StrictlyLaravel\PHPStan\RouteModelParameterRule
     - StrictlyLaravel\PHPStan\QueryDefaultRule
     - StrictlyLaravel\PHPStan\QueryReadRule
+    - StrictlyLaravel\PHPStan\InputReadRule
+    - StrictlyLaravel\PHPStan\FormRequestRule
     - StrictlyLaravel\PHPStan\BroadcastDataRule
     - StrictlyLaravel\PHPStan\BroadcastsOnRule
     - StrictlyLaravel\PHPStan\TranslationRule

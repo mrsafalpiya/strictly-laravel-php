@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Pages\Settings\SecurityPage;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Validation\Rules\Password;
 use Laravel\Fortify\Features;
 use Spatie\LaravelData\Optional;
@@ -21,12 +22,14 @@ class SecurityController extends Controller
     /**
      * Show the user's security settings page.
      */
-    public function edit(TwoFactorAuthenticationRequest $request, #[CurrentUser] User $user): SecurityPage
+    public function edit(Request $request, #[CurrentUser] User $user): SecurityPage
     {
         $canManageTwoFactor = Features::canManageTwoFactorAuthentication();
 
         if ($canManageTwoFactor) {
-            $request->ensureStateIsValid();
+            // Problem P-112: an action takes no FormRequest. This one validates nothing and only lends Fortify's
+            // two-factor state handling (user and session) a request, so it's made from the request instead.
+            TwoFactorAuthenticationRequest::createFrom($request)->ensureStateIsValid();
         }
 
         return new SecurityPage(

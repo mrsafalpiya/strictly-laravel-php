@@ -2,20 +2,12 @@
 
 namespace StrictlyLaravel\PHPStan;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Request as RequestFacade;
 use PhpParser\Node;
 use PhpParser\Node\Expr;
-use PhpParser\Node\Expr\MethodCall;
-use PhpParser\Node\Expr\PropertyFetch;
-use PhpParser\Node\Expr\StaticCall;
-use PhpParser\Node\Identifier;
-use PhpParser\Node\Name;
 use PHPStan\Analyser\Scope;
 use PHPStan\Rules\IdentifierRuleError;
 use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
-use PHPStan\Type\ObjectType;
 use StrictlyLaravel\Data\QueryData;
 
 /**
@@ -41,13 +33,13 @@ final readonly class QueryReadRule implements Rule
      */
     public function processNode(Node $node, Scope $scope): array
     {
-        if (! $this->readsQuery($node, $scope)) {
+        if (RequestRead::of($node, $scope)?->accessor !== 'query') {
             return [];
         }
 
-        $controller = $scope->getClassReflection();
+        $controller = ControllerAction::enclosing($scope);
 
-        if ($controller === null || ! ControllerAction::isController($controller)) {
+        if ($controller === null) {
             return [];
         }
 
@@ -63,23 +55,5 @@ final readonly class QueryReadRule implements Rule
                 ))
                 ->build(),
         ];
-    }
-
-    private function readsQuery(Node $node, Scope $scope): bool
-    {
-        return match (true) {
-            // PHPStan also analyses `$request?->query()` as a MethodCall.
-            $node instanceof MethodCall, $node instanceof PropertyFetch => $this->named($node->name, 'query')
-                && (new ObjectType(Request::class))->isSuperTypeOf($scope->getType($node->var))->yes(),
-            $node instanceof StaticCall => $this->named($node->name, 'query')
-                && $node->class instanceof Name
-                && $scope->resolveName($node->class) === RequestFacade::class,
-            default => false,
-        };
-    }
-
-    private function named(Identifier|Expr $name, string $expected): bool
-    {
-        return $name instanceof Identifier && $name->toLowerString() === $expected;
     }
 }
