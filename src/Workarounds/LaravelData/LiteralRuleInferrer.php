@@ -2,18 +2,8 @@
 
 namespace StrictlyLaravel\Workarounds\LaravelData;
 
-use BackedEnum;
-use PHPStan\PhpDocParser\Ast\ConstExpr\ConstExprFloatNode;
-use PHPStan\PhpDocParser\Ast\ConstExpr\ConstExprIntegerNode;
-use PHPStan\PhpDocParser\Ast\ConstExpr\ConstExprStringNode;
-use PHPStan\PhpDocParser\Ast\ConstExpr\ConstFetchNode;
 use PHPStan\PhpDocParser\Ast\Type\ArrayTypeNode;
-use PHPStan\PhpDocParser\Ast\Type\ConstTypeNode;
 use PHPStan\PhpDocParser\Ast\Type\GenericTypeNode;
-use PHPStan\PhpDocParser\Ast\Type\IdentifierTypeNode;
-use PHPStan\PhpDocParser\Ast\Type\NullableTypeNode;
-use PHPStan\PhpDocParser\Ast\Type\TypeNode;
-use PHPStan\PhpDocParser\Ast\Type\UnionTypeNode;
 use Spatie\LaravelData\Attributes\Validation\In;
 use Spatie\LaravelData\Attributes\Validation\Rule;
 use Spatie\LaravelData\Attributes\Validation\ValidationAttribute;
@@ -21,8 +11,7 @@ use Spatie\LaravelData\RuleInferrers\RuleInferrer;
 use Spatie\LaravelData\Support\DataProperty;
 use Spatie\LaravelData\Support\Validation\PropertyRules;
 use Spatie\LaravelData\Support\Validation\ValidationContext;
-use Spatie\TypeScriptTransformer\Actions\FindClassNameFqcnAction;
-use Spatie\TypeScriptTransformer\PhpNodes\PhpClassNode;
+use StrictlyLaravel\TypeScript\LiteralValues;
 use StrictlyLaravel\TypeScript\PropertyAnnotation;
 
 /**
@@ -31,9 +20,9 @@ use StrictlyLaravel\TypeScript\PropertyAnnotation;
  * A PHPDoc literal union (`@param 'monday'|'sunday' $weekStartsOn`) is generated as the TypeScript literal union
  * `'monday' | 'sunday'` (Workarounds\TypeScriptTransformer\LiteralTypes), but laravel-data validates only the native
  * type, so the server accepts any string. This adds `in:monday,sunday`, from the same PHPDoc type the TypeScript is
- * generated from (PropertyAnnotation): string, int and float literals, class constants and enum cases (their backing
- * value), optionally `|null`. A list of such literals (`list<'low'|'high'>`) has every item validated (ListItemsRule).
- * A `true`/`false` literal adds no rule.
+ * generated from (PropertyAnnotation, LiteralValues): string, int and float literals, class constants and enum cases
+ * (their backing value), optionally `|null`. A list of such literals (`list<'low'|'high'>`) has every item validated
+ * (ListItemsRule). A `true`/`false` literal adds no rule.
  */
 final class LiteralRuleInferrer implements RuleInferrer
 {
@@ -65,8 +54,8 @@ final class LiteralRuleInferrer implements RuleInferrer
             return null;
         }
 
-        $type = $this->withoutNull($annotation->type);
-        $values = $this->literals($type, $annotation->scope);
+        $type = LiteralValues::withoutNull($annotation->type);
+        $values = LiteralValues::of($type, $annotation->scope);
 
         if ($values !== null) {
             return new In($values);
@@ -77,90 +66,8 @@ final class LiteralRuleInferrer implements RuleInferrer
             $type instanceof ArrayTypeNode => $type->type,
             default => null,
         };
-        $itemValues = $item === null ? null : $this->literals($this->withoutNull($item), $annotation->scope);
+        $itemValues = $item === null ? null : LiteralValues::of(LiteralValues::withoutNull($item), $annotation->scope);
 
         return $itemValues === null ? null : new Rule(ListItemsRule::oneOf($itemValues));
-    }
-
-    private function withoutNull(TypeNode $type): TypeNode
-    {
-        if ($type instanceof NullableTypeNode) {
-            return $type->type;
-        }
-
-        if (! $type instanceof UnionTypeNode) {
-            return $type;
-        }
-
-        $types = array_values(array_filter($type->types, fn (TypeNode $member): bool => ! $this->isNull($member)));
-
-        return count($types) === 1 ? $types[0] : new UnionTypeNode($types);
-    }
-
-    private function isNull(TypeNode $type): bool
-    {
-        return $type instanceof IdentifierTypeNode && strtolower($type->name) === 'null';
-    }
-
-    /**
-     * The values of a literal or a union of literals, or null when it isn't one.
-     *
-     * @return list<string|int|float>|null
-     */
-    private function literals(TypeNode $type, PhpClassNode $scope): ?array
-    {
-        $members = $type instanceof UnionTypeNode ? $type->types : [$type];
-        $values = [];
-
-        foreach ($members as $member) {
-            if (! $member instanceof ConstTypeNode) {
-                return null;
-            }
-
-            $value = $this->value($member, $scope);
-
-            if ($value === null) {
-                return null;
-            }
-
-            $values[] = $value;
-        }
-
-        return $values;
-    }
-
-    private function value(ConstTypeNode $type, PhpClassNode $scope): string|int|float|null
-    {
-        $expression = $type->constExpr;
-
-        if ($expression instanceof ConstExprStringNode) {
-            return $expression->value;
-        }
-
-        if ($expression instanceof ConstExprIntegerNode) {
-            return (int) str_replace('_', '', $expression->value);
-        }
-
-        if ($expression instanceof ConstExprFloatNode) {
-            return (float) str_replace('_', '', $expression->value);
-        }
-
-        if (! $expression instanceof ConstFetchNode) {
-            return null;
-        }
-
-        $class = (new FindClassNameFqcnAction)->execute($scope, $expression->className);
-
-        if ($class === null || ! defined("{$class}::{$expression->name}")) {
-            return null;
-        }
-
-        $value = constant("{$class}::{$expression->name}");
-
-        return match (true) {
-            $value instanceof BackedEnum => $value->value,
-            is_string($value), is_int($value), is_float($value) => $value,
-            default => null,
-        };
     }
 }

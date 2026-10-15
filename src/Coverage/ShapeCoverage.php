@@ -8,6 +8,7 @@ use Spatie\LaravelData\Support\DataConfig;
 use Spatie\LaravelData\Support\DataProperty;
 use stdClass;
 use StrictlyLaravel\Data\InputData;
+use StrictlyLaravel\TypeScript\LiteralValues;
 
 /**
  * Compares a Data class with every value the feature tests recorded for it, at any depth, and finds the states its
@@ -149,6 +150,13 @@ final class ShapeCoverage
     private function walkValue(string $owner, DataProperty $property, array $values, Origin $origin, string $path): void
     {
         $type = $property->type;
+        $wrapped = WrappedProp::of($property);
+
+        if ($wrapped !== null) {
+            $this->walkWrapped($owner, $property, $wrapped, $values, $origin, $path);
+
+            return;
+        }
 
         if ($type->kind === DataTypeKind::DataObject) {
             $variants = array_values(array_filter(
@@ -196,6 +204,29 @@ final class ShapeCoverage
     }
 
     /**
+     * A prop wrapped in Inertia's ScrollProp, MergeProp or OnceProp, walked as the collection or Data object it sends
+     * (Problem P-133).
+     *
+     * @param  class-string  $owner
+     * @param  list<mixed>  $values  the property's non-null values
+     */
+    private function walkWrapped(string $owner, DataProperty $property, WrappedProp $wrapped, array $values, Origin $origin, string $path): void
+    {
+        if ($wrapped->collection === null) {
+            $this->walk($wrapped->dataClass, $values, $origin, $path);
+
+            return;
+        }
+
+        $items = $this->items($wrapped->collection === 'paginated'
+            ? array_map(fn (mixed $value): mixed => $value instanceof stdClass ? ($value->data ?? []) : [], $values)
+            : $values);
+
+        $this->shape($owner, $property, 'is only ever empty', $origin, $path, "at least one item in {$path}", seen: $items !== [], fixIsComplete: true);
+        $this->walk($wrapped->dataClass, $items, $origin, "{$path}[]");
+    }
+
+    /**
      * A union of scalars (`int|string`) is only proven for the members a test produced, so each must be seen. `int`
      * and `float` are both a TypeScript `number`, so they count as one member.
      *
@@ -230,7 +261,9 @@ final class ShapeCoverage
 
     /**
      * Whether a value is the given Data class's variant of a union: it sends every property the class always sends,
-     * and nothing the class doesn't have.
+     * nothing the class doesn't have, and for each property typed as a literal (the discriminant of a discriminated
+     * union, such as a `type` documented `@var ActivityType::Commented`) one of its values. Variants with the same keys are told apart by
+     * the literal, as `tsc` does (Problem P-132).
      *
      * @param  class-string  $variant
      */
@@ -240,7 +273,8 @@ final class ShapeCoverage
             return false;
         }
 
-        $keys = array_map(strval(...), array_keys(get_object_vars($value)));
+        $sent = get_object_vars($value);
+        $keys = array_map(strval(...), array_keys($sent));
         $all = [];
         $required = [];
 
@@ -254,6 +288,14 @@ final class ShapeCoverage
 
             if (! $property->type->isOptional && $property->type->lazyType === null) {
                 $required[] = $name;
+            }
+
+            $literals = array_key_exists($name, $sent) && $sent[$name] !== null
+                ? LiteralValues::ofProperty($variant, $property->name)
+                : null;
+
+            if ($literals !== null && ! in_array($sent[$name], $literals, true)) {
+                return false;
             }
         }
 
