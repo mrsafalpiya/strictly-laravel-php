@@ -2,6 +2,7 @@
 
 namespace StrictlyLaravel\Broadcasting;
 
+use Spatie\LaravelData\Data;
 use StrictlyLaravel\Routes\RouteKey;
 
 /**
@@ -15,11 +16,14 @@ final readonly class ChannelDefinition
      * @param  'public'|'private'|'presence'  $visibility  how a client subscribes to it
      * @param  array<string, RouteKey|null>  $parameters  each parameter of the pattern, with the route key it is bound by
      *                                                    (null for a plain value)
+     * @param  class-string<Data>|null  $member  a presence channel's member data: the Data class its callback returns
+     *                                           (null when it returns an array, which nothing types, Problem P-145)
      */
     public function __construct(
         public string $pattern,
         public string $visibility,
         public array $parameters,
+        public ?string $member = null,
     ) {}
 
     /**

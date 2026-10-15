@@ -46,9 +46,10 @@ parameters:
 # closure route, whose route function Wayfinder can't type, takes no input, query or other Data class or FormRequest, returns
 # no Data class but a Page, and reads neither input nor the query string (P-097, P-109, P-151, P-167). A
 # broadcast event's payload is the Data class its broadcastData() declares (P-052), and it declares the channels it is
-# sent on with #[BroadcastsOn] (P-144). A translation call in PHP names a key of the default locale (or Laravel's own)
-# with exactly its message's params, and picks a pluralised message's form with a choice call (P-137). A Data property
-# that holds a model's key declares the model with #[KeyOf] (P-128).
+# sent on with #[BroadcastsOn] (P-144). A presence channel's callback declares the Data class its members share as its
+# return type (P-145). A translation call in PHP names a key of the default locale (or Laravel's own) with exactly its
+# message's params, and picks a pluralised message's form with a choice call (P-137). A Data property that holds a
+# model's key declares the model with #[KeyOf] (P-128).
 rules:
     - StrictlyLaravel\PHPStan\DataClassFinalRule
     - StrictlyLaravel\PHPStan\DataNamespaceRule
@@ -65,6 +66,7 @@ rules:
     - StrictlyLaravel\PHPStan\ClosureRouteRule
     - StrictlyLaravel\PHPStan\BroadcastDataRule
     - StrictlyLaravel\PHPStan\BroadcastsOnRule
+    - StrictlyLaravel\PHPStan\PresenceDataRule
     - StrictlyLaravel\PHPStan\TranslationRule
     - StrictlyLaravel\PHPStan\KeyOfRule
 
