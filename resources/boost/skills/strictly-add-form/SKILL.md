@@ -48,7 +48,7 @@ final class StoreProjectData extends InputData
     Route::post('projects', [ProjectController::class, 'store'])->name('projects.store');
 ```
 
-Read the payload only through `$data`. Every validation error must be a field of the input; a refusal that isn't about a field is a toast: `FlashData::toast(ToastType::Error, '…'); return back();`.
+Read the payload only through `$data`. Never take a FormRequest (`strictly.formRequest`): its `rules()` and `authorize()` belong in the input class. An action without an input class reads no input from the request (`strictly.inputRead`), since nothing types it. Every validation error must be a field of the input; a refusal that isn't about a field is a toast: `FlashData::toast(ToastType::Error, '…'); return back();`.
 
 ## 3. Build the form from the route
 
@@ -126,6 +126,8 @@ Done when `composer ci:check` passes.
 - `ci:check:lint` fails with ``Untyped field name "email": use `name={field('…')}` from `<TypedForm>`'s render prop``: name every control with `field()`.
 - `ci:check:tsc` fails with `error TS2322: Type 'string' is not assignable to type 'FieldName'.`: a plain string names a control. Use `field('…')`, and type a forwarded `name` as `FieldName`.
 - `ci:check:tsc` fails with `error TS2339: Property 'nmae' does not exist on type 'Partial<Record<"name"`: the error key isn't a field of the input.
+- `ci:check:test` fails with `App\Http\Controllers\ProjectController::store() takes`: the action takes a FormRequest. Move its `rules()` and `authorize()` into an input class, take that instead, and read the payload from `$data`.
+- `ci:check:test` fails with `App\Http\Controllers\ProjectController::store() reads input`: the action takes no input class, so nothing types what it reads (`$request->input()`, `string()`, `all()`, `validate()`, `$request->name`). Take an input class and read the field from `$data`; a GET's query string goes in a query class.
 - `ci:check:test` fails with `doesn't extend StrictlyLaravel\Data\InputData.`: the action's Data parameter must extend `InputData`.
 - `ci:check:test` fails with `App\Data\StoreTaskData::$task nests App\Data\TaskData, whose rules()`: a Data class with `rules()` nested in an input must extend `InputData` too.
 - `ci:check:test` fails with `Gate::authorize() after App\Data\StoreProjectData was validated, so`: move the check into the input's `authorize()`.
