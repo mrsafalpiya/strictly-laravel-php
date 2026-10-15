@@ -17,7 +17,7 @@ final class ControllerAction
     {
         $class = $scope->getClassReflection();
 
-        if ($class === null || ! $class->isClass() || $class->isAnonymous() || $class->isAbstract()) {
+        if ($class === null || ! self::isController($class)) {
             return null;
         }
 
@@ -25,9 +25,18 @@ final class ControllerAction
             return null;
         }
 
-        $name = $class->getName();
-        $isController = str_contains($name, '\\Controllers\\') || str_ends_with($name, 'Controller');
+        return $class;
+    }
 
-        return $isController ? $class : null;
+    /** Whether a class is a controller: a concrete class in a `Controllers` namespace or named `…Controller`. */
+    public static function isController(ClassReflection $class): bool
+    {
+        if (! $class->isClass() || $class->isAnonymous() || $class->isAbstract()) {
+            return false;
+        }
+
+        $name = $class->getName();
+
+        return str_contains($name, '\\Controllers\\') || str_ends_with($name, 'Controller');
     }
 }
