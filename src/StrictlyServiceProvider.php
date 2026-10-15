@@ -24,6 +24,9 @@ final class StrictlyServiceProvider extends ServiceProvider
     /** What `strictly:install` publishes as the app's config/strictly.php: the Base Kit's vendor declarations. */
     public const string CONFIG_STUB = __DIR__.'/../stubs/strictly.php';
 
+    /** What `strictly:install` publishes as the app's tests/Feature/LocaleParityTest.php (Problem P-057). */
+    public const string LOCALE_PARITY_TEST_STUB = __DIR__.'/../stubs/LocaleParityTest.php';
+
     public function register(): void
     {
         $this->mergeConfigFrom(self::CONFIG_DEFAULTS, 'strictly');
