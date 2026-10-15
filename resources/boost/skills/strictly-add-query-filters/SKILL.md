@@ -109,6 +109,8 @@ export default function Index({ projects, filters }: Props) {
 
 `mergeQuery` keeps the current URL's other keys: `index({ mergeQuery: { sort } })`. Wayfinder leaves `null` and `[]` out of the URL, which the server reads back as the default.
 
+A route whose action takes no query class takes no query string: its `query` and `mergeQuery` accept nothing, so a link can't send a key no query class declares. On the server, read keys only from the query class, never with `$request->query()` (`strictly.queryRead`). Pagination needs no query class: `<Pagination>` follows the paginator's own links, and `<InfiniteScroll>` asks for the next page itself.
+
 ## 4. Request it with and without filters in feature tests
 
 Send each nullable filter both absent and set, or `ci:check:coverage` reports the `filters` prop's gap:
@@ -144,4 +146,6 @@ Done when `composer ci:check` passes.
 - `ci:check:test` fails with `App\Data\ProjectFiltersData::$statuses is a list, so it must default`: default a list to `[]` and a nullable property to `null`.
 - `ci:check:tsc` fails with `error TS2561: Object literal may only specify known properties, but 'statuse' does not exist in type 'Partial<ProjectFiltersData>'.`: the key isn't a property of the query class.
 - `ci:check:tsc` fails with `error TS2322: Type '"oldest"' is not assignable to type 'ProjectSort | undefined'.`: the value isn't one the property's type allows.
+- `ci:check:tsc` fails with `error TS2353: Object literal may only specify known properties, and 'tab' does not exist in type 'NoQueryClass'.`: the route's action takes no query class; write one (step 1) and type-hint it on the action.
+- `ci:check:test` fails with `App\Http\Controllers\DashboardController::index() reads the query`: read the key from the action's query class instead of the request.
 - `ci:check:test` fails with `Expected response status code [422] but received 200.`: an invalid query value falls back to its default; assert the default instead of a 422.

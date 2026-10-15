@@ -9,7 +9,8 @@ use StrictlyLaravel\Data\QueryData;
 
 /**
  * The query Data class of a controller action: the type its route function's `query` option takes
- * (WayfinderTemplates). It is the action's first parameter typed with a QueryData subclass.
+ * (WayfinderTemplates). It is the action's first parameter typed with a QueryData subclass. A route without one (a
+ * closure has none) takes no query string (Problem P-106).
  *
  * A GET of a controller the app doesn't own (Fortify's password reset link) takes no query class: its query class is
  * the one config/strictly.php declares for it (VendorDeclarations, Problem P-025), which wins over its parameters.
