@@ -13,6 +13,7 @@ use ReflectionMethod;
 use ReflectionNamedType;
 use ReflectionParameter;
 use ReflectionProperty;
+use StrictlyLaravel\Broadcasting\BroadcastChannels;
 use StrictlyLaravel\Data\InputData;
 use StrictlyLaravel\Data\QueryData;
 use StrictlyLaravel\Data\RouteKeyOf;
@@ -27,7 +28,9 @@ use Throwable;
  *    or `{ id: RouteKey<'Project', number> }` (the Wayfinder template override, WayfinderTemplates::functionArguments());
  *  - a Data class built from the model (a static `from…(Project $project)` method, such as `fromModel()`) has the
  *    properties named after the binding fields the routes use for it (`id`, or `slug` for `{project:slug}`) generated
- *    as `RouteKey<'Project', …>`, and so does a property declared `#[RouteKeyOf(Project::class)]` (TypeScript\RouteKeyTypes).
+ *    as `RouteKey<'Project', …>`, and so does a property declared `#[RouteKeyOf(Project::class)]` (TypeScript\RouteKeyTypes);
+ *  - a broadcast channel parameter whose callback type-hints the model (`fn (User $user, Project $project)`) binds it
+ *    like a route, so `channel('projects.{project}', …)` takes the key too (Broadcasting\BroadcastChannels).
  *
  * So `show(project)` takes a ProjectData, its `id`, or an issue's declared `project_id`, but not an IssueData, its `id`
  * or a plain number. Feature tests check that every branded value sent is an existing key of its model
@@ -55,6 +58,13 @@ final class RouteKeys
                     $field = $route->bindingFieldFor($name);
                     $fields[$model][] = is_string($field) ? $field : self::routeKeyName($model);
                 }
+            }
+        }
+
+        // A broadcast channel binds a model like a route (Problem P-054): `channel('issues.{issue}', …)` takes its key.
+        foreach (BroadcastChannels::bindings(app()) as $model => $names) {
+            foreach ($names as $name) {
+                $fields[$model][] = $name;
             }
         }
 

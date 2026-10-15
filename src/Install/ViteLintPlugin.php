@@ -18,6 +18,7 @@ final class ViteLintPlugin
     public const array RULES = [
         'strictly/no-hardcoded-urls',
         'strictly/require-suppression-reason',
+        'strictly/typed-broadcasts',
         'strictly/typed-form-fields',
         'strictly/typed-forms',
         'strictly/typed-inertia-components',

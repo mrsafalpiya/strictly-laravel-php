@@ -2,12 +2,14 @@
 
 namespace StrictlyLaravel\Testing;
 
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Http\Events\RequestHandled;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Events\RouteMatched;
 use Illuminate\Routing\Route;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\MessageBag;
@@ -19,6 +21,7 @@ use JsonException;
 use Spatie\LaravelData\Support\DataConfig;
 use Spatie\LaravelData\Support\DataProperty;
 use stdClass;
+use StrictlyLaravel\Broadcasting\BroadcastEvents;
 use StrictlyLaravel\Inertia\Page;
 use StrictlyLaravel\Inertia\PageLocations;
 use StrictlyLaravel\Routes\FormEndpoints;
@@ -27,6 +30,7 @@ use StrictlyLaravel\Routes\RouteInput;
 use StrictlyLaravel\Routes\RouteQuery;
 use StrictlyLaravel\Routes\RouteResponse;
 use StrictlyLaravel\Routes\WayfinderTemplates;
+use Stringable;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -92,8 +96,17 @@ use Symfony\Component\HttpFoundation\Response;
  * A vendor action's input, query class and response are the ones config/strictly.php declares for it (Problems P-025,
  * P-050), and a FormRequest the action takes reports its reads too (InputReads::trackFormRequests()).
  *
+ * Every event broadcast during the test whose payload is a Data class (BroadcastsData), from a request or not, becomes
+ * resources/js/__contracts__/_broadcasts/<hash>.ts, checked against the type `@/generated/broadcasting` maps its name to
+ * (Problems P-052, P-053), and its private and presence channels against the channels routes/channels.php defines
+ * (Problem P-054):
+ *
+ *     // Recorded by Tests\Feature\CommentTest > a comment is broadcast: broadcast App\Events\CommentPosted on private-issues.4000001
+ *     export const channels = [ "private-issues.4000001" ] satisfies BroadcastChannelName[];
+ *     export const payload = { "id": 7000001, "body": "…" } satisfies Contract<BroadcastEvents['CommentPosted']>;
+ *
  * Each Contract has a `.json` sidecar next to it describing what was recorded (`kind` is `page`, `flash`, `form`,
- * `query` or `json`; a partial reload's page record has `partial`), which Contract Coverage reads (records(),
+ * `query`, `json` or `broadcast`; a partial reload's page record has `partial`), which Contract Coverage reads (records(),
  * `strictly:coverage`). A `form` or `query` record of a request that was neither refused nor validated nor read
  * anything has only the sidecar.
  *
@@ -118,6 +131,9 @@ final class ContractRecorder
     /** Where the responses of JSON endpoints are recorded, under DIRECTORY. */
     private const string JSON_DIRECTORY = '_json';
 
+    /** Where broadcasts are recorded, under DIRECTORY. */
+    private const string BROADCASTS_DIRECTORY = '_broadcasts';
+
     /**
      * The shared props Inertia types itself rather than through the shared props Data class: the validation errors
      * (`Page['props']['errors']`), shared by Inertia's middleware.
@@ -133,8 +149,8 @@ final class ContractRecorder
 
     /**
      * Every recorded Contract's sidecar, decoded with objects as stdClass (so `{}` and `[]` stay apart), in no
-     * particular order: what Contract Coverage reads. Each has a `kind` (`page`, `flash`, `form`, `query` or `json`) and
-     * the payload it recorded.
+     * particular order: what Contract Coverage reads. Each has a `kind` (`page`, `flash`, `form`, `query`, `json` or
+     * `broadcast`) and the payload it recorded.
      *
      * @return list<stdClass>
      */
@@ -189,6 +205,58 @@ final class ContractRecorder
         Event::listen(RequestHandled::class, function (RequestHandled $event) use ($test): void {
             self::record($test, $event->request, $event->response);
         });
+
+        // Every event is dispatched through the dispatcher, which broadcasts the ones that should be (Problem P-052).
+        Event::listen('*', function (string $name, array $payload) use ($test): void {
+            $event = $payload[0] ?? null;
+
+            if ($event instanceof ShouldBroadcast) {
+                self::recordBroadcast($test, $event);
+            }
+        });
+    }
+
+    /**
+     * A broadcast of an event whose payload is a Data class, as Laravel sends it: under its name, on its channels, with
+     * `broadcastWith()` as the payload (BroadcastsData). The channels a client subscribes to with authorization (private
+     * and presence ones) must be ones routes/channels.php defines, or no listener is ever authorized for them.
+     */
+    private static function recordBroadcast(string $test, ShouldBroadcast $event): void
+    {
+        if (method_exists($event, 'broadcastWhen') && $event->broadcastWhen() !== true) {
+            return;
+        }
+
+        $broadcast = BroadcastEvents::of($event);
+        $channels = array_map(fn (mixed $channel): string => is_string($channel) || $channel instanceof Stringable ? (string) $channel : '', Arr::wrap($event->broadcastOn()));
+
+        // Laravel broadcasts an event on no channel to nobody.
+        if ($broadcast === null || $channels === [] || ! method_exists($event, 'broadcastWith')) {
+            return;
+        }
+
+        $payload = self::decode(self::json($event->broadcastWith()));
+        $guarded = array_values(array_filter($channels, fn (string $channel): bool => str_starts_with($channel, 'private-') || str_starts_with($channel, 'presence-')));
+
+        self::write(self::BROADCASTS_DIRECTORY, [
+            sprintf('// Recorded by %s: broadcast %s on %s', $test, $broadcast->name, implode(', ', $channels)),
+            "import type { Contract } from '@mrsafalpiya/strictly-laravel/contracts';",
+            sprintf("import type { %s } from '@/generated/broadcasting';", $guarded === [] ? 'BroadcastEvents' : 'BroadcastChannelName, BroadcastEvents'),
+            '',
+            ...$guarded === [] ? [] : [
+                '// Every private and presence channel it was broadcast on: no listener is authorized for one routes/channels.php doesn\'t define.',
+                sprintf('export const channels = %s satisfies BroadcastChannelName[];', self::json($guarded)),
+            ],
+            sprintf('export const payload = %s satisfies Contract<BroadcastEvents[%s]>;', self::json($payload), self::quote($broadcast->key)),
+        ], [
+            'kind' => 'broadcast',
+            'test' => $test,
+            'event' => $broadcast->key,
+            'class' => $event::class,
+            'payloadClass' => $broadcast->payload,
+            'channels' => $channels,
+            'payload' => $payload,
+        ]);
     }
 
     private static function record(string $test, Request $request, Response $response): void

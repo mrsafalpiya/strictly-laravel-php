@@ -5,6 +5,7 @@ namespace StrictlyLaravel\Coverage;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Support\DataConfig;
 use stdClass;
+use StrictlyLaravel\Broadcasting\BroadcastEvent;
 use StrictlyLaravel\Inertia\GlobalDataClasses;
 use StrictlyLaravel\Inertia\Page;
 use StrictlyLaravel\Routes\RouteResponse;
@@ -32,9 +33,11 @@ use StrictlyLaravel\Routes\RouteResponse;
  * - declared vendor fields: every field config/strictly.php declares for a vendor action's input or query must be
  *   one some test saw the vendor validate, read or report an error for (`form` and `query` records), and a declared
  *   vendor query must be requested by some test.
+ * - broadcasts: some test must broadcast every event whose payload is a Data class (`broadcast` records), or its
+ *   payload type was never checked, and the payloads' shapes are observed against that class.
  *
- * A Type Boundary that records Contracts of a new kind (broadcasts) adds its dimension here: an unexercised Gap for
- * what no test reached, and its Data values fed to the same ShapeCoverage so their shapes are proven too.
+ * A Type Boundary that records Contracts of a new kind adds its dimension here: an unexercised Gap for what no test
+ * reached, and its Data values fed to the same ShapeCoverage so their shapes are proven too.
  */
 final readonly class ContractCoverage
 {
@@ -51,9 +54,10 @@ final readonly class ContractCoverage
      * @param  array<string, class-string>  $formEndpoints  endpoint => input Data class (FormEndpoints::all())
      * @param  array<string, string>  $jsonEndpoints  endpoint => response Data class or declared TypeScript type (JsonEndpoints::all())
      * @param  list<array{action: string, kind: 'input'|'query', class: class-string, endpoints: list<string>}>  $vendorPayloads  the declared vendor inputs and queries (VendorDeclarations::payloads())
+     * @param  array<string, BroadcastEvent>  $broadcasts  the broadcast events by the name Echo listens for them (BroadcastEvents::in())
      * @return list<Gap>
      */
-    public function gaps(array $records, array $pages, ?GlobalDataClasses $global = null, array $formEndpoints = [], array $jsonEndpoints = [], array $vendorPayloads = []): array
+    public function gaps(array $records, array $pages, ?GlobalDataClasses $global = null, array $formEndpoints = [], array $jsonEndpoints = [], array $vendorPayloads = [], array $broadcasts = []): array
     {
         $shapes = new ShapeCoverage($this->config);
         $unexercised = [
@@ -63,6 +67,7 @@ final readonly class ContractCoverage
             ...$this->formEndpoints($records, $formEndpoints),
             ...$this->jsonEndpoints($records, $jsonEndpoints, $shapes),
             ...$this->vendorFields($records, $vendorPayloads),
+            ...$this->broadcasts($records, $broadcasts, $shapes),
         ];
 
         $this->accepted($records, $shapes);
@@ -381,6 +386,41 @@ final readonly class ContractCoverage
             if ($dataClass !== null) {
                 $shapes->observe($dataClass, $responses[$endpoint], new Origin($endpoint, "calls {$endpoint}"));
             }
+        }
+
+        return $gaps;
+    }
+
+    /**
+     * @param  list<stdClass>  $records
+     * @param  array<string, BroadcastEvent>  $events
+     * @return list<Gap>
+     */
+    private function broadcasts(array $records, array $events, ShapeCoverage $shapes): array
+    {
+        $payloads = [];
+
+        foreach ($records as $record) {
+            if ($record->kind === 'broadcast' && is_string($record->event ?? null)) {
+                $payloads[$record->event][] = $record->payload ?? null;
+            }
+        }
+
+        $gaps = [];
+
+        foreach ($events as $key => $event) {
+            if (! isset($payloads[$key])) {
+                $gaps[] = new Gap(
+                    "{$key}: no feature test broadcasts this event",
+                    [],
+                    "add a feature test that broadcasts {$event->class}, so its {$event->payload} payload is checked",
+                    unexercised: true,
+                );
+
+                continue;
+            }
+
+            $shapes->observe($event->payload, $payloads[$key], new Origin("broadcast {$key}", "broadcasts {$key}"));
         }
 
         return $gaps;

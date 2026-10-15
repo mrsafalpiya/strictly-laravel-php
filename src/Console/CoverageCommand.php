@@ -4,6 +4,7 @@ namespace StrictlyLaravel\Console;
 
 use Illuminate\Console\Command;
 use Spatie\LaravelData\Support\DataConfig;
+use StrictlyLaravel\Broadcasting\BroadcastEvents;
 use StrictlyLaravel\Coverage\ContractCoverage;
 use StrictlyLaravel\Coverage\Gap;
 use StrictlyLaravel\Inertia\GlobalDataClasses;
@@ -17,8 +18,9 @@ use Symfony\Component\Console\Formatter\OutputFormatter;
 
 /**
  * Reports what the Contracts the feature tests recorded never exercised (Contract Coverage, Problem P-066), each gap
- * with the test that closes it. A page no test renders always fails; a shape its type permits that no Contract
- * showed fails with `--strict`, which is how `ci:check` runs it (`ci:check:coverage`, after the tests).
+ * with the test that closes it. A page no test renders (or an endpoint no test calls, an event no test broadcasts)
+ * always fails; a shape its type permits that no Contract showed fails with `--strict`, which is how `ci:check` runs it
+ * (`ci:check:coverage`, after the tests).
  *
  * Each gap is one line, so it isn't wrapped to the terminal's width:
  *
@@ -42,8 +44,9 @@ final class CoverageCommand extends Command
         $pages = PageLocations::pages();
         $formEndpoints = FormEndpoints::all(app('router'));
         $jsonEndpoints = JsonEndpoints::all(app('router'));
+        $broadcasts = BroadcastEvents::in([app_path()]);
 
-        if ($records === [] && ($pages !== [] || $formEndpoints !== [] || $jsonEndpoints !== [])) {
+        if ($records === [] && ($pages !== [] || $formEndpoints !== [] || $jsonEndpoints !== [] || $broadcasts !== [])) {
             $this->line('Contract Coverage: no Contracts are recorded. Run the feature tests first (composer ci:check:test), then this command.');
 
             return self::FAILURE;
@@ -57,6 +60,7 @@ final class CoverageCommand extends Command
             $formEndpoints,
             $jsonEndpoints,
             VendorDeclarations::payloads(app('router')),
+            $broadcasts,
         );
         $failing = array_filter($gaps, fn (Gap $gap): bool => $strict || $gap->unexercised);
 

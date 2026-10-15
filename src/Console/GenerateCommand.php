@@ -10,6 +10,9 @@ use Spatie\LaravelTypeScriptTransformer\Support\LaravelConsoleLogger;
 use Spatie\TypeScriptTransformer\Enums\RunnerMode;
 use Spatie\TypeScriptTransformer\Runners\Runner;
 use Spatie\TypeScriptTransformer\TypeScriptTransformerConfig;
+use StrictlyLaravel\Broadcasting\BroadcastChannels;
+use StrictlyLaravel\Broadcasting\BroadcastEvents;
+use StrictlyLaravel\Broadcasting\BroadcastingModule;
 use StrictlyLaravel\Routes\RouteKeys;
 use StrictlyLaravel\Routes\VendorDeclarations;
 use StrictlyLaravel\Translations\Translations;
@@ -23,18 +26,19 @@ use Symfony\Component\Console\Attribute\AsCommand;
 
 /**
  * Generates every TypeScript file the app's React code imports from PHP: the Data and enum types (`@/generated`), the
- * translations and their typed `t()` (`@/generated/translations`, from lang/) and Wayfinder's routes and actions. All
- * of it is gitignored, so build, typecheck and `ci:check` run this first. The npm package's Vite plugin runs it with
- * `--skip-routes` whenever a PHP file under app/ or lang/ changes, since the Base Kit's Wayfinder plugin already
- * regenerates the routes in dev.
+ * translations and their typed `t()` (`@/generated/translations`, from lang/), the broadcast events and channels with
+ * their typed Echo helpers (`@/generated/broadcasting`, from the events and routes/channels.php) and Wayfinder's routes
+ * and actions. All of it is gitignored, so build, typecheck and `ci:check` run this first. The npm package's Vite plugin
+ * runs it with `--skip-routes` whenever a PHP file under app/ or lang/, or routes/channels.php, changes, since the Base
+ * Kit's Wayfinder plugin already regenerates the routes in dev.
  */
 #[AsCommand(name: 'strictly:generate')]
 final class GenerateCommand extends Command
 {
     protected $signature = 'strictly:generate
-        {--skip-routes : Generate only the Data and enum types and the translations, not Wayfinder\'s routes and actions}';
+        {--skip-routes : Generate only the Data and enum types, the translations and the broadcasts, not Wayfinder\'s routes and actions}';
 
-    protected $description = 'Generate the TypeScript types for Data classes, enums, translations and routes';
+    protected $description = 'Generate the TypeScript types for Data classes, enums, translations, broadcasts and routes';
 
     public function handle(Runner $runner, TypeScriptTransformerConfig $config, Filesystem $files): int
     {
@@ -78,6 +82,14 @@ final class GenerateCommand extends Command
             TranslationsModule::write(Translations::ofApp(), TypeGeneration::outputDirectory(), $files);
         } catch (RuntimeException $exception) {
             $this->components->error('Cannot generate the translations: '.$exception->getMessage());
+
+            return self::FAILURE;
+        }
+
+        try {
+            BroadcastingModule::write(BroadcastEvents::in([$this->laravel->path()]), BroadcastChannels::of($this->laravel), TypeGeneration::outputDirectory(), $files);
+        } catch (RuntimeException $exception) {
+            $this->components->error('Cannot generate the broadcast events: '.$exception->getMessage());
 
             return self::FAILURE;
         }

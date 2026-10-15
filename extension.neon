@@ -39,7 +39,8 @@ parameters:
 # through Page classes (Problems P-009, P-011), and flash data is written only through the flash Data class (P-047).
 # A Data class a controller action takes extends InputData (P-014, P-017), and such an action authorizes in the
 # input's authorize(), which runs before validation (P-030). Every property of a query Data class has the default an
-# absent query key means (P-104, P-105).
+# absent query key means (P-104, P-105). A broadcast event's payload is the Data class its broadcastData() declares
+# (P-052).
 rules:
     - StrictlyLaravel\PHPStan\DataClassFinalRule
     - StrictlyLaravel\PHPStan\DataNamespaceRule
@@ -48,3 +49,4 @@ rules:
     - StrictlyLaravel\PHPStan\InputDataRule
     - StrictlyLaravel\PHPStan\AuthorizeInInputRule
     - StrictlyLaravel\PHPStan\QueryDefaultRule
+    - StrictlyLaravel\PHPStan\BroadcastDataRule
