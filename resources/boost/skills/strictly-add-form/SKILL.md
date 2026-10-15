@@ -28,7 +28,7 @@ final class StoreProjectData extends InputData
 - Extra rules go in `public static function rules(): array`; they are merged with the inferred ones.
 - A field that holds a model's key declares the model: `#[KeyOf(User::class)] public ?int $assigneeId`, or `#[KeyOf(Label::class)] public array $labelIds` for a list (`StrictlyLaravel\Data\KeyOf`; `#[KeyOf(Issue::class, 'number')]` for a key by another field). TypeScript then takes only that model's key for it, so fill it from the Data the server sent (`member.id`); for a select, look its string value up among the options' keys instead of `Number(value)`. Keep the `exists` rule: it checks the row exists for this user.
 - Authorize in the input class, which runs before validation: `public static function authorize(Request $request): bool`.
-- `authorize()` and `rules()` receive the route's bound models: name a model parameter after the route's (`authorize(Project $project)` for `{project}`, `rules(Label $label)` to `->ignore($label->id)`). Don't read `$request->route('project')`. Only an input class gets them; a query class's or a plain Data class's model parameter would be a new, empty model.
+- `authorize()` and `rules()` receive the route's bound models: name a model parameter after the route's (`authorize(Project $project)` for `{project}`, `rules(Label $label)` to `->ignore($label->id)`). Don't read `$request->route('project')`. A model parameter with a contextual attribute comes from the container instead (`#[CurrentUser] User $user` is the signed-in user, whatever the route's `{user}`). Only an input class gets the route's models; a query class's or a plain Data class's model parameter would be a new, empty model.
 
 ## 2. Type-hint it in the action
 
@@ -50,7 +50,7 @@ final class StoreProjectData extends InputData
     Route::post('projects', [ProjectController::class, 'store'])->name('projects.store');
 ```
 
-Read the payload only through `$data`. Never take a FormRequest (`strictly.formRequest`): its `rules()` and `authorize()` belong in the input class. An action without an input class reads no input from the request (`strictly.inputRead`), since nothing types it. Route the form to a controller action, never a closure: Wayfinder types a route function only from a controller action, so a closure route may neither take an input class nor read input (`strictly.closureRoute`). Every validation error must be a field of the input; a refusal that isn't about a field is a toast: `FlashData::toast(ToastType::Error, '…'); return back();`.
+Read the payload only through `$data`. Never take a FormRequest (`strictly.formRequest`): its `rules()` and `authorize()` belong in the input class. An action without an input class reads no input from the request (`strictly.inputRead`), since nothing types it. Route the form to a controller action, never a closure: Wayfinder types a route function only from a controller action, so a closure route may neither take an input class (`strictly.closureRoute`) nor read input (`strictly.inputRead`). Every validation error must be a field of the input; a refusal that isn't about a field is a toast: `FlashData::toast(ToastType::Error, '…'); return back();`.
 
 ## 3. Build the form from the route
 
@@ -135,7 +135,7 @@ Done when `composer ci:check` passes.
 - `ci:check:test` fails with `doesn't extend StrictlyLaravel\Data\InputData.`: the action's Data parameter must extend `InputData`.
 - `ci:check:test` fails with `App\Data\BulkUpdateIssuesData::$ids is validated by an exists rule`: the field holds a model's key; declare the model with `#[KeyOf(Issue::class)]` (`strictly.keyOf`). A value that is no model's key takes `@phpstan-ignore strictly.keyOf (why)`.
 - `ci:check:tsc` fails with `error TS2345: Argument of type 'number & { readonly [keyOf]: "Issue.id"; }' is not assignable to parameter of type '(number & { readonly [keyOf]: "User.id"; }) | null'.`: an issue's key was sent where the input takes a user's. Send the key of the model the field declares.
-- `ci:check:test` fails with `App\Data\StoreTaskData::$task nests App\Data\TaskData, whose rules()`: a Data class with `rules()` nested in an input must extend `InputData` too.
+- `ci:check:test` fails with `App\Data\StoreTaskData::$task nests App\Data\TaskData, whose rules()`: a Data class with `rules()` nested in an input must extend `InputData` too (or carry `#[MergeValidationRules]` itself).
 - `ci:check:test` fails with `Gate::authorize() after App\Data\StoreProjectData was validated, so`: move the check into the input's `authorize()`.
 - `ci:check:test` fails with `App\Data\UpdateEmailData::authorize() takes App\Models\User $account, but the route users/{user}/email has no {account} parameter.`: name the model parameter after the route's parameter. If it says the route binds `{user}` to a string, the action must take the model (`User $user`) so the route binds it.
 - `ci:check:test` fails with `App\Data\TeamFiltersData::rules() takes App\Models\User $user`: only an input class's `authorize()` and `rules()` receive the route's models (`strictly.routeModelParameter`).

@@ -2,9 +2,11 @@
 
 namespace StrictlyLaravel\Workarounds\LaravelData;
 
+use Illuminate\Contracts\Container\ContextualAttribute;
 use Illuminate\Contracts\Routing\UrlRoutable;
 use Illuminate\Routing\Route;
 use LogicException;
+use ReflectionAttribute;
 use ReflectionMethod;
 use ReflectionNamedType;
 use ReflectionParameter;
@@ -14,7 +16,9 @@ use ReflectionParameter;
  * of the route's bound parameters, so `authorize(Comment $comment)` would get a new, empty Comment. This gives each
  * model-typed parameter of such a method (any UrlRoutable, the types Laravel's implicit route binding resolves) the
  * model the current route binds to the parameter of the same name, as named arguments for the container's call. Every
- * other parameter still resolves through the container.
+ * other parameter still resolves through the container, and so does a model parameter with a contextual attribute
+ * (`#[CurrentUser] User $user`, any of Laravel's `ContextualAttribute`s): it says where its value comes from, and a
+ * named argument would override it with the route's model.
  *
  * It never falls back to an empty model: a model parameter the route has no parameter of that name for, a route
  * parameter that isn't bound to a model of that type (the action doesn't take it, so the route left it a string), or
@@ -37,12 +41,18 @@ final class RouteModelArguments
         foreach ((new ReflectionMethod($class, $method))->getParameters() as $parameter) {
             $type = $parameter->getType();
 
-            if ($type instanceof ReflectionNamedType && ! $type->isBuiltin() && is_a($type->getName(), UrlRoutable::class, true)) {
+            if ($type instanceof ReflectionNamedType && ! $type->isBuiltin() && is_a($type->getName(), UrlRoutable::class, true)
+                && ! self::hasContextualAttribute($parameter)) {
                 $arguments[$parameter->getName()] = self::boundModel("{$class}::{$method}()", $parameter, $type);
             }
         }
 
         return $arguments;
+    }
+
+    private static function hasContextualAttribute(ReflectionParameter $parameter): bool
+    {
+        return $parameter->getAttributes(ContextualAttribute::class, ReflectionAttribute::IS_INSTANCEOF) !== [];
     }
 
     private static function boundModel(string $method, ReflectionParameter $parameter, ReflectionNamedType $type): ?UrlRoutable

@@ -2,6 +2,7 @@
 
 namespace StrictlyLaravel\PHPStan;
 
+use Illuminate\Contracts\Container\ContextualAttribute;
 use Illuminate\Contracts\Routing\UrlRoutable;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
@@ -11,6 +12,7 @@ use PHPStan\Rules\IdentifierRuleError;
 use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
 use PHPStan\Type\TypeCombinator;
+use ReflectionAttribute;
 use Spatie\LaravelData\Contracts\BaseData;
 use StrictlyLaravel\Data\InputData;
 use StrictlyLaravel\Data\QueryData;
@@ -19,7 +21,9 @@ use StrictlyLaravel\Data\QueryData;
  * Problem P-126: only an InputData's `authorize()` and `rules()` receive the route's bound models for their
  * model-typed parameters (Workarounds\LaravelData\RouteModelArguments). laravel-data calls any other Data class's
  * through the container, so `rules(Comment $comment)` on a query class or a plain Data class gets a new, empty Comment
- * and checks the wrong object without a word. Reported on the class that declares the method.
+ * and checks the wrong object without a word. Reported on the class that declares the method. A parameter with a
+ * contextual attribute (`#[CurrentUser] User $user`, any of Laravel's `ContextualAttribute`s) is fine anywhere: the
+ * container resolves it from the attribute, as it does for an InputData.
  *
  * @implements Rule<InClassNode>
  */
@@ -50,7 +54,13 @@ final class RouteModelParameterRule implements Rule
                 continue;
             }
 
+            $contextual = $this->contextualParameters($data, $name);
+
             foreach ($data->getNativeMethod($name)->getVariants()[0]->getParameters() as $parameter) {
+                if (in_array($parameter->getName(), $contextual, true)) {
+                    continue;
+                }
+
                 foreach (TypeCombinator::removeNull($parameter->getType())->getObjectClassReflections() as $model) {
                     if (! $this->isModel($model)) {
                         continue;
@@ -74,6 +84,24 @@ final class RouteModelParameterRule implements Rule
         }
 
         return $errors;
+    }
+
+    /**
+     * The names of the method's parameters that carry a contextual attribute, which the container resolves.
+     *
+     * @return list<string>
+     */
+    private function contextualParameters(ClassReflection $data, string $method): array
+    {
+        $names = [];
+
+        foreach ($data->getNativeReflection()->getMethod($method)->getParameters() as $parameter) {
+            if ($parameter->getAttributes(ContextualAttribute::class, ReflectionAttribute::IS_INSTANCEOF) !== []) {
+                $names[] = $parameter->getName();
+            }
+        }
+
+        return $names;
     }
 
     /** A model, or any other class Laravel's implicit route binding resolves. */

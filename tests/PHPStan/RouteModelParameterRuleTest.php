@@ -25,9 +25,9 @@ final class RouteModelParameterRuleTest extends RuleTestCase
         $tip = static fn (string $class): string => "Make App\\Data\\RouteModels\\{$class} extend StrictlyLaravel\\Data\\InputData if it is a request's input. Otherwise read the model from request()->route() and narrow it with instanceof.";
 
         $this->analyse([__DIR__.'/data/route-model-parameters.php'], [
-            [$takes('CommentFiltersData::rules()', 'comment'), 57, 'Read the model from request()->route() and narrow it with instanceof: a query class\'s rules() get no route models.'],
-            [$takes('CommentData::authorize()', 'comment'), 67, $tip('CommentData')],
-            [$takes('BaseCommentData::rules()', 'comment'), 82, $tip('BaseCommentData')],
+            [$takes('CommentFiltersData::rules()', 'comment'), 59, 'Read the model from request()->route() and narrow it with instanceof: a query class\'s rules() get no route models.'],
+            [$takes('CommentData::authorize()', 'comment'), 69, $tip('CommentData')],
+            [$takes('BaseCommentData::rules()', 'comment'), 84, $tip('BaseCommentData')],
         ]);
     }
 }

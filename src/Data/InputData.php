@@ -24,12 +24,13 @@ use StrictlyLaravel\Workarounds\LaravelData\AuthorizeWithRouteModels;
  * - A model-typed parameter of `authorize()` or `rules()` receives the model the route binds to the parameter of the
  *   same name (`authorize(Comment $comment)` for `{comment}`), never a new, empty one (Problem P-126): a parameter the
  *   route has no such model for throws, naming it. So does validating such an input outside a request to its route
- *   (`validate()` from a command or a unit test, Problem P-155). Every other parameter is resolved from the container.
+ *   (`validate()` from a command or a unit test, Problem P-155). Every other parameter is resolved from the container,
+ *   and so is a model parameter with a contextual attribute (`#[CurrentUser] User $user` gets the signed-in user).
  *   The PHPStan rule `strictly.routeModelParameter` rejects a model parameter there on any other Data class.
  *
  * The PHPStan rule `strictly.inputData` requires every Data class an action takes to extend this class, and every Data
  * class with `rules()` nested in an input too: laravel-data reads #[MergeValidationRules] from each nested class, so a
- * plain one's `rules()` replace its inferred ones (Problem P-099).
+ * plain one's `rules()` replace its inferred ones (Problem P-099), unless it carries the attribute itself.
  */
 #[MergeValidationRules]
 abstract class InputData extends Data

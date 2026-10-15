@@ -24,6 +24,15 @@ final class ProjectWatchersChannel
     }
 }
 
+/** make:channel's stub: `array|bool` could authorize a private or a presence channel. */
+final class ProjectChannel
+{
+    public function join(object $user, int $project): array|bool
+    {
+        return $project > 0;
+    }
+}
+
 final class TeamViewersChannel
 {
     public function join(object $user, int $team): ?ViewerData
@@ -34,6 +43,7 @@ final class TeamViewersChannel
 
 namespace App\Routes;
 
+use App\Broadcasting\ProjectChannel;
 use App\Broadcasting\ProjectWatchersChannel;
 use App\Broadcasting\TeamViewersChannel;
 use App\Data\ViewerData;
@@ -58,4 +68,8 @@ function channels(Broadcaster $broadcaster, string $pattern): void
 
     // A Data class the callback doesn't declare: generation reads only the declared return type.
     Broadcast::channel('boards.{board}.viewers', fn (object $user, int $board) => new ViewerData($board, 'Ada'));
+
+    // An array or a bool: nothing says whether it's a private or a presence channel.
+    Broadcast::channel('projects.{project}.private', ProjectChannel::class);
+    Broadcast::channel('boards.{board}', fn (object $user, int $board): array|bool => $board > 0 ? ['id' => $board] : false);
 }

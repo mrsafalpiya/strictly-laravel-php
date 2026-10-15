@@ -25,13 +25,13 @@ final class NestedInputDataRuleTest extends RuleTestCase
         $tip = 'Make App\Data\Nested\TaskData extend StrictlyLaravel\Data\InputData: its rules() then merge with the inferred ones, as the input\'s own do.';
 
         $this->analyse([__DIR__.'/data/nested-inputs.php'], [
-            [$nests('StoreTaskData::$task'), 57, $tip],
-            [$nests('StoreTasksData::$tasks'), 67, $tip],
-            [$nests('StoreTasksData::$byKey'), 70, $tip],
-            [$nests('StoreTasksData::$collection'), 73, $tip],
-            [$nests('StoreTasksData::$attributed'), 76, $tip],
-            [$nests('StoreChecklistData::$checklist', 'ChecklistData'), 86, $tip],
-            [$nests('TaskFiltersData::$task'), 92, $tip],
+            [$nests('StoreTaskData::$task'), 58, $tip],
+            [$nests('StoreTasksData::$tasks'), 68, $tip],
+            [$nests('StoreTasksData::$byKey'), 71, $tip],
+            [$nests('StoreTasksData::$collection'), 74, $tip],
+            [$nests('StoreTasksData::$attributed'), 77, $tip],
+            [$nests('StoreChecklistData::$checklist', 'ChecklistData'), 87, $tip],
+            [$nests('TaskFiltersData::$task'), 93, $tip],
         ]);
     }
 }

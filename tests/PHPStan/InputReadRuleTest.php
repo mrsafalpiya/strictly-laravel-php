@@ -16,7 +16,7 @@ final class InputReadRuleTest extends RuleTestCase
         return new InputReadRule;
     }
 
-    public function test_controllers_read_input_only_through_an_input_or_query_class(): void
+    public function test_controllers_read_input_only_through_an_input_class(): void
     {
         $tip = 'Take an input class on the action (a final Data class extending StrictlyLaravel\Data\InputData) and read the field from it: it types the route\'s form and its validation errors. A GET\'s query string goes in a query class (extending StrictlyLaravel\Data\QueryData) instead.';
         $error = static fn (string $method, string $with, int $line): array => [
@@ -43,6 +43,11 @@ final class InputReadRuleTest extends RuleTestCase
             $error('properties', '->files', 57),
             $error('helpers', 'Request::input()', 62),
             $error('helpers', 'request()', 62),
+            [
+                'App\\Http\\Controllers\\InputReads\\ProjectController::index() reads input from the request with input() instead of from its query class, which falls back to its defaults on an invalid value: the raw value is unchecked.',
+                82,
+                'Read the key from the query class, and declare it there if it is missing: the route function\'s query option sends only its keys.',
+            ],
             $error('formRequest', 'validated()', 87),
             $error('closure', 'input()', 92),
             $error('filter', 'input()', 97),

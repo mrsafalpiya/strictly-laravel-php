@@ -14,15 +14,17 @@ use StrictlyLaravel\Data\InputData;
 use StrictlyLaravel\Data\QueryData;
 
 /**
- * Problem P-112: a controller method that takes no input or query class reads no input from the request
+ * Problem P-112: a controller method that takes no input class reads no input from the request
  * (`$request->input('q')`, `$request->string('name')`, `$request->all()`, `$request->validate([...])`, `$request->name`,
  * `$request['name']`, `Request::input('q')`, `request('q')`). No type describes such a payload: a typed form sends only
  * the fields of its action's input class, so it has none for these keys, and the input Contracts only check a form
  * endpoint's reads.
  *
- * A method that takes an input or query class may still read the request: the Contract its requests record checks
- * every key it reads against that class (P-024). The query string itself is QueryReadRule's (P-106). Reading what isn't
- * the payload (`user()`, `route()`, `header()`, `ip()`, `session()`, `cookie()`) is fine.
+ * A method that takes an input class may still read the request: the input was validated whole (a 422 otherwise), and
+ * the Contract its requests record checks every key it reads against that class (P-024). A method that takes only a
+ * query class may not, as QueryReadRule rejects `query()` there (P-106): on a GET, `input('tab')` reads the same query
+ * string, and a query class falls back to its defaults on an invalid value, so the raw value is unchecked. Reading what
+ * isn't the payload (`user()`, `route()`, `header()`, `ip()`, `session()`, `cookie()`) is fine.
  *
  * A closure route reads no input either (Problem P-167): Wayfinder types no route function from a closure, so no typed
  * form can send it any (RouteClosure).
@@ -66,8 +68,20 @@ final readonly class InputReadRule implements Rule
             return RouteClosure::encloses($scope) ? [$this->closureRouteError($read)] : [];
         }
 
-        if ($this->takesRequestData($scope)) {
+        if ($this->takes($scope, InputData::class)) {
             return [];
+        }
+
+        if ($this->takes($scope, QueryData::class)) {
+            return [
+                RuleErrorBuilder::message(sprintf(
+                    '%s::%s() reads input from the request with %s instead of from its query class, which falls back to its defaults on an invalid value: the raw value is unchecked.',
+                    $controller->getName(), $scope->getFunctionName() ?? '{closure}', $read->shown,
+                ))
+                    ->identifier('strictly.inputRead')
+                    ->tip('Read the key from the query class, and declare it there if it is missing: the route function\'s query option sends only its keys.')
+                    ->build(),
+            ];
         }
 
         return [
@@ -99,8 +113,12 @@ final readonly class InputReadRule implements Rule
             ->build();
     }
 
-    /** Whether the method the read is in takes an input or query class, whose Contract checks the keys it reads. */
-    private function takesRequestData(Scope $scope): bool
+    /**
+     * Whether the method the read is in takes an instance of the class (InputData or QueryData).
+     *
+     * @param  class-string  $base
+     */
+    private function takes(Scope $scope, string $base): bool
     {
         $function = $scope->getFunction();
 
@@ -109,12 +127,8 @@ final readonly class InputReadRule implements Rule
         }
 
         foreach ($function->getOnlyVariant()->getParameters() as $parameter) {
-            $type = TypeCombinator::removeNull($parameter->getType());
-
-            foreach (InputDataRule::REQUEST_DATA as $base) {
-                if ((new ObjectType($base))->isSuperTypeOf($type)->yes()) {
-                    return true;
-                }
+            if ((new ObjectType($base))->isSuperTypeOf(TypeCombinator::removeNull($parameter->getType()))->yes()) {
+                return true;
             }
         }
 
