@@ -31,4 +31,15 @@ final class QueryReadRuleTest extends RuleTestCase
             [$message('filter'), 49, $tip],
         ]);
     }
+
+    public function test_closure_routes_read_no_query_string(): void
+    {
+        $this->analyse([__DIR__.'/data/closure-route-reads.php'], [
+            [
+                "A closure route reads the query string from the request, where nothing types it: a route function sends only the keys of a controller action's query class.",
+                10,
+                'Move the route to a controller action that takes a query class (a final Data class extending StrictlyLaravel\Data\QueryData) and read the key from it: Wayfinder types a route function\'s query option with the query class of the controller action it runs, never with a closure\'s.',
+            ],
+        ]);
+    }
 }

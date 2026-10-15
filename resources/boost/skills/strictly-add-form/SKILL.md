@@ -50,7 +50,7 @@ final class StoreProjectData extends InputData
     Route::post('projects', [ProjectController::class, 'store'])->name('projects.store');
 ```
 
-Read the payload only through `$data`. Never take a FormRequest (`strictly.formRequest`): its `rules()` and `authorize()` belong in the input class. An action without an input class reads no input from the request (`strictly.inputRead`), since nothing types it. Every validation error must be a field of the input; a refusal that isn't about a field is a toast: `FlashData::toast(ToastType::Error, '…'); return back();`.
+Read the payload only through `$data`. Never take a FormRequest (`strictly.formRequest`): its `rules()` and `authorize()` belong in the input class. An action without an input class reads no input from the request (`strictly.inputRead`), since nothing types it. Route the form to a controller action, never a closure: Wayfinder types a route function only from a controller action, so a closure route may neither take an input class nor read input (`strictly.closureRoute`). Every validation error must be a field of the input; a refusal that isn't about a field is a toast: `FlashData::toast(ToastType::Error, '…'); return back();`.
 
 ## 3. Build the form from the route
 
@@ -130,6 +130,8 @@ Done when `composer ci:check` passes.
 - `ci:check:tsc` fails with `error TS2339: Property 'nmae' does not exist on type 'Partial<Record<"name"`: the error key isn't a field of the input.
 - `ci:check:test` fails with `App\Http\Controllers\ProjectController::store() takes`: the action takes a FormRequest. Move its `rules()` and `authorize()` into an input class, take that instead, and read the payload from `$data`.
 - `ci:check:test` fails with `App\Http\Controllers\ProjectController::store() reads input`: the action takes no input class, so nothing types what it reads (`$request->input()`, `string()`, `all()`, `validate()`, `$request->name`). Take an input class and read the field from `$data`; a GET's query string goes in a query class.
+- `ci:check:test` fails with `The closure route POST projects takes App\Data\StoreProjectData`: move the route to a controller action that takes the input class.
+- `ci:check:test` fails with `A closure route reads input from the request with string()`: move the route to a controller action that takes an input class, and read the field from it.
 - `ci:check:test` fails with `doesn't extend StrictlyLaravel\Data\InputData.`: the action's Data parameter must extend `InputData`.
 - `ci:check:test` fails with `App\Data\BulkUpdateIssuesData::$ids is validated by an exists rule`: the field holds a model's key; declare the model with `#[KeyOf(Issue::class)]` (`strictly.keyOf`). A value that is no model's key takes `@phpstan-ignore strictly.keyOf (why)`.
 - `ci:check:tsc` fails with `error TS2345: Argument of type 'number & { readonly [keyOf]: "Issue.id"; }' is not assignable to parameter of type '(number & { readonly [keyOf]: "User.id"; }) | null'.`: an issue's key was sent where the input takes a user's. Send the key of the model the field declares.

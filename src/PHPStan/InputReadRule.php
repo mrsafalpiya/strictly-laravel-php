@@ -24,6 +24,9 @@ use StrictlyLaravel\Data\QueryData;
  * every key it reads against that class (P-024). The query string itself is QueryReadRule's (P-106). Reading what isn't
  * the payload (`user()`, `route()`, `header()`, `ip()`, `session()`, `cookie()`) is fine.
  *
+ * A closure route reads no input either (Problem P-167): Wayfinder types no route function from a closure, so no typed
+ * form can send it any (RouteClosure).
+ *
  * @implements Rule<Expr>
  */
 final readonly class InputReadRule implements Rule
@@ -59,7 +62,11 @@ final readonly class InputReadRule implements Rule
 
         $controller = ControllerAction::enclosing($scope);
 
-        if ($controller === null || $this->takesRequestData($scope)) {
+        if ($controller === null) {
+            return RouteClosure::encloses($scope) ? [$this->closureRouteError($read)] : [];
+        }
+
+        if ($this->takesRequestData($scope)) {
             return [];
         }
 
@@ -75,6 +82,21 @@ final readonly class InputReadRule implements Rule
                 ))
                 ->build(),
         ];
+    }
+
+    /** A closure route's read (Problem P-167): its route function has no input type at all (ClosureRouteRule). */
+    private function closureRouteError(RequestRead $read): IdentifierRuleError
+    {
+        return RuleErrorBuilder::message(sprintf(
+            'A closure route reads input from the request with %s, where nothing types it: a typed form sends only the fields of a controller action\'s input class.',
+            $read->shown,
+        ))
+            ->identifier('strictly.inputRead')
+            ->tip(sprintf(
+                'Move the route to a controller action that takes an input class (a final Data class extending %s) and read the field from it: Wayfinder brands a route function with the input class of the controller action it runs, never with a closure\'s.',
+                InputData::class,
+            ))
+            ->build();
     }
 
     /** Whether the method the read is in takes an input or query class, whose Contract checks the keys it reads. */
