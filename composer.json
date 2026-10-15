@@ -11,6 +11,7 @@
         "illuminate/support": "^13.0",
         "inertiajs/inertia-laravel": "^3.0",
         "larastan/larastan": "^3.9",
+        "laravel/boost": "^2.10",
         "pestphp/pest-plugin-phpstan": "^5.2",
         "pestphp/pest-plugin-type-coverage": "^5.0",
         "phpstan/phpstan": "^2.3",

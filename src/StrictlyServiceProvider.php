@@ -3,10 +3,12 @@
 namespace StrictlyLaravel;
 
 use Illuminate\Console\Events\CommandFinished;
+use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Spatie\TypeScriptTransformer\TypeScriptTransformerConfig;
+use StrictlyLaravel\Boost\BoostGuidance;
 use StrictlyLaravel\Console\CoverageCommand;
 use StrictlyLaravel\Console\GenerateCommand;
 use StrictlyLaravel\Console\InstallCommand;
@@ -54,6 +56,9 @@ final class StrictlyServiceProvider extends ServiceProvider
         $this->commands([CoverageCommand::class, GenerateCommand::class, InstallCommand::class, MakePageCommand::class]);
 
         Event::listen(CommandFinished::class, WayfinderQueryVerb::afterCommand(...));
+
+        // Laravel Boost installs the package's guideline and skills (Problem P-146).
+        Event::listen(CommandStarting::class, (new BoostGuidance($this->app->basePath('boost.json')))->beforeCommand(...));
 
         // Wayfinder generates routes from the console only (its command and its Vite plugin's).
         $this->callAfterResolving('view', WayfinderTemplates::register(...));

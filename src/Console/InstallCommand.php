@@ -4,6 +4,7 @@ namespace StrictlyLaravel\Console;
 
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
+use StrictlyLaravel\Install\BoostUpdateScript;
 use StrictlyLaravel\Install\CiCheckScripts;
 use StrictlyLaravel\Install\ConversionOutcome;
 use StrictlyLaravel\Install\GenerateFirst;
@@ -100,6 +101,7 @@ final class InstallCommand extends Command
             'config/strictly.php' => fn () => $this->publish($files, StrictlyServiceProvider::CONFIG_STUB, "{$root}/config/strictly.php"),
             'tests/Feature/LocaleParityTest.php' => fn () => $this->publish($files, StrictlyServiceProvider::LOCALE_PARITY_TEST_STUB, "{$root}/tests/Feature/LocaleParityTest.php"),
             "Composer scripts: ci:check and its steps (using {$packageManager->value})" => fn () => $this->writeCiCheck("{$root}/composer.json", $packageManager),
+            'Composer scripts: boost:update after composer update' => fn () => BoostUpdateScript::ensure("{$root}/composer.json"),
             'tsconfig.json: strictness flags' => fn () => TsconfigFlags::patch("{$root}/tsconfig.json"),
             'tsconfig.json: narrowed JSX types' => fn () => JsxTypes::patchTsconfig("{$root}/tsconfig.json"),
             'vite.config.ts: Strictly Laravel oxlint plugin' => fn () => ViteLintPlugin::register("{$root}/vite.config.ts"),
