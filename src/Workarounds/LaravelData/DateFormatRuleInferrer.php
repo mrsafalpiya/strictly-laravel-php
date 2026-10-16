@@ -96,14 +96,8 @@ final class DateFormatRuleInferrer implements RuleInferrer
             return null;
         }
 
-        if ($cast instanceof DateTimeCast) {
-            // The Overlay's own cast says what it reads, toISOString()'s format included (P-173).
-            $formats = $cast->formats();
-        } else {
-            // DateTimeInterfaceCast keeps its format protected; null means `data.date_format`, as in its castValue().
-            $format = (fn (): mixed => $this->format)->call($cast) ?? config('data.date_format');
-            $formats = array_values(array_filter(is_array($format) ? $format : [$format], is_string(...)));
-        }
+        // The Overlay's own cast says what it reads, toISOString()'s format included (P-173).
+        $formats = DateTimeCast::formatsOf($cast);
 
         return $formats === [] ? null : $formats;
     }

@@ -14,6 +14,7 @@ use StrictlyLaravel\Console\CoverageCommand;
 use StrictlyLaravel\Console\GenerateCommand;
 use StrictlyLaravel\Console\InstallCommand;
 use StrictlyLaravel\Console\MakePageCommand;
+use StrictlyLaravel\Data\DateTimeCast;
 use StrictlyLaravel\Routes\WayfinderTemplates;
 use StrictlyLaravel\TypeScript\TypeGeneration;
 use StrictlyLaravel\Workarounds\LaravelData\RulesWithRouteModels;
@@ -38,8 +39,13 @@ final class StrictlyServiceProvider extends ServiceProvider
         // Also what `typescript:transform` (and its --watch) runs.
         $this->app->singleton(TypeScriptTransformerConfig::class, TypeGeneration::config(...));
 
-        // Before any provider boots, so laravel-data reads the config with the workarounds applied.
-        $this->app->booting(fn () => StrictInputConfig::apply($this->app->make('config')));
+        // Before any provider boots, so laravel-data reads the config with the Overlay's date cast (Problem P-173) and
+        // the workarounds applied.
+        $this->app->booting(function (): void {
+            $config = $this->app->make('config');
+            DateTimeCast::useAsGlobalCast($config);
+            StrictInputConfig::apply($config);
+        });
 
         // Problem P-126: an input's rules() receive the route's bound models.
         $this->app->bind(DataValidationRulesResolver::class, RulesWithRouteModels::class);
