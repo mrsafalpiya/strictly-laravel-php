@@ -3,13 +3,12 @@
 namespace StrictlyLaravel\Tests\PHPStan;
 
 use PHPStan\Rules\Rule;
-use PHPStan\Testing\RuleTestCase;
 use StrictlyLaravel\PHPStan\AuthorizeInInputRule;
 
 /**
- * @extends RuleTestCase<AuthorizeInInputRule>
+ * @extends StrictlyRuleTestCase<AuthorizeInInputRule>
  */
-final class AuthorizeInInputRuleTest extends RuleTestCase
+final class AuthorizeInInputRuleTest extends StrictlyRuleTestCase
 {
     protected function getRule(): Rule
     {

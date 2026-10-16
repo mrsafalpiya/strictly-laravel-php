@@ -3,13 +3,12 @@
 namespace StrictlyLaravel\Tests\PHPStan;
 
 use PHPStan\Rules\Rule;
-use PHPStan\Testing\RuleTestCase;
 use StrictlyLaravel\PHPStan\PresenceDataRule;
 
 /**
- * @extends RuleTestCase<PresenceDataRule>
+ * @extends StrictlyRuleTestCase<PresenceDataRule>
  */
-final class PresenceDataRuleTest extends RuleTestCase
+final class PresenceDataRuleTest extends StrictlyRuleTestCase
 {
     protected function getRule(): Rule
     {

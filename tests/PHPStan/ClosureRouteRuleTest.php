@@ -3,13 +3,12 @@
 namespace StrictlyLaravel\Tests\PHPStan;
 
 use PHPStan\Rules\Rule;
-use PHPStan\Testing\RuleTestCase;
 use StrictlyLaravel\PHPStan\ClosureRouteRule;
 
 /**
- * @extends RuleTestCase<ClosureRouteRule>
+ * @extends StrictlyRuleTestCase<ClosureRouteRule>
  */
-final class ClosureRouteRuleTest extends RuleTestCase
+final class ClosureRouteRuleTest extends StrictlyRuleTestCase
 {
     protected function getRule(): Rule
     {

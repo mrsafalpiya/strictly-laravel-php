@@ -13,6 +13,7 @@ use StrictlyLaravel\Install\JsxTypes;
 use StrictlyLaravel\Install\KitConversion;
 use StrictlyLaravel\Install\PackageManager;
 use StrictlyLaravel\Install\PestContractsHook;
+use StrictlyLaravel\Install\PhpstanIgnores;
 use StrictlyLaravel\Install\PhpstanInclude;
 use StrictlyLaravel\Install\ScratchCopy;
 use StrictlyLaravel\Install\TsconfigFlags;
@@ -125,6 +126,7 @@ final class InstallCommand extends Command
         $this->convertKit($root);
         // After Kit Conversion, which writes the include into a phpstan.neon it converts.
         $this->applyHook('PHPStan extension included in phpstan.neon', fn () => $this->includePhpstanExtension("{$root}/phpstan.neon"));
+        $this->applyHook('phpstan.neon: no Strictly Laravel rule ignored', fn () => PhpstanIgnores::reject("{$root}/phpstan.neon"));
         // After Kit Conversion too, which writes the hook into a tests/Pest.php it converts: applied before it, the hook
         // would make the Base Kit's tests/Pest.php unknown content.
         $this->applyHook('tests/Pest.php: feature tests record Contracts', fn () => PestContractsHook::ensure("{$root}/tests/Pest.php"));

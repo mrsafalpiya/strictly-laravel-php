@@ -3,13 +3,12 @@
 namespace StrictlyLaravel\Tests\PHPStan;
 
 use PHPStan\Rules\Rule;
-use PHPStan\Testing\RuleTestCase;
 use StrictlyLaravel\PHPStan\RouteModelParameterRule;
 
 /**
- * @extends RuleTestCase<RouteModelParameterRule>
+ * @extends StrictlyRuleTestCase<RouteModelParameterRule>
  */
-final class RouteModelParameterRuleTest extends RuleTestCase
+final class RouteModelParameterRuleTest extends StrictlyRuleTestCase
 {
     protected function getRule(): Rule
     {

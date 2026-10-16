@@ -3,13 +3,12 @@
 namespace StrictlyLaravel\Tests\PHPStan;
 
 use PHPStan\Rules\Rule;
-use PHPStan\Testing\RuleTestCase;
 use StrictlyLaravel\PHPStan\QueryDefaultRule;
 
 /**
- * @extends RuleTestCase<QueryDefaultRule>
+ * @extends StrictlyRuleTestCase<QueryDefaultRule>
  */
-final class QueryDefaultRuleTest extends RuleTestCase
+final class QueryDefaultRuleTest extends StrictlyRuleTestCase
 {
     protected function getRule(): Rule
     {

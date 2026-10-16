@@ -3,14 +3,13 @@
 namespace StrictlyLaravel\Tests\PHPStan;
 
 use PHPStan\Rules\Rule;
-use PHPStan\Testing\RuleTestCase;
 use StrictlyLaravel\PHPStan\TranslationCatalog;
 use StrictlyLaravel\PHPStan\TranslationRule;
 
 /**
- * @extends RuleTestCase<TranslationRule>
+ * @extends StrictlyRuleTestCase<TranslationRule>
  */
-final class TranslationRuleTest extends RuleTestCase
+final class TranslationRuleTest extends StrictlyRuleTestCase
 {
     protected function getRule(): Rule
     {

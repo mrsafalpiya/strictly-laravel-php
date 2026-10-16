@@ -3,13 +3,12 @@
 namespace StrictlyLaravel\Tests\PHPStan;
 
 use PHPStan\Rules\Rule;
-use PHPStan\Testing\RuleTestCase;
 use StrictlyLaravel\PHPStan\FormRequestRule;
 
 /**
- * @extends RuleTestCase<FormRequestRule>
+ * @extends StrictlyRuleTestCase<FormRequestRule>
  */
-final class FormRequestRuleTest extends RuleTestCase
+final class FormRequestRuleTest extends StrictlyRuleTestCase
 {
     protected function getRule(): Rule
     {
