@@ -33,15 +33,10 @@ final readonly class ChannelDefinition
      */
     public function matches(string $name): bool
     {
-        $prefixes = match ($this->visibility) {
-            'public' => [''],
-            'presence' => ['presence-'],
-            default => ['private-encrypted-', 'private-'],
-        };
         $regex = '/^'.preg_replace('/\\\\\{.*?\\\\\}/', '[^.]+', preg_quote($this->pattern, '/')).'$/';
 
-        foreach ($prefixes as $prefix) {
-            if ($prefix === '' && preg_match('/^(private|presence)-/', $name) === 1) {
+        foreach ($this->prefixes() as $prefix) {
+            if ($prefix === '' && self::isAuthorized($name)) {
                 continue;
             }
 
@@ -60,12 +55,42 @@ final readonly class ChannelDefinition
     public function broadcastNames(): string
     {
         $name = str_replace('`', '\\`', (string) preg_replace('/\{.*?\}/', '${string}', $this->pattern));
-        $prefixes = match ($this->visibility) {
+
+        return implode(' | ', array_map(fn (string $prefix): string => "`{$prefix}{$name}`", $this->prefixes()));
+    }
+
+    /**
+     * The parameter names of a channel pattern, in order: `project` for `projects.{project}.public`.
+     *
+     * @return list<string>
+     */
+    public static function parameterNames(string $pattern): array
+    {
+        preg_match_all('/\{(.*?)\}/', $pattern, $names);
+
+        return $names[1];
+    }
+
+    /**
+     * Whether Echo subscribes to a channel of this name with authorization: one named `private-…` (the encrypted
+     * `private-encrypted-…` too) or `presence-…`, never a public one.
+     */
+    public static function isAuthorized(string $name): bool
+    {
+        return preg_match('/^(private|presence)-/', $name) === 1;
+    }
+
+    /**
+     * The prefixes of the names the server broadcasts on for this channel's visibility: none for a public one.
+     *
+     * @return list<string>
+     */
+    private function prefixes(): array
+    {
+        return match ($this->visibility) {
             'public' => [''],
             'presence' => ['presence-'],
             default => ['private-', 'private-encrypted-'],
         };
-
-        return implode(' | ', array_map(fn (string $prefix): string => "`{$prefix}{$name}`", $prefixes));
     }
 }

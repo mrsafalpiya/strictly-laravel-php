@@ -39,7 +39,7 @@ final class PublicChannels
 
             $parameters = [];
 
-            foreach (self::parameters($pattern) as $name) {
+            foreach (ChannelDefinition::parameterNames($pattern) as $name) {
                 $model = is_array($models) ? ($models[$name] ?? null) : null;
                 $parameters[$name] = is_string($model) && is_subclass_of($model, Model::class)
                     ? new RouteKey($model, (new $model)->getRouteKeyName())
@@ -110,7 +110,7 @@ final class PublicChannels
             return ["{$where}: ".var_export($pattern, true).' is not a channel name. List each public channel by its name, such as \'status\' or \'projects.{project}.public\'.'];
         }
 
-        if (preg_match('/^(private|presence)-/', $pattern) === 1) {
+        if (ChannelDefinition::isAuthorized($pattern)) {
             return ["{$where}.{$pattern}: Echo subscribes to a channel named `private-…` or `presence-…` with authorization, so it isn't public. Define it in routes/channels.php instead, and name it with `channel()`."];
         }
 
@@ -123,7 +123,7 @@ final class PublicChannels
         }
 
         $errors = [];
-        $parameters = self::parameters($pattern);
+        $parameters = ChannelDefinition::parameterNames($pattern);
 
         foreach ($models as $name => $model) {
             if (! in_array($name, $parameters, true)) {
@@ -134,17 +134,5 @@ final class PublicChannels
         }
 
         return $errors;
-    }
-
-    /**
-     * The parameter names of a pattern: `project` for `projects.{project}.public`.
-     *
-     * @return list<string>
-     */
-    private static function parameters(string $pattern): array
-    {
-        preg_match_all('/\{(.*?)\}/', $pattern, $names);
-
-        return $names[1];
     }
 }

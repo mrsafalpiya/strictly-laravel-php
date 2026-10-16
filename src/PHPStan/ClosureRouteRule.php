@@ -38,8 +38,6 @@ use StrictlyLaravel\Inertia\Page;
  */
 final readonly class ClosureRouteRule implements Rule
 {
-    private const string FORM_REQUEST = 'Illuminate\Foundation\Http\FormRequest';
-
     public function __construct(
         private ReflectionProvider $reflection,
     ) {}
@@ -74,7 +72,7 @@ final readonly class ClosureRouteRule implements Rule
                 $class->isSubclassOf(InputData::class) => ['an input class', 'payload'],
                 $class->isSubclassOf(QueryData::class) => ['a query class', 'query'],
                 $class->implementsInterface(BaseData::class) => ['a Data class', 'payload'],
-                $class->isSubclassOf(self::FORM_REQUEST) => ['a FormRequest', 'payload'],
+                $class->isSubclassOf(FormRequestRule::FORM_REQUEST) => ['a FormRequest', 'payload'],
                 default => [null, null],
             };
 

@@ -24,7 +24,8 @@ use StrictlyLaravel\Data\QueryData;
  */
 final readonly class FormRequestRule implements Rule
 {
-    private const string FORM_REQUEST = 'Illuminate\Foundation\Http\FormRequest';
+    /** Laravel's FormRequest, by name: the package doesn't depend on laravel/framework. */
+    public const string FORM_REQUEST = 'Illuminate\Foundation\Http\FormRequest';
 
     public function __construct(
         private ReflectionProvider $reflection,

@@ -77,9 +77,7 @@ final class BroadcastChannels
             $function = self::reflect($callback);
             $parameters = [];
 
-            preg_match_all('/\{(.*?)\}/', $pattern, $names);
-
-            foreach ($names[1] as $name) {
+            foreach (ChannelDefinition::parameterNames($pattern) as $name) {
                 $parameters[$name] = $function === null ? null : self::routeKey($function, $name);
             }
 
