@@ -141,7 +141,7 @@ export function ProjectViewers({ project }: { project: ProjectData }) {
 
 A broadcast notification (`toBroadcast()`) or a model broadcast (`BroadcastsEvents`) has no generated payload type, so don't read it with Echo's `useEchoNotification()` or `useEchoModel()`. Broadcast an app event like `ProjectUpdated` alongside the notification or model change, and listen for that with `useChannelEvent()`.
 
-Don't listen on the channel objects Echo hands out either: `useChannel(…).channel()?.listen(…)`, `echo().private(…).listen(…)` and their `notification()`, `here()`, `joining()` and `leaving()` take any event name and hand-typed data, as `useEcho()` does. Echo's channels are still fine for whispers, `stopListening()` and leaving.
+Don't listen on the channel objects Echo hands out either: `useChannel(…).channel()?.listen(…)`, `echo().private(…).listen(…)` and their `notification()`, `here()`, `joining()` and `leaving()` take any event name and hand-typed data, as `useEcho()` does. Echo's channels are still fine for whispers, `stopListening()` and leaving. A whisper goes from client to client without reaching the server, so nothing generates its type: `whisper(name, data)` and `listenForWhisper(name, callback)` take any name and any payload, and a misspelt name or a payload that disagrees with what's sent passes `tsc` and lint. Keep each whisper's name and payload type in one shared TypeScript module and import it on both sides.
 
 ## 5. Broadcast every payload shape in a feature test
 
