@@ -5,6 +5,8 @@ namespace StrictlyLaravel\PHPStan;
 use PhpParser\Node\Stmt\ClassMethod;
 use PHPStan\Analyser\Scope;
 use PHPStan\Reflection\ClassReflection;
+use PHPStan\Type\ObjectType;
+use PHPStan\Type\TypeCombinator;
 
 /**
  * Whether a method is a controller action, as the PHPStan rules about request input see it: a public, non-static
@@ -49,5 +51,28 @@ final class ControllerAction
         $name = $class->getName();
 
         return str_contains($name, '\\Controllers\\') || str_ends_with($name, 'Controller');
+    }
+
+    /**
+     * Whether the method a node is in (for a closure, the method around it) takes an instance of the class: an input
+     * or query class.
+     *
+     * @param  class-string  $base
+     */
+    public static function takes(Scope $scope, string $base): bool
+    {
+        $function = $scope->getFunction();
+
+        if ($function === null) {
+            return false;
+        }
+
+        foreach ($function->getOnlyVariant()->getParameters() as $parameter) {
+            if ((new ObjectType($base))->isSuperTypeOf(TypeCombinator::removeNull($parameter->getType()))->yes()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

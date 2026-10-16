@@ -44,6 +44,10 @@ final class DataShapeRuleTest extends StrictlyRuleTestCase
             [$union('StoreIssueData::$estimates', 'int|string'), 72, $unionTip],
             [$shape('IssueFiltersData::$sort', 'array{field: string}'), 82, $shapeTip],
             [$shape('ReportPage::$rows', 'array{id: int}'), 159, $shapeTip],
+            [$union('FocusPage::$focus', $issueOrMilestone), 197, $dataUnionTip],
+            [$union('FocusPage::$board', $issueOrMilestone), 198, $dataUnionTip],
+            [$union('FocusPage::$estimates', 'int|string'), 200, $unionTip],
+            [$nested('FocusPage::$columns', 'list<App\Data\Shapes\IssueData>'), 202, $nestedTip],
         ]);
     }
 }

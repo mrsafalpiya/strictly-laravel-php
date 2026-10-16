@@ -160,3 +160,65 @@ final class ReportPage extends Page
         public PageOfData $issues,
     ) {}
 }
+
+/**
+ * @template TSubject of Data
+ */
+final class PinData extends Data
+{
+    /**
+     * @param  TSubject  $subject
+     */
+    public function __construct(public Data $subject) {}
+}
+
+/**
+ * @template TItem
+ */
+final class BoardData extends Data
+{
+    /**
+     * @param  list<PageOfData<TItem>>  $columns
+     */
+    public function __construct(public array $columns) {}
+}
+
+final class FocusPage extends Page
+{
+    /**
+     * @param  PageOfData<IssueData|MilestoneData>  $focus
+     * @param  BoardData<IssueData|MilestoneData>  $board
+     * @param  PinData<IssueData|MilestoneData>  $pin
+     * @param  PageOfData<int|string>  $estimates
+     * @param  PageOfData<'low'|'high'>  $priorities
+     * @param  PageOfData<list<IssueData>>  $columns
+     */
+    public function __construct(
+        public PageOfData $focus,
+        public BoardData $board,
+        public PinData $pin,
+        public PageOfData $estimates,
+        public PageOfData $priorities,
+        public PageOfData $columns,
+    ) {}
+}
+
+/**
+ * @template TItem of Data
+ */
+final class TreeData extends Data
+{
+    /**
+     * @param  list<TItem>  $items
+     * @param  list<TreeData<TItem>>  $children
+     */
+    public function __construct(public array $items, public array $children) {}
+}
+
+final class OutlinePage extends Page
+{
+    /**
+     * @param  TreeData<IssueData>  $outline
+     */
+    public function __construct(public TreeData $outline) {}
+}

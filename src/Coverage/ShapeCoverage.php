@@ -101,8 +101,9 @@ final class ShapeCoverage
      * @param  class-string  $class
      * @param  list<mixed>  $values
      * @param  list<string>  $absenceReported
+     * @param  array<string, TemplateArgument>  $arguments  $class's templates, bound by the use being walked (P-185)
      */
-    private function walk(string $class, array $values, Origin $origin, string $prefix, array $absenceReported = []): void
+    private function walk(string $class, array $values, Origin $origin, string $prefix, array $absenceReported = [], array $arguments = []): void
     {
         $objects = array_values(array_filter($values, fn (mixed $value): bool => $value instanceof stdClass));
 
@@ -138,7 +139,7 @@ final class ShapeCoverage
 
             if ($nonNull !== []) {
                 $this->scalarMembers($class, $property, $nonNull, $origin, $path);
-                $this->walkValue($class, $property, $nonNull, $origin, $path);
+                $this->walkValue($class, $property, $nonNull, $origin, $path, $arguments);
             }
         }
     }
@@ -146,14 +147,23 @@ final class ShapeCoverage
     /**
      * @param  class-string  $owner
      * @param  list<mixed>  $values  the property's non-null values
+     * @param  array<string, TemplateArgument>  $arguments  $owner's templates, bound
      */
-    private function walkValue(string $owner, DataProperty $property, array $values, Origin $origin, string $path): void
+    private function walkValue(string $owner, DataProperty $property, array $values, Origin $origin, string $path, array $arguments): void
     {
         $type = $property->type;
         $wrapped = WrappedProp::of($property);
 
         if ($wrapped !== null) {
             $this->walkWrapped($owner, $property, $wrapped, $values, $origin, $path);
+
+            return;
+        }
+
+        $template = TemplateArgument::ofProperty($property, $owner, $arguments);
+
+        if ($template !== null) {
+            $this->walkTemplate($owner, $property, $template['type'], $template['items'], $arguments, $values, $origin, $path);
 
             return;
         }
@@ -172,13 +182,7 @@ final class ShapeCoverage
                 return;
             }
 
-            foreach ($variants as $variant) {
-                $matching = array_values(array_filter($values, fn (mixed $value): bool => $this->isVariant($variant, $value)));
-                $variantName = class_basename($variant);
-
-                $this->shape($owner, $property, "is never seen as {$variantName}", $origin, $path, "as {$variantName}", seen: $matching !== []);
-                $this->walk($variant, $matching, $origin, $path);
-            }
+            $this->walkVariants($owner, $property, $variants, $values, $origin, $path);
 
             return;
         }
@@ -200,6 +204,62 @@ final class ShapeCoverage
 
         if ($type->kind->isDataCollectable() && $type->dataClass !== null && class_exists($type->dataClass)) {
             $this->walk($type->dataClass, $items, $origin, "{$path}[]");
+        }
+    }
+
+    /**
+     * A value that is one of a union's Data classes, each of which must be seen.
+     *
+     * @param  class-string  $owner
+     * @param  list<class-string<Data>>  $variants
+     * @param  list<mixed>  $values
+     * @param  string|null  $label  how $owner is written with its type arguments, for a template-typed property
+     */
+    private function walkVariants(string $owner, DataProperty $property, array $variants, array $values, Origin $origin, string $path, ?string $label = null): void
+    {
+        foreach ($variants as $variant) {
+            $matching = array_values(array_filter($values, fn (mixed $value): bool => $this->isVariant($variant, $value)));
+            $variantName = class_basename($variant);
+
+            $this->shape($owner, $property, "is never seen as {$variantName}", $origin, $path, "as {$variantName}", seen: $matching !== [], label: $label);
+            $this->walk($variant, $matching, $origin, $path);
+        }
+    }
+
+    /**
+     * A property whose type is a template of a generic Data class, or a list or map of it, or a generic Data class
+     * itself, walked as the Data class the use being walked binds it to (Problem P-185). Its shapes are kept per use
+     * (`ListingData<IssueData>.items`), since each use is a different TypeScript type.
+     *
+     * @param  class-string  $owner
+     * @param  array<string, TemplateArgument>  $arguments  $owner's templates, bound
+     * @param  list<mixed>  $values  the property's non-null values
+     */
+    private function walkTemplate(string $owner, DataProperty $property, TemplateArgument $type, bool $items, array $arguments, array $values, Origin $origin, string $path): void
+    {
+        $label = $arguments === [] ? null : TemplateArgument::labelOf($owner, $arguments);
+
+        if ($type->unbound !== null) {
+            $declaring = class_basename($type->unbound['class']);
+            $template = $type->unbound['template'];
+
+            $this->shape($owner, $property, "holds {$template} with no Data class", $origin, $path, '', seen: false, fix: sprintf(
+                'give %1$s a type argument where it is used (%1$s<SomeData>), or bound %2$s by one Data class, so Contract Coverage can check what it holds',
+                $declaring,
+                $template,
+            ));
+        }
+
+        if ($items) {
+            $values = $this->items($values);
+            $this->shape($owner, $property, 'is only ever empty', $origin, $path, "at least one item in {$path}", seen: $values !== [], fixIsComplete: true, label: $label);
+            $path = "{$path}[]";
+        }
+
+        if (count($type->classes) === 1) {
+            $this->walk($type->classes[0], $values, $origin, $path, arguments: $type->arguments);
+        } elseif ($type->classes !== []) {
+            $this->walkVariants($owner, $property, $type->classes, $values, $origin, $path, $label);
         }
     }
 
@@ -330,18 +390,24 @@ final class ShapeCoverage
      * @param  string  $state  such as "is only ever null"
      * @param  string  $wanted  the value a test should send, completing "with <path> …" (or the whole phrase when
      *                          $fixIsComplete), such as "not null"
+     * @param  string|null  $label  how $class is written with the type arguments of the use, such as
+     *                              `ListingData<IssueData>`, when the shape is kept per use (P-185)
+     * @param  string|null  $fix  what to do, when it is no feature test to add
      */
-    private function shape(string $class, DataProperty $property, string $state, Origin $origin, string $path, string $wanted, bool $seen, bool $fixIsComplete = false): void
+    private function shape(string $class, DataProperty $property, string $state, Origin $origin, string $path, string $wanted, bool $seen, bool $fixIsComplete = false, ?string $label = null, ?string $fix = null): void
     {
-        $what = class_basename($class).'.'.($property->outputMappedName ?? $property->name)." {$state}";
-        $key = "{$class}::{$property->name}::{$state}";
+        $what = ($label ?? class_basename($class)).'.'.($property->outputMappedName ?? $property->name)." {$state}";
+        $key = $label === null ? "{$class}::{$property->name}::{$state}" : "{$class}::{$label}::{$property->name}::{$state}";
         $at = "{$origin->label} › {$path}";
-        $fix = sprintf('add a feature test that %s with %s', $origin->action, $fixIsComplete ? $wanted : "{$path} {$wanted}");
 
-        if (is_subclass_of($class, InputData::class)) {
-            // observeAccepted(): a submission the server accepted shows the state as well.
-            $field = $property->inputMappedName ?? $property->name;
-            $fix .= sprintf(', or one whose request a form endpoint accepts with %s\'s %s %s', class_basename($class), $field, $fixIsComplete ? 'not empty' : $wanted);
+        if ($fix === null) {
+            $fix = sprintf('add a feature test that %s with %s', $origin->action, $fixIsComplete ? $wanted : "{$path} {$wanted}");
+
+            if (is_subclass_of($class, InputData::class)) {
+                // observeAccepted(): a submission the server accepted shows the state as well.
+                $field = $property->inputMappedName ?? $property->name;
+                $fix .= sprintf(', or one whose request a form endpoint accepts with %s\'s %s %s', class_basename($class), $field, $fixIsComplete ? 'not empty' : $wanted);
+            }
         }
 
         $this->shapes[$key] ??= ['what' => $what, 'at' => [], 'fix' => $fix, 'seen' => false, 'required' => false];

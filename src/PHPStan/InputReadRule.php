@@ -8,8 +8,6 @@ use PHPStan\Analyser\Scope;
 use PHPStan\Rules\IdentifierRuleError;
 use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
-use PHPStan\Type\ObjectType;
-use PHPStan\Type\TypeCombinator;
 use StrictlyLaravel\Data\InputData;
 use StrictlyLaravel\Data\QueryData;
 
@@ -25,6 +23,8 @@ use StrictlyLaravel\Data\QueryData;
  * query class may not, as QueryReadRule rejects `query()` there (P-106): on a GET, `input('tab')` reads the same query
  * string, and a query class falls back to its defaults on an invalid value, so the raw value is unchecked. Reading what
  * isn't the payload (`user()`, `route()`, `header()`, `ip()`, `session()`, `cookie()`) is fine.
+ *
+ * Handing the request to app code that could read it unseen is RequestHandOffRule's (Problem P-168).
  *
  * A closure route reads no input either (Problem P-167): Wayfinder types no route function from a closure, so no typed
  * form can send it any (RouteClosure).
@@ -68,11 +68,11 @@ final readonly class InputReadRule implements Rule
             return RouteClosure::encloses($scope) ? [$this->closureRouteError($read)] : [];
         }
 
-        if ($this->takes($scope, InputData::class)) {
+        if (ControllerAction::takes($scope, InputData::class)) {
             return [];
         }
 
-        if ($this->takes($scope, QueryData::class)) {
+        if (ControllerAction::takes($scope, QueryData::class)) {
             return [
                 RuleErrorBuilder::message(sprintf(
                     '%s::%s() reads input from the request with %s instead of from its query class, which falls back to its defaults on an invalid value: the raw value is unchecked.',
@@ -111,27 +111,5 @@ final readonly class InputReadRule implements Rule
                 InputData::class,
             ))
             ->build();
-    }
-
-    /**
-     * Whether the method the read is in takes an instance of the class (InputData or QueryData).
-     *
-     * @param  class-string  $base
-     */
-    private function takes(Scope $scope, string $base): bool
-    {
-        $function = $scope->getFunction();
-
-        if ($function === null) {
-            return false;
-        }
-
-        foreach ($function->getOnlyVariant()->getParameters() as $parameter) {
-            if ((new ObjectType($base))->isSuperTypeOf(TypeCombinator::removeNull($parameter->getType()))->yes()) {
-                return true;
-            }
-        }
-
-        return false;
     }
 }
