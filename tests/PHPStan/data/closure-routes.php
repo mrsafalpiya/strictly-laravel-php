@@ -156,3 +156,27 @@ final class ProjectInputTest extends TestCase
         Route::post('projects', fn (StoreProjectData $data): StatsData => new StatsData(projects: 1));
     }
 }
+
+namespace App\ClosureRoutes\Unions;
+
+use App\Data\ClosureRoutes\StatsData;
+use App\Pages\ClosureRoutes\WelcomePage;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+
+// A Data class in a union declares no response either (P-202).
+Route::get('stats-or-login', fn (): StatsData|RedirectResponse => new RedirectResponse('/login'))->name('stats.or-login');
+Route::get('maybe-stats', fn (): ?StatsData => null);
+Route::get('inferred-stats-or-login', function (Request $request) {
+    if ($request->user() === null) {
+        return new RedirectResponse('/login');
+    }
+
+    return new StatsData(projects: 5);
+});
+
+// These pass: a Page class nullable or in a union, declared or inferred.
+Route::get('welcome-or-login', fn (): WelcomePage|RedirectResponse => new WelcomePage);
+Route::get('maybe-welcome', fn (): ?WelcomePage => null);
+Route::get('inferred-welcome-or-login', fn (Request $request) => $request->user() === null ? new RedirectResponse('/login') : new WelcomePage);

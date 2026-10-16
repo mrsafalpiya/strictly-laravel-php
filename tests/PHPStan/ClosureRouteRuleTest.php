@@ -29,8 +29,8 @@ final class ClosureRouteRuleTest extends StrictlyRuleTestCase
             $line,
             $tip,
         ];
-        $response = static fn (string $route, int $line): array => [
-            "The closure route {$route} returns App\\Data\\ClosureRoutes\\StatsData, but Wayfinder types a route function's response only from a controller action: useRouteHttp() types its result unknown.",
+        $response = static fn (string $route, int $line, string $type = 'App\\Data\\ClosureRoutes\\StatsData'): array => [
+            "The closure route {$route} returns {$type}, but Wayfinder types a route function's response only from a controller action: useRouteHttp() types its result unknown.",
             $line,
             $tip,
         ];
@@ -56,6 +56,9 @@ final class ClosureRouteRuleTest extends StrictlyRuleTestCase
             $json('GET projects/names', 'Illuminate\Support\Collection<int, string>', 132),
             $json('GET projects/latest', 'App\Models\ClosureRoutes\Project', 133),
             $json('GET projects/first', 'array|Illuminate\Http\RedirectResponse', 134),
+            $response('GET stats-or-login', 169, 'App\Data\ClosureRoutes\StatsData|Illuminate\Http\RedirectResponse'),
+            $response('GET maybe-stats', 170),
+            $response('GET inferred-stats-or-login', 171, 'App\Data\ClosureRoutes\StatsData|Illuminate\Http\RedirectResponse'),
         ]);
     }
 }
