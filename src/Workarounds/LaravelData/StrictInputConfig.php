@@ -8,6 +8,7 @@ use Spatie\LaravelData\Casts\DateTimeInterfaceCast;
 use Spatie\LaravelData\RuleInferrers\AttributesRuleInferrer;
 use Spatie\LaravelData\RuleInferrers\BuiltInTypesRuleInferrer;
 use Spatie\LaravelData\RuleInferrers\RequiredRuleInferrer;
+use StrictlyLaravel\Data\DateTimeCast;
 
 /**
  * Applies the laravel-data workarounds to the app's `data` config before laravel-data reads it, whether the app
@@ -22,8 +23,9 @@ use Spatie\LaravelData\RuleInferrers\RequiredRuleInferrer;
  * - Problem P-021: `features.cast_and_transform_iterables` is turned on, so `/** @var list<IssueStatus> *\/ array`
  *   holds enums, not the raw strings laravel-data 4 leaves by default (upstream: off by default until its next major);
  *
- * - Problem P-189: the global cast for `DateTimeInterface` is InterfaceTypedDateCast, which reads a property typed
- *   `CarbonInterface` or `DateTimeInterface` as a CarbonImmutable instead of failing every value.
+ * - the global cast for `DateTimeInterface` is DateTimeCast, which reads `toISOString()`'s timestamp after the formats
+ *   of `data.date_format` (Problem P-173) and, through InterfaceTypedDateCast, a property typed `CarbonInterface` or
+ *   `DateTimeInterface` as a CarbonImmutable instead of failing every value (Problem P-189).
  *
  * Applying it again changes nothing. There is no switch to turn any of it off (ADR-0007: no feature toggles).
  */
@@ -44,9 +46,9 @@ final class StrictInputConfig
         $config->set('data.rule_inferrers', self::ruleInferrers(is_array($inferrers) ? array_values($inferrers) : []));
         $config->set('data.features.cast_and_transform_iterables', true);
 
-        // Problem P-189: unless the app casts dates with a class of its own.
+        // Problems P-173 and P-189: unless the app casts dates with a class of its own.
         if ($config->get('data.casts.'.DateTimeInterface::class) === DateTimeInterfaceCast::class) {
-            $config->set('data.casts.'.DateTimeInterface::class, InterfaceTypedDateCast::class);
+            $config->set('data.casts.'.DateTimeInterface::class, DateTimeCast::class);
         }
     }
 
