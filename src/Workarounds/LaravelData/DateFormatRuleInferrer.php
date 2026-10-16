@@ -15,6 +15,7 @@ use Spatie\LaravelData\Support\DataProperty;
 use Spatie\LaravelData\Support\Validation\PropertyRules;
 use Spatie\LaravelData\Support\Validation\ValidationContext;
 use StrictlyLaravel\Data\DateOnlyCast;
+use StrictlyLaravel\Data\DateTimeCast;
 
 /**
  * Problem P-075 (docs/problems.md). Upstream: no upstream issue filed.
@@ -23,7 +24,8 @@ use StrictlyLaravel\Data\DateOnlyCast;
  * (`2026-10-14`, `tomorrow` for `public CarbonImmutable $startsAt`) passes validation and the cast throws
  * CannotCastDate: a 500 instead of a 422 on the field. This adds DateFormatRule with the formats the property's
  * DateTimeInterfaceCast reads: its `#[WithCast(DateTimeInterfaceCast::class, format: …)]` format, otherwise the formats
- * of `data.date_format` (DATE_ATOM by default). A list of dates (`list<CarbonImmutable>`) has every item validated. A
+ * of `data.date_format` (DATE_ATOM by default), followed by `toISOString()`'s when the cast is the Overlay's
+ * DateTimeCast (P-173). A list of dates (`list<CarbonImmutable>`) has every item validated. A
  * `#[DateOnly]` property gets `date_format:Y-m-d`, the rule DateOnlyCast applies, so its error comes with the other
  * fields' instead of only once they all pass. Null and a missing key are left to the nullable, required and Optional
  * rules, and an explicit `#[DateFormat]` has the last word: nothing is added then. A property whose cast is some other
@@ -94,9 +96,14 @@ final class DateFormatRuleInferrer implements RuleInferrer
             return null;
         }
 
-        // DateTimeInterfaceCast keeps its format protected; null means `data.date_format`, as in its castValue().
-        $format = (fn (): mixed => $this->format)->call($cast) ?? config('data.date_format');
-        $formats = array_values(array_filter(is_array($format) ? $format : [$format], is_string(...)));
+        if ($cast instanceof DateTimeCast) {
+            // The Overlay's own cast says what it reads, toISOString()'s format included (P-173).
+            $formats = $cast->formats();
+        } else {
+            // DateTimeInterfaceCast keeps its format protected; null means `data.date_format`, as in its castValue().
+            $format = (fn (): mixed => $this->format)->call($cast) ?? config('data.date_format');
+            $formats = array_values(array_filter(is_array($format) ? $format : [$format], is_string(...)));
+        }
 
         return $formats === [] ? null : $formats;
     }
