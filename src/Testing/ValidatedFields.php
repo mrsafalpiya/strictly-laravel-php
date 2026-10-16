@@ -25,7 +25,9 @@ final class ValidatedFields
 
     public static function listen(Factory $validation): void
     {
-        // Read by reflection: the factory's resolver is null until one is set, though its PHPDoc types it as a Closure.
+        // Read by reflection: the factory's resolver is null until one is set. Upstream defect: Laravel's
+        // `Illuminate\Validation\Factory::$resolver` is typed `@var \Closure` (v13.37), not `?\Closure`, so the
+        // instanceof below narrows it. No upstream issue filed.
         $resolver = (new ReflectionProperty($validation, 'resolver'))->getValue($validation);
         $resolver = $resolver instanceof Closure ? $resolver : null;
 
