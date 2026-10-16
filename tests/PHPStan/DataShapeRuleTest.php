@@ -3,13 +3,12 @@
 namespace StrictlyLaravel\Tests\PHPStan;
 
 use PHPStan\Rules\Rule;
-use PHPStan\Testing\RuleTestCase;
 use StrictlyLaravel\PHPStan\DataShapeRule;
 
 /**
- * @extends RuleTestCase<DataShapeRule>
+ * @extends StrictlyRuleTestCase<DataShapeRule>
  */
-final class DataShapeRuleTest extends RuleTestCase
+final class DataShapeRuleTest extends StrictlyRuleTestCase
 {
     protected function getRule(): Rule
     {

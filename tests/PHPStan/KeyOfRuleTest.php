@@ -3,13 +3,12 @@
 namespace StrictlyLaravel\Tests\PHPStan;
 
 use PHPStan\Rules\Rule;
-use PHPStan\Testing\RuleTestCase;
 use StrictlyLaravel\PHPStan\KeyOfRule;
 
 /**
- * @extends RuleTestCase<KeyOfRule>
+ * @extends StrictlyRuleTestCase<KeyOfRule>
  */
-final class KeyOfRuleTest extends RuleTestCase
+final class KeyOfRuleTest extends StrictlyRuleTestCase
 {
     protected function getRule(): Rule
     {

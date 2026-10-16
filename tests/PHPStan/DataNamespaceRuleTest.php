@@ -3,13 +3,12 @@
 namespace StrictlyLaravel\Tests\PHPStan;
 
 use PHPStan\Rules\Rule;
-use PHPStan\Testing\RuleTestCase;
 use StrictlyLaravel\PHPStan\DataNamespaceRule;
 
 /**
- * @extends RuleTestCase<DataNamespaceRule>
+ * @extends StrictlyRuleTestCase<DataNamespaceRule>
  */
-final class DataNamespaceRuleTest extends RuleTestCase
+final class DataNamespaceRuleTest extends StrictlyRuleTestCase
 {
     protected function getRule(): Rule
     {

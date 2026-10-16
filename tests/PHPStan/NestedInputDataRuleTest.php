@@ -3,13 +3,12 @@
 namespace StrictlyLaravel\Tests\PHPStan;
 
 use PHPStan\Rules\Rule;
-use PHPStan\Testing\RuleTestCase;
 use StrictlyLaravel\PHPStan\NestedInputDataRule;
 
 /**
- * @extends RuleTestCase<NestedInputDataRule>
+ * @extends StrictlyRuleTestCase<NestedInputDataRule>
  */
-final class NestedInputDataRuleTest extends RuleTestCase
+final class NestedInputDataRuleTest extends StrictlyRuleTestCase
 {
     protected function getRule(): Rule
     {

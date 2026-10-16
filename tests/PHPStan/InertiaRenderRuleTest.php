@@ -3,13 +3,12 @@
 namespace StrictlyLaravel\Tests\PHPStan;
 
 use PHPStan\Rules\Rule;
-use PHPStan\Testing\RuleTestCase;
 use StrictlyLaravel\PHPStan\InertiaRenderRule;
 
 /**
- * @extends RuleTestCase<InertiaRenderRule>
+ * @extends StrictlyRuleTestCase<InertiaRenderRule>
  */
-final class InertiaRenderRuleTest extends RuleTestCase
+final class InertiaRenderRuleTest extends StrictlyRuleTestCase
 {
     protected function getRule(): Rule
     {

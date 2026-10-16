@@ -3,13 +3,12 @@
 namespace StrictlyLaravel\Tests\PHPStan;
 
 use PHPStan\Rules\Rule;
-use PHPStan\Testing\RuleTestCase;
 use StrictlyLaravel\PHPStan\InputReadRule;
 
 /**
- * @extends RuleTestCase<InputReadRule>
+ * @extends StrictlyRuleTestCase<InputReadRule>
  */
-final class InputReadRuleTest extends RuleTestCase
+final class InputReadRuleTest extends StrictlyRuleTestCase
 {
     protected function getRule(): Rule
     {

@@ -3,13 +3,12 @@
 namespace StrictlyLaravel\Tests\PHPStan;
 
 use PHPStan\Rules\Rule;
-use PHPStan\Testing\RuleTestCase;
 use StrictlyLaravel\PHPStan\InertiaFlashRule;
 
 /**
- * @extends RuleTestCase<InertiaFlashRule>
+ * @extends StrictlyRuleTestCase<InertiaFlashRule>
  */
-final class InertiaFlashRuleTest extends RuleTestCase
+final class InertiaFlashRuleTest extends StrictlyRuleTestCase
 {
     protected function getRule(): Rule
     {

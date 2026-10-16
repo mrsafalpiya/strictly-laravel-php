@@ -3,13 +3,12 @@
 namespace StrictlyLaravel\Tests\PHPStan;
 
 use PHPStan\Rules\Rule;
-use PHPStan\Testing\RuleTestCase;
 use StrictlyLaravel\PHPStan\JsonResponseRule;
 
 /**
- * @extends RuleTestCase<JsonResponseRule>
+ * @extends StrictlyRuleTestCase<JsonResponseRule>
  */
-final class JsonResponseRuleTest extends RuleTestCase
+final class JsonResponseRuleTest extends StrictlyRuleTestCase
 {
     protected function getRule(): Rule
     {

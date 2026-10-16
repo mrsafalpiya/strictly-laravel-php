@@ -3,13 +3,12 @@
 namespace StrictlyLaravel\Tests\PHPStan;
 
 use PHPStan\Rules\Rule;
-use PHPStan\Testing\RuleTestCase;
 use StrictlyLaravel\PHPStan\BroadcastDataRule;
 
 /**
- * @extends RuleTestCase<BroadcastDataRule>
+ * @extends StrictlyRuleTestCase<BroadcastDataRule>
  */
-final class BroadcastDataRuleTest extends RuleTestCase
+final class BroadcastDataRuleTest extends StrictlyRuleTestCase
 {
     protected function getRule(): Rule
     {

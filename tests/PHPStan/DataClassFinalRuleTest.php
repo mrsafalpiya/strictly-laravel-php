@@ -3,13 +3,12 @@
 namespace StrictlyLaravel\Tests\PHPStan;
 
 use PHPStan\Rules\Rule;
-use PHPStan\Testing\RuleTestCase;
 use StrictlyLaravel\PHPStan\DataClassFinalRule;
 
 /**
- * @extends RuleTestCase<DataClassFinalRule>
+ * @extends StrictlyRuleTestCase<DataClassFinalRule>
  */
-final class DataClassFinalRuleTest extends RuleTestCase
+final class DataClassFinalRuleTest extends StrictlyRuleTestCase
 {
     protected function getRule(): Rule
     {
