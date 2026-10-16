@@ -54,7 +54,7 @@ A GET endpoint that reads a query string takes a query class instead (skill `str
     Route::post('projects/check-name', [ProjectController::class, 'checkName'])->name('projects.check-name');
 ```
 
-Return one Data object from a controller action: a closure route that returns a Data class, or anything else Laravel sends as JSON (an array, a Collection, a model), fails `strictly.closureRoute`, since Wayfinder types a route function only from a controller action. The `strictly.jsonResponse` PHPStan rule rejects an action that answers JSON any other way: a list (`array`, even with `@return list<ProjectData>`), a Collection, a `DataCollection` or paginated collection, a model, and a nullable or union return type (`?ProjectData`, `ProjectData|RedirectResponse`), none of which types the route's response. Wrap a list in a Data class that holds it:
+Return one Data object from a controller action: a closure route that returns a Data class (on its own, nullable or in a union: `?StatsData`, `StatsData|RedirectResponse`), or anything else Laravel sends as JSON (an array, a Collection, a model), fails `strictly.closureRoute`, since Wayfinder types a route function only from a controller action. The `strictly.jsonResponse` PHPStan rule rejects an action that answers JSON any other way: a list (`array`, even with `@return list<ProjectData>`), a Collection, a `DataCollection` or paginated collection, a model, and a nullable or union return type (`?ProjectData`, `ProjectData|RedirectResponse`), none of which types the route's response. Wrap a list in a Data class that holds it:
 
 ```php
 final class RecentProjectsData extends Data
