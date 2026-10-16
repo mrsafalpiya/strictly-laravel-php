@@ -42,8 +42,9 @@ parameters:
 # Only an input's authorize() and rules() receive the route's bound models, so no other Data class's take one (P-126).
 # Every property of a query Data class has the default an absent query key means (P-104, P-105), and a controller reads
 # the query string only through one (P-106). A controller action takes an input class, never a FormRequest, and reads
-# input from the request only beside an input class, whose Contract checks the keys it reads (P-112). A
-# closure route, whose route function Wayfinder can't type, takes no input, query or other Data class or FormRequest, returns
+# input from the request only beside an input class, whose Contract checks the keys it reads (P-112); without one, it
+# hands the request to no app code, which could read it unseen (P-168). A closure route, whose route function
+# Wayfinder can't type, takes no input, query or other Data class or FormRequest, returns
 # no Data class but a Page, and reads neither input nor the query string (P-097, P-109, P-151, P-167). A
 # broadcast event's payload is the Data class its broadcastData() declares (P-052), and it declares the channels it is
 # sent on with #[BroadcastsOn] (P-144). A presence channel's callback declares the Data class its members share as its
@@ -65,6 +66,7 @@ rules:
     - StrictlyLaravel\PHPStan\QueryDefaultRule
     - StrictlyLaravel\PHPStan\QueryReadRule
     - StrictlyLaravel\PHPStan\InputReadRule
+    - StrictlyLaravel\PHPStan\RequestHandOffRule
     - StrictlyLaravel\PHPStan\FormRequestRule
     - StrictlyLaravel\PHPStan\JsonResponseRule
     - StrictlyLaravel\PHPStan\ClosureRouteRule

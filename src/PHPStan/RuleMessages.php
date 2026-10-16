@@ -81,6 +81,10 @@ final class RuleMessages
             "%s::%s() reads the query string from the request with %s, where nothing types it: a route function sends only the keys of its action's query class.",
             "A closure route reads the query string from the request with %s, where nothing types it: a route function sends only the keys of a controller action's query class.",
         ],
+        'strictly.requestHandOff' => [
+            "%s::%s() hands the request to %s, where nothing types the input it reads: a typed form sends only the fields of its action's input class.",
+            "A closure route hands the request to %s, where nothing types the input it reads: a typed form sends only the fields of a controller action's input class.",
+        ],
         'strictly.routeModelParameter' => [
             "%s::%s() takes %s $%s, which is a new, empty %s there: only an InputData's authorize() and rules() receive the route's bound models.",
         ],
