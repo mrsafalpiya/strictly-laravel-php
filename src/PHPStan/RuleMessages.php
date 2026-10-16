@@ -26,6 +26,7 @@ final class RuleMessages
         'strictly.closureRoute' => [
             "The closure route %s takes %s, %s, but Wayfinder types a route function's query option only from a controller action: no route function can send its keys.",
             "The closure route %s takes %s, %s, but Wayfinder types a route function's payload only from a controller action: no typed form can send it.",
+            "The closure route %s returns %s, which Laravel sends as JSON that nothing types: Wayfinder types a route function's response only from a controller action that returns a Data class, so useRouteHttp() types its result unknown, and no Contract checks it.",
             "The closure route %s returns %s, but Wayfinder types a route function's response only from a controller action: useRouteHttp() types its result unknown.",
         ],
         'strictly.dataClassFinal' => [

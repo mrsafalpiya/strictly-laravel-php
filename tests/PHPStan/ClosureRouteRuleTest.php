@@ -34,6 +34,11 @@ final class ClosureRouteRuleTest extends StrictlyRuleTestCase
             $line,
             $tip,
         ];
+        $json = static fn (string $route, string $type, int $line): array => [
+            "The closure route {$route} returns {$type}, which Laravel sends as JSON that nothing types: Wayfinder types a route function's response only from a controller action that returns a Data class, so useRouteHttp() types its result unknown, and no Contract checks it.",
+            $line,
+            'Move the route to a controller action that returns one Data class holding the value, such as RecentProjectsData with a list<ProjectData> property: it types the route\'s response, and every response a feature test gets is checked against it. See the strictly-add-json-endpoint skill.',
+        ];
 
         $this->analyse([__DIR__.'/data/closure-routes.php'], [
             $payload('POST projects', 'App\Data\ClosureRoutes\StoreProjectData', 'an input class', 61),
@@ -47,6 +52,10 @@ final class ClosureRouteRuleTest extends StrictlyRuleTestCase
             $response('GET|POST search', 70),
             $payload('PUT projects', 'App\Data\ClosureRoutes\StoreProjectData', 'an input class', 73),
             $response('GET totals', 79),
+            $json('GET projects/recent', 'array', 131),
+            $json('GET projects/names', 'Illuminate\Support\Collection<int, string>', 132),
+            $json('GET projects/latest', 'App\Models\ClosureRoutes\Project', 133),
+            $json('GET projects/first', 'array|Illuminate\Http\RedirectResponse', 134),
         ]);
     }
 }

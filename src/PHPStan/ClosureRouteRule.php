@@ -17,7 +17,9 @@ use PHPStan\Rules\RuleErrorBuilder;
 use PHPStan\Type\ClosureType;
 use PHPStan\Type\NeverType;
 use PHPStan\Type\ObjectType;
+use PHPStan\Type\Type;
 use PHPStan\Type\TypeCombinator;
+use PHPStan\Type\TypeUtils;
 use PHPStan\Type\VerbosityLevel;
 use Spatie\LaravelData\Contracts\BaseData;
 use StrictlyLaravel\Data\InputData;
@@ -31,6 +33,11 @@ use StrictlyLaravel\Inertia\Page;
  * payload and `useRouteForm(store(), …)` refuses it, `index({ query })` takes no keys, and `useRouteHttp(stats())` types
  * its result `unknown`. Reading the payload or the query string in a closure route is InputReadRule's and
  * QueryReadRule's.
+ *
+ * Nor does a closure route return anything else Laravel answers as JSON that no Data class types (UntypedJson, as
+ * JsonResponseRule reads controller actions with, P-179): an array, a Collection, a model, an API resource. Pages,
+ * redirects, `Response`, views, strings and a `JsonResponse` (JSON built by hand, which stays untyped: P-048) stay
+ * allowed.
  *
  * A route a test registers is left alone (RouteClosure).
  *
@@ -98,14 +105,30 @@ final readonly class ClosureRouteRule implements Rule
         }
 
         $response = $this->response($route, $scope);
+        $line = $route->closure->returnType?->getStartLine() ?? $route->closure->getStartLine();
 
-        if ($response !== null) {
+        if ($response === null) {
+            return $errors;
+        }
+
+        $returns = $response->describe(VerbosityLevel::typeOnly());
+
+        if (array_any(TypeUtils::flattenTypes($response), fn (Type $member): bool => UntypedJson::is($member, $this->reflection))) {
             $errors[] = RuleErrorBuilder::message(sprintf(
-                "The closure route %s returns %s, but Wayfinder types a route function's response only from a controller action: useRouteHttp() types its result unknown.",
-                $route->shown, $response,
+                "The closure route %s returns %s, which Laravel sends as JSON that nothing types: Wayfinder types a route function's response only from a controller action that returns a Data class, so useRouteHttp() types its result unknown, and no Contract checks it.",
+                $route->shown, $returns,
             ))
                 ->identifier('strictly.closureRoute')
-                ->line($route->closure->returnType?->getStartLine() ?? $route->closure->getStartLine())
+                ->line($line)
+                ->tip('Move the route to a controller action that returns one Data class holding the value, such as RecentProjectsData with a list<ProjectData> property: it types the route\'s response, and every response a feature test gets is checked against it. See the strictly-add-json-endpoint skill.')
+                ->build();
+        } elseif ((new ObjectType(BaseData::class))->isSuperTypeOf($response)->yes() && (new ObjectType(Page::class))->isSuperTypeOf($response)->no()) {
+            $errors[] = RuleErrorBuilder::message(sprintf(
+                "The closure route %s returns %s, but Wayfinder types a route function's response only from a controller action: useRouteHttp() types its result unknown.",
+                $route->shown, $returns,
+            ))
+                ->identifier('strictly.closureRoute')
+                ->line($line)
                 ->tip($tip)
                 ->build();
         }
@@ -114,10 +137,10 @@ final readonly class ClosureRouteRule implements Rule
     }
 
     /**
-     * The Data class a closure returns, declared or inferred (`fn () => new StatsData(…)`), null or not; null when it
-     * returns no Data class, or a Page, which a closure route may render.
+     * What a closure returns, declared or inferred (`fn () => Project::all()`), without null (`fn () => null` returns
+     * nothing); null when it never returns.
      */
-    private function response(RouteClosure $route, Scope $scope): ?string
+    private function response(RouteClosure $route, Scope $scope): ?Type
     {
         // PHPStan types an arrow function's result by its expression, whatever return type it declares.
         if ($route->closure->returnType !== null) {
@@ -127,18 +150,9 @@ final readonly class ClosureRouteRule implements Rule
             $response = $closure instanceof ClosureType ? $closure->getReturnType() : null;
         }
 
-        // `fn () => null` returns no Data class.
         $response = $response === null ? null : TypeCombinator::removeNull($response);
 
-        if ($response === null || $response instanceof NeverType) {
-            return null;
-        }
-
-        if (! (new ObjectType(BaseData::class))->isSuperTypeOf($response)->yes() || ! (new ObjectType(Page::class))->isSuperTypeOf($response)->no()) {
-            return null;
-        }
-
-        return $response->describe(VerbosityLevel::typeOnly());
+        return $response === null || $response instanceof NeverType ? null : $response;
     }
 
     /** The class a parameter type names, nullable or not; null for any other type. */

@@ -2,10 +2,6 @@
 
 namespace StrictlyLaravel\PHPStan;
 
-use ArrayObject;
-use Illuminate\Contracts\Support\Arrayable;
-use Illuminate\Contracts\Support\Jsonable;
-use JsonSerializable;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Node\InClassMethodNode;
@@ -18,7 +14,6 @@ use PHPStan\Type\Type;
 use PHPStan\Type\TypeUtils;
 use PHPStan\Type\VerbosityLevel;
 use Spatie\LaravelData\Data;
-use stdClass;
 use StrictlyLaravel\Inertia\Page;
 
 /**
@@ -29,7 +24,8 @@ use StrictlyLaravel\Inertia\Page;
  *
  * - a return type Laravel serialises to JSON with no Data class: `array` or `iterable` (`@return list<ProjectData>`
  *   included), a Collection, laravel-data's DataCollection, PaginatedDataCollection and CursorPaginatedDataCollection,
- *   a paginator, a model or an API resource (anything Arrayable, Jsonable or JsonSerializable that isn't a Data class);
+ *   a paginator, a model or an API resource (anything Arrayable, Jsonable or JsonSerializable that isn't a Data class:
+ *   UntypedJson, which ClosureRouteRule reads closure routes with);
  * - a nullable Data class, or a union that holds one (`?ProjectData`, `ProjectData|RedirectResponse`), which
  *   RouteResponse doesn't read as a response.
  *
@@ -42,11 +38,6 @@ use StrictlyLaravel\Inertia\Page;
  */
 final readonly class JsonResponseRule implements Rule
 {
-    /** What Laravel's router answers as JSON when an action returns it (Router::toResponse()). */
-    private const array JSON = [Arrayable::class, Jsonable::class, JsonSerializable::class, ArrayObject::class, stdClass::class];
-
-    private const string SYMFONY_RESPONSE = 'Symfony\Component\HttpFoundation\Response';
-
     public function __construct(
         private ReflectionProvider $reflection,
     ) {}
@@ -80,7 +71,7 @@ final readonly class JsonResponseRule implements Rule
         $consequence = 'useRouteHttp() types the route\'s response unknown, and no Contract checks it.';
 
         foreach ($members as $member) {
-            if ($this->isUntypedJson($member)) {
+            if (UntypedJson::is($member, $this->reflection)) {
                 return [$this->error(
                     "{$action} returns {$returns}, which Laravel sends as JSON that nothing types: {$consequence}",
                     'Return one Data class that holds the value instead, such as RecentProjectsData with a list<ProjectData> property: it types the route\'s response, and every response a feature test gets is checked against it. See the strictly-add-json-endpoint skill.',
@@ -96,20 +87,6 @@ final readonly class JsonResponseRule implements Rule
         }
 
         return [];
-    }
-
-    /** Whether Laravel answers a value of this type as JSON that isn't a Data class. */
-    private function isUntypedJson(Type $type): bool
-    {
-        $classes = $type->getObjectClassReflections();
-
-        if ($classes === []) {
-            return $type->isIterable()->yes();
-        }
-
-        return array_any($classes, fn (ClassReflection $class): bool => ! $class->is(Data::class)
-            && ! $class->is(self::SYMFONY_RESPONSE)
-            && array_any(self::JSON, fn (string $json): bool => $this->reflection->hasClass($json) && $class->is($json)));
     }
 
     /** Whether a type is a Data class that would be a JSON endpoint's response on its own: one that isn't a Page. */
