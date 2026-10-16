@@ -68,6 +68,8 @@ final class RecentProjectsData extends Data
 }
 ```
 
+A generic Data class (`ListingData` with `@template TItem of Data` and a `list<TItem>` property) can be the response too, with its type argument in the action's `@return`: `/** @return ListingData<IssueData> */ public function show(): ListingData`. The route's response is then `ListingData<IssueData>`, and Contract Coverage checks the items as `IssueData`. Without the type argument, PHPStan (`missingType.generics`) and `tsc` (TS2314) reject it.
+
 Put a value that may be missing in a nullable property of the response class, and refuse a request with `abort()` or a validation error instead of returning another type.
 
 ## 3. Call it with `useRouteHttp`

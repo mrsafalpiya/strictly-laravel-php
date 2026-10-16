@@ -149,7 +149,7 @@ final class WayfinderTemplates
     /**
      * The TypeScript intersected into the return type of the action's route functions, or '' when there is none:
      * `& WithInput<StoreProjectData>` for an action taking an InputData, `& WithResponse<SearchResultsData>` for a JSON
-     * endpoint (RouteResponse), and the same for a vendor action's declarations (VendorDeclarations): `& WithInput<LoginData>`,
+     * endpoint (RouteResponse, `& WithResponse<ListingData<IssueData>>` for one returning a generic Data class), and the same for a vendor action's declarations (VendorDeclarations): `& WithInput<LoginData>`,
      * `& WithResponse<{ svg: string; url: string } | []>`.
      */
     public static function brands(string $controller, string $method): string
@@ -164,7 +164,7 @@ final class WayfinderTemplates
         $response = RouteResponse::ofAction($controller, $method);
 
         if ($response !== null) {
-            $brands .= sprintf(" & import('%s').WithResponse<%s>", self::TYPES_MODULE, RouteResponse::typeScript($response));
+            $brands .= sprintf(" & import('%s').WithResponse<%s>", self::TYPES_MODULE, $response->typeScript);
         }
 
         return $brands;

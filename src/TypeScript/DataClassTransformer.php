@@ -22,12 +22,20 @@ final class DataClassTransformer extends LaravelDataClassTransformer
 {
     public function __construct()
     {
-        parent::__construct(
-            transpilePhpStanTypeToTypeScriptTypeAction: new PhpDocTypeTranspiler([
-                new LiteralTypes,
-                new EnumKeyedMaps,
-            ]),
-        );
+        parent::__construct(transpilePhpStanTypeToTypeScriptTypeAction: self::phpDocTypes());
+    }
+
+    /**
+     * How a Data class's PHPDoc types are transpiled to TypeScript, with the Overlay's fixes. Anything else generated
+     * from a PHPDoc type that names Data classes, such as a JSON endpoint's `@return ListingData<IssueData>`
+     * (Routes\RouteResponse), transpiles it with this, so it agrees with the generated types.
+     */
+    public static function phpDocTypes(): PhpDocTypeTranspiler
+    {
+        return new PhpDocTypeTranspiler([
+            new LiteralTypes,
+            new EnumKeyedMaps,
+        ]);
     }
 
     public function transform(PhpClassNode $phpClassNode, TransformationContext $context): Transformed|Untransformable

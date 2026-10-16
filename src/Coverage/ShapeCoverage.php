@@ -50,10 +50,12 @@ final class ShapeCoverage
      * @param  list<mixed>  $values
      * @param  list<string>  $absenceReported  the class's own properties (by output name) whose absence another
      *                                         dimension reports, such as a page's deferred props
+     * @param  array<string, TemplateArgument>  $arguments  a generic class's templates, bound by the type it is used as,
+     *                                                      such as a JSON endpoint's `@return` (Problem P-197)
      */
-    public function observe(string $class, array $values, Origin $origin, array $absenceReported = []): void
+    public function observe(string $class, array $values, Origin $origin, array $absenceReported = [], array $arguments = []): void
     {
-        $this->walk($class, $values, $origin, '', $absenceReported);
+        $this->walk($class, $values, $origin, '', $absenceReported, $arguments);
     }
 
     /**

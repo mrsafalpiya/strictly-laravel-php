@@ -315,12 +315,11 @@ final class ContractRecorder
 
     /**
      * A successful response of a JSON endpoint (Problem P-048), checked against the Data class its action declares, or
-     * the Data class or TypeScript type config/strictly.php declares for a vendor action (Problem P-050). A refused
-     * request is a form endpoint's to record (its validation errors); any other failure sends no response of that type.
-     *
-     * @param  class-string|string  $declared
+     * the Data class or TypeScript type config/strictly.php declares for a vendor action (Problem P-050), with the type
+     * arguments a generic Data class's `@return` gives it (Problem P-197). A refused request is a form endpoint's to
+     * record (its validation errors); any other failure sends no response of that type.
      */
-    private static function recordJson(string $test, Request $request, Response $response, string $endpoint, string $declared): void
+    private static function recordJson(string $test, Request $request, Response $response, string $endpoint, RouteResponse $declared): void
     {
         $content = $response->getContent();
 
@@ -338,13 +337,13 @@ final class ContractRecorder
             sprintf('// Recorded by %s: %s %s (JSON response)', $test, $request->method(), $request->getRequestUri()),
             "import type { Contract } from '@mrsafalpiya/strictly-laravel/contracts';",
             '',
-            sprintf('export const response = %s satisfies Contract<%s>;', self::json($body), RouteResponse::typeScript($declared)),
+            sprintf('export const response = %s satisfies Contract<%s>;', self::json($body), $declared->typeScript),
         ], [
             'kind' => 'json',
             'test' => $test,
             'request' => $request->method().' '.$request->getRequestUri(),
             'endpoint' => $endpoint,
-            'response' => $declared,
+            'response' => $declared->declared,
             'body' => $body,
         ]);
     }

@@ -4,7 +4,6 @@ namespace StrictlyLaravel\Routes;
 
 use Illuminate\Routing\Route;
 use Illuminate\Routing\Router;
-use Spatie\LaravelData\Data;
 
 /**
  * The app's JSON endpoints: the routes whose action returns a Data class, or whose vendor action has a declared response
@@ -15,10 +14,9 @@ use Spatie\LaravelData\Data;
 final class JsonEndpoints
 {
     /**
-     * Every JSON endpoint the router has, by name, with the Data class it responds with (or the TypeScript type a vendor
-     * action's response is declared as).
+     * Every JSON endpoint the router has, by name, with its response.
      *
-     * @return array<string, class-string<Data>|string>
+     * @return array<string, RouteResponse>
      */
     public static function all(Router $router): array
     {

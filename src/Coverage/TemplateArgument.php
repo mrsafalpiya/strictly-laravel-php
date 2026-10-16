@@ -94,6 +94,22 @@ final readonly class TemplateArgument
     }
 
     /**
+     * The templates of a generic Data class bound by the type arguments a PHPDoc type writes it with, such as a JSON
+     * endpoint's `@return ListingData<IssueData>` (Problem P-197), read in the scope that declares that type.
+     *
+     * @param  class-string<Data>  $class
+     * @param  list<TypeNode>  $typeArguments
+     * @return array<string, self>
+     */
+    public static function bind(string $class, array $typeArguments, PhpClassNode $scope): array
+    {
+        /** @var class-string $owner the type arguments may name its own templates */
+        $owner = $scope->getName();
+
+        return self::data($class, $typeArguments, $scope, $owner, [], 0)->arguments;
+    }
+
+    /**
      * How a Data class is written with the type arguments it is walked with: `ListingData<IssueData>`.
      *
      * @param  class-string  $class

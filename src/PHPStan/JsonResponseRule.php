@@ -32,7 +32,7 @@ use StrictlyLaravel\Inertia\Page;
  * Responses that aren't JSON data stay allowed: Page classes (on their own, nullable or in a union), redirects,
  * `Response`, downloads and `void`. So does a `JsonResponse`, the explicit way to answer JSON that stays untyped
  * (the route's response is `unknown`, which the client must narrow before it reads it, P-048). The types are the
- * native ones RouteResponse reads, not the PHPDoc.
+ * native ones RouteResponse reads; it reads the PHPDoc `@return` only for a generic Data class's type arguments (P-197).
  *
  * @implements Rule<InClassMethodNode>
  */
