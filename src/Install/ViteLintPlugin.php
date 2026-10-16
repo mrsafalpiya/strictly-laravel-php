@@ -7,9 +7,9 @@ use RuntimeException;
 /**
  * Edits the Base Kit's Vite+ lint config (the `lint` object in vite.config.ts), only within the `lint: { … }` object
  * (ViteConfig), in two hooks: register() adds the npm package's oxlint plugin to `jsPlugins` and turns each of its rules
- * on as an error, and rejectAssertions() turns on oxlint's own rules against type and non-null assertions and against an
- * `any` reaching typed code, which asserts a type without a cast. Each adds any
- * missing rule to `rules`, creating either key when the app has none. Rules are never turned off (ADR-0007): an app
+ * on as an error, and rejectAssertionsAndUnsafeAny() turns on oxlint's own rules against type and non-null assertions
+ * and against an `any` reaching typed code, which asserts a type without a cast. Each adds any missing rule to `rules`,
+ * creating either key when the app has none. Rules are never turned off (ADR-0007): an app
  * suppresses one with a reasoned comment instead, so each hook throws when the config already sets one of its rules,
  * in `rules` or in a `lint.overrides` entry, to anything but the setting it writes (P-190), and never rewrites it.
  */
@@ -94,7 +94,7 @@ final class ViteLintPlugin
      * Turns on oxlint's rules against type and non-null assertions (ASSERTION_RULES, P-068) and against an `any` reaching
      * typed code (UNSAFE_ANY_RULES, P-175). Returns whether the file changed.
      */
-    public static function rejectAssertions(string $viteConfig): bool
+    public static function rejectAssertionsAndUnsafeAny(string $viteConfig): bool
     {
         $rules = [...self::ASSERTION_RULES, ...self::UNSAFE_ANY_RULES];
 

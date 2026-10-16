@@ -59,7 +59,7 @@ final class ViteLintPluginTest extends TestCase
             .'remove the setting, and suppress single lines with `// oxlint-disable-next-line typescript/no-non-null-assertion -- reason`.',
         ));
 
-        ViteLintPlugin::rejectAssertions($this->viteConfig);
+        ViteLintPlugin::rejectAssertionsAndUnsafeAny($this->viteConfig);
     }
 
     #[Test]
@@ -69,7 +69,7 @@ final class ViteLintPluginTest extends TestCase
 
         $this->expectExceptionMessage('vite.config.ts turns `typescript/no-unsafe-assignment` off; Strictly Laravel has no toggles (ADR-0007)');
 
-        ViteLintPlugin::rejectAssertions($this->viteConfig);
+        ViteLintPlugin::rejectAssertionsAndUnsafeAny($this->viteConfig);
     }
 
     #[Test]
@@ -77,7 +77,7 @@ final class ViteLintPluginTest extends TestCase
     {
         $this->lintConfig(array_fill_keys(array_keys(ViteLintPlugin::UNSAFE_ANY_RULES), null));
 
-        self::assertTrue(ViteLintPlugin::rejectAssertions($this->viteConfig));
+        self::assertTrue(ViteLintPlugin::rejectAssertionsAndUnsafeAny($this->viteConfig));
         self::assertStringContainsString(<<<'TS'
                     rules: {
                         'typescript/no-unsafe-argument': 'error',
@@ -88,7 +88,7 @@ final class ViteLintPluginTest extends TestCase
                         'typescript/consistent-type-assertions': [
 
             TS, (string) file_get_contents($this->viteConfig));
-        self::assertFalse(ViteLintPlugin::rejectAssertions($this->viteConfig));
+        self::assertFalse(ViteLintPlugin::rejectAssertionsAndUnsafeAny($this->viteConfig));
     }
 
     #[Test]
@@ -101,7 +101,7 @@ final class ViteLintPluginTest extends TestCase
             ."not `['error', { assertionStyle: 'never' }]`; Strictly Laravel has no toggles (ADR-0007)",
         );
 
-        ViteLintPlugin::rejectAssertions($this->viteConfig);
+        ViteLintPlugin::rejectAssertionsAndUnsafeAny($this->viteConfig);
     }
 
     #[Test]
@@ -111,7 +111,7 @@ final class ViteLintPluginTest extends TestCase
 
         $this->expectExceptionMessage("vite.config.ts sets `typescript/consistent-type-assertions` to `'error'`, not `['error', { assertionStyle: 'never' }]`");
 
-        ViteLintPlugin::rejectAssertions($this->viteConfig);
+        ViteLintPlugin::rejectAssertionsAndUnsafeAny($this->viteConfig);
     }
 
     #[Test]
@@ -135,7 +135,7 @@ final class ViteLintPluginTest extends TestCase
             .'(ADR-0007): remove the setting, and suppress single lines with `// oxlint-disable-next-line typescript/consistent-type-assertions -- reason`.',
         ));
 
-        ViteLintPlugin::rejectAssertions($this->viteConfig);
+        ViteLintPlugin::rejectAssertionsAndUnsafeAny($this->viteConfig);
     }
 
     #[Test]
@@ -173,7 +173,7 @@ final class ViteLintPluginTest extends TestCase
         $before = file_get_contents($this->viteConfig);
 
         self::assertFalse(ViteLintPlugin::register($this->viteConfig));
-        self::assertFalse(ViteLintPlugin::rejectAssertions($this->viteConfig));
+        self::assertFalse(ViteLintPlugin::rejectAssertionsAndUnsafeAny($this->viteConfig));
         self::assertSame($before, file_get_contents($this->viteConfig));
     }
 
