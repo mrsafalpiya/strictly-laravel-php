@@ -86,32 +86,28 @@ final class RequestHandOffRule implements Rule
             : "{$method->getDeclaringClass()->getName()}::{$method->getName()}()";
 
         if ($controller === null) {
-            return [
-                RuleErrorBuilder::message(sprintf(
-                    'A closure route hands the request to %s, where nothing types the input it reads: a typed form sends only the fields of a controller action\'s input class.',
-                    $to,
-                ))
-                    ->identifier('strictly.requestHandOff')
-                    ->tip(sprintf(
-                        'Move the route to a controller action that takes an input class (a final Data class extending %s), and pass the input class, or the values the code needs (such as $request->user()), instead of the request: Wayfinder brands a route function with the input class of the controller action it runs, never with a closure\'s.',
-                        InputData::class,
-                    ))
-                    ->build(),
-            ];
+            return [$this->error('A closure route', $to, 'a controller action\'s', sprintf(
+                'Move the route to a controller action that takes an input class (a final Data class extending %s), and pass the input class, or the values the code needs (such as $request->user()), instead of the request: Wayfinder brands a route function with the input class of the controller action it runs, never with a closure\'s.',
+                InputData::class,
+            ))];
         }
 
-        return [
-            RuleErrorBuilder::message(sprintf(
-                '%s::%s() hands the request to %s, where nothing types the input it reads: a typed form sends only the fields of its action\'s input class.',
-                $controller->getName(), $scope->getFunctionName() ?? '{closure}', $to,
-            ))
-                ->identifier('strictly.requestHandOff')
-                ->tip(sprintf(
-                    'Take an input class on the action (a final Data class extending %s) and pass it, or the values the code needs (such as $request->user()), instead of the request: the input class types the route\'s form and its validation errors. A GET\'s query string goes in a query class (extending %s) instead.',
-                    InputData::class, QueryData::class,
-                ))
-                ->build(),
-        ];
+        return [$this->error("{$controller->getName()}::".($scope->getFunctionName() ?? '{closure}').'()', $to, 'its action\'s', sprintf(
+            'Take an input class on the action (a final Data class extending %s) and pass it, or the values the code needs (such as $request->user()), instead of the request: the input class types the route\'s form and its validation errors. A GET\'s query string goes in a query class (extending %s) instead.',
+            InputData::class, QueryData::class,
+        ))];
+    }
+
+    /**
+     * @param  string  $from  what hands the request on: a closure route, or the controller method
+     * @param  string  $whose  whose input class a typed form sends the fields of
+     */
+    private function error(string $from, string $to, string $whose, string $tip): IdentifierRuleError
+    {
+        return RuleErrorBuilder::message("{$from} hands the request to {$to}, where nothing types the input it reads: a typed form sends only the fields of {$whose} input class.")
+            ->identifier('strictly.requestHandOff')
+            ->tip($tip)
+            ->build();
     }
 
     /**
