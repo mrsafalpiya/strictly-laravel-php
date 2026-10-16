@@ -6,11 +6,11 @@ use PHPStan\PhpDocParser\Ast\Type\ArrayTypeNode;
 use PHPStan\PhpDocParser\Ast\Type\GenericTypeNode;
 use Spatie\LaravelData\Attributes\Validation\In;
 use Spatie\LaravelData\Attributes\Validation\Rule;
-use Spatie\LaravelData\Attributes\Validation\ValidationAttribute;
 use Spatie\LaravelData\RuleInferrers\RuleInferrer;
 use Spatie\LaravelData\Support\DataProperty;
 use Spatie\LaravelData\Support\Validation\PropertyRules;
 use Spatie\LaravelData\Support\Validation\ValidationContext;
+use Spatie\LaravelData\Support\Validation\ValidationRule;
 use StrictlyLaravel\TypeScript\LiteralValues;
 use StrictlyLaravel\TypeScript\PropertyAnnotation;
 
@@ -26,7 +26,7 @@ use StrictlyLaravel\TypeScript\PropertyAnnotation;
  */
 final class LiteralRuleInferrer implements RuleInferrer
 {
-    /** @var array<string, ValidationAttribute|null> */
+    /** @var array<string, ValidationRule|null> */
     private static array $cache = [];
 
     public function handle(DataProperty $property, PropertyRules $rules, ValidationContext $context): PropertyRules
@@ -42,7 +42,7 @@ final class LiteralRuleInferrer implements RuleInferrer
         return $rule === null ? $rules : $rules->add($rule);
     }
 
-    private function rule(DataProperty $property): ?ValidationAttribute
+    private function rule(DataProperty $property): ?ValidationRule
     {
         if (! class_exists($property->className)) {
             return null;
