@@ -141,6 +141,8 @@ export function ProjectViewers({ project }: { project: ProjectData }) {
 
 A broadcast notification (`toBroadcast()`) or a model broadcast (`BroadcastsEvents`) has no generated payload type, so don't read it with Echo's `useEchoNotification()` or `useEchoModel()`. Broadcast an app event like `ProjectUpdated` alongside the notification or model change, and listen for that with `useChannelEvent()`.
 
+Don't listen on the channel objects Echo hands out either: `useChannel(…).channel()?.listen(…)`, `echo().private(…).listen(…)` and their `notification()`, `here()`, `joining()` and `leaving()` take any event name and hand-typed data, as `useEcho()` does. Echo's channels are still fine for whispers, `stopListening()` and leaving.
+
 ## 5. Broadcast every payload shape in a feature test
 
 Every event a feature test broadcasts is recorded as a Contract (its payload, and its channels against `routes/channels.php`, the public channels `config/strictly.php` declares and the event's `#[BroadcastsOn]`). A test must broadcast each event on each channel it declares, with each nullable payload field both `null` and set, or `ci:check:coverage` fails. Spy with `Event::listen()`; `Event::fake()` stops the broadcast, so nothing is recorded:
@@ -176,6 +178,7 @@ Done when `composer ci:check` passes. `php artisan reverb:start` serves the even
 - `ci:check:test` fails with `Channel projects.{project} returns an array or a bool`: `make:channel`'s `array|bool` return type fits a private channel and a presence channel alike. Declare `bool` for a private channel, or a Data class for a presence channel.
 - `ci:check:lint` fails with ``Echo's `useEcho()` takes any event name and a hand-typed payload``: listen with `useChannelEvent()` from `@/generated/broadcasting`.
 - `ci:check:lint` fails with ``Echo's `useEchoNotification()` reads a broadcast notification's hand-typed payload``: broadcast an app event with a `BroadcastsData` payload alongside the notification and listen for it with `useChannelEvent()`; the same for `useEchoModel()` and a model change.
+- `ci:check:lint` fails with ``Echo's channel `listen()` takes any event name and a hand-typed payload``: listen with `useChannelEvent()` from `@/generated/broadcasting` instead of on the channel object; for `here()`, `joining()` and `leaving()`, follow the members with `usePresence()`.
 - `ci:check:lint` fails with ``Echo's `usePresenceChannel()` hands out a presence channel whose members are typed by hand``: follow the members with `usePresence()` from `@/generated/broadcasting`.
 - `ci:check:lint` fails with ``Echo's `useChannel(name, 'presence')` hands out a presence channel whose members are typed by hand``: follow the members with `usePresence()` from `@/generated/broadcasting`.
 - `ci:check:tsc` fails with `error TS2345: Argument of type '"project.{project}"' is not assignable to parameter of type '"projects.{project}"'.`: the pattern isn't defined in `routes/channels.php`.
