@@ -12,20 +12,13 @@ use ReflectionMethod;
 use ReflectionNamedType;
 use Spatie\LaravelData\Data;
 use Spatie\TypeScriptTransformer\Actions\FindClassNameFqcnAction;
-use Spatie\TypeScriptTransformer\Data\WritingContext;
 use Spatie\TypeScriptTransformer\PhpNodes\PhpClassNode;
 use Spatie\TypeScriptTransformer\PhpNodes\PhpMethodNode;
-use Spatie\TypeScriptTransformer\References\ClassStringReference;
-use Spatie\TypeScriptTransformer\Transformed\Transformed;
 use Spatie\TypeScriptTransformer\TypeResolvers\DocTypeResolver;
-use Spatie\TypeScriptTransformer\TypeScriptNodes\TypeScriptReference;
-use Spatie\TypeScriptTransformer\TypeScriptNodes\TypeScriptUnknown;
-use Spatie\TypeScriptTransformer\Visitor\Visitor;
 use StrictlyLaravel\Coverage\TemplateArgument;
 use StrictlyLaravel\Inertia\Page;
 use StrictlyLaravel\TypeScript\ClassTemplates;
 use StrictlyLaravel\TypeScript\DataClassTransformer;
-use StrictlyLaravel\Workarounds\TypeScriptTransformer\MixedAsUnknown;
 
 /**
  * The response of a JSON endpoint (Problem P-048): the declared return type of a controller action (or route closure)
@@ -72,10 +65,10 @@ final readonly class RouteResponse
         $declared = VendorDeclarations::response($class, $method);
 
         if ($declared !== null) {
-            return new self($declared, is_subclass_of($declared, Data::class) ? WayfinderTemplates::generatedType($declared) : $declared);
+            return new self($declared, self::isDataClass($declared) ? WayfinderTemplates::generatedType($declared) : $declared);
         }
 
-        return self::declaredData(new ReflectionMethod($class, $method));
+        return self::ofReturnType(new ReflectionMethod($class, $method));
     }
 
     /**
@@ -86,7 +79,7 @@ final readonly class RouteResponse
         $uses = $route->getAction('uses');
 
         if ($uses instanceof Closure) {
-            return self::declaredData(new ReflectionFunction($uses));
+            return self::ofReturnType(new ReflectionFunction($uses));
         }
 
         if (! is_string($uses)) {
@@ -107,10 +100,23 @@ final readonly class RouteResponse
      */
     public function dataClass(): ?string
     {
-        return ! VendorDeclarations::isTypeScript($this->declared) && is_subclass_of($this->declared, Data::class) ? $this->declared : null;
+        return self::isDataClass($this->declared) ? $this->declared : null;
     }
 
-    private static function declaredData(ReflectionFunctionAbstract $action): ?self
+    /**
+     * Whether a declared response is a Data class rather than a TypeScript type.
+     *
+     * @phpstan-assert-if-true class-string<Data> $declared
+     */
+    private static function isDataClass(string $declared): bool
+    {
+        return ! VendorDeclarations::isTypeScript($declared) && is_subclass_of($declared, Data::class);
+    }
+
+    /**
+     * The response an action's native return type declares: a Data class that isn't a Page.
+     */
+    private static function ofReturnType(ReflectionFunctionAbstract $action): ?self
     {
         $type = $action->getReturnType();
 
@@ -150,27 +156,6 @@ final readonly class RouteResponse
             return null;
         }
 
-        return new self($class, self::typeScriptOf($return, $scope), TemplateArgument::bind($class, array_values($return->genericTypes), $scope));
-    }
-
-    /**
-     * The TypeScript a PHPDoc type is generated as (DataClassTransformer's transpiler, with `mixed` as `unknown`), with
-     * every class it names written as its generated type, so it can be read from any file.
-     */
-    private static function typeScriptOf(GenericTypeNode $type, PhpClassNode $scope): string
-    {
-        $references = [];
-        $node = (new Visitor([new MixedAsUnknown]))
-            ->before(function (TypeScriptReference $node) use (&$references): void {
-                $reference = $node->reference;
-
-                if ($reference instanceof ClassStringReference && class_exists($reference->classString)) {
-                    $node->connect(new Transformed(new TypeScriptUnknown, $reference, []));
-                    $references[$reference->getKey()] = WayfinderTemplates::generatedType($reference->classString);
-                }
-            }, [TypeScriptReference::class])
-            ->execute(DataClassTransformer::phpDocTypes()->execute($type, $scope));
-
-        return $node?->write(new WritingContext($references)) ?? 'unknown';
+        return new self($class, DataClassTransformer::typeScriptOf($return, $scope), TemplateArgument::bind($class, array_values($return->genericTypes), $scope));
     }
 }

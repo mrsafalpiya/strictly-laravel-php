@@ -12,6 +12,9 @@ use stdClass;
  */
 final class ComposerScripts
 {
+    /** How many brackets are open where the root object's keys sit: its own `{` alone. */
+    private const int TOP_LEVEL_KEY_DEPTH = 1;
+
     /**
      * Replace the scripts with what $edit returns for them. Returns whether the file changed.
      *
@@ -86,7 +89,7 @@ final class ComposerScripts
             if ($char === '"') {
                 $close = self::closingQuote($json, $i);
 
-                if ($start === null && $depth === 1
+                if ($start === null && $depth === self::TOP_LEVEL_KEY_DEPTH
                     && preg_match('/\G\s*:\s*/', $json, $colon, 0, $close + 1) === 1
                     && json_decode(substr($json, $i, $close - $i + 1)) === $key) {
                     $start = $close + 1 + strlen($colon[0]);
@@ -105,7 +108,7 @@ final class ComposerScripts
             } elseif ($char === '}' || $char === ']') {
                 $depth--;
 
-                if ($start !== null && $depth === 1) {
+                if ($start !== null && $depth === self::TOP_LEVEL_KEY_DEPTH) {
                     return [$start, $i + 1, trim($indent) === '' ? $indent : ''];
                 }
             }

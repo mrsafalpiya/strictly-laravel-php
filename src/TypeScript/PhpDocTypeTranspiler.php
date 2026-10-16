@@ -40,11 +40,12 @@ final class PhpDocTypeTranspiler extends TranspilePhpStanTypeToTypeScriptNodeAct
     }
 
     /**
-     * The class, if it can be loaded: what the parent's resolveClass() returns, which types it only as a string.
+     * The class, if it can be loaded: what the parent's resolveClass() returns, which types it only as a string, or a
+     * name resolved some other way (Coverage\TemplateArgument).
      *
      * @return class-string|null
      */
-    private static function loadable(?string $class): ?string
+    public static function loadable(?string $class): ?string
     {
         return $class !== null && (class_exists($class) || interface_exists($class)) ? $class : null;
     }

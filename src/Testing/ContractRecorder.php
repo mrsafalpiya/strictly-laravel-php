@@ -306,10 +306,10 @@ final class ContractRecorder
             self::recordQuery($test, $request, FormEndpoints::name($route), $query);
         }
 
-        $declared = $route instanceof Route ? RouteResponse::ofRoute($route) : null;
+        $routeResponse = $route instanceof Route ? RouteResponse::ofRoute($route) : null;
 
-        if ($route instanceof Route && $declared !== null) {
-            self::recordJson($test, $request, $response, JsonEndpoints::name($route), $declared);
+        if ($route instanceof Route && $routeResponse !== null) {
+            self::recordJson($test, $request, $response, JsonEndpoints::name($route), $routeResponse);
         }
     }
 
@@ -319,7 +319,7 @@ final class ContractRecorder
      * arguments a generic Data class's `@return` gives it (Problem P-197). A refused request is a form endpoint's to
      * record (its validation errors); any other failure sends no response of that type.
      */
-    private static function recordJson(string $test, Request $request, Response $response, string $endpoint, RouteResponse $declared): void
+    private static function recordJson(string $test, Request $request, Response $response, string $endpoint, RouteResponse $routeResponse): void
     {
         $content = $response->getContent();
 
@@ -337,13 +337,13 @@ final class ContractRecorder
             sprintf('// Recorded by %s: %s %s (JSON response)', $test, $request->method(), $request->getRequestUri()),
             "import type { Contract } from '@mrsafalpiya/strictly-laravel/contracts';",
             '',
-            sprintf('export const response = %s satisfies Contract<%s>;', self::json($body), $declared->typeScript),
+            sprintf('export const response = %s satisfies Contract<%s>;', self::json($body), $routeResponse->typeScript),
         ], [
             'kind' => 'json',
             'test' => $test,
             'request' => $request->method().' '.$request->getRequestUri(),
             'endpoint' => $endpoint,
-            'response' => $declared->declared,
+            'response' => $routeResponse->declared,
             'body' => $body,
         ]);
     }

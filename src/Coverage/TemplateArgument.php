@@ -20,6 +20,7 @@ use Spatie\LaravelData\Support\DataProperty;
 use Spatie\TypeScriptTransformer\Actions\FindClassNameFqcnAction;
 use Spatie\TypeScriptTransformer\PhpNodes\PhpClassNode;
 use StrictlyLaravel\TypeScript\ClassTemplates;
+use StrictlyLaravel\TypeScript\PhpDocTypeTranspiler;
 use StrictlyLaravel\TypeScript\PropertyAnnotation;
 
 /**
@@ -316,8 +317,6 @@ final readonly class TemplateArgument
      */
     private static function className(string $name, PhpClassNode $scope): ?string
     {
-        $class = (new FindClassNameFqcnAction)->execute($scope, $name);
-
-        return $class !== null && (class_exists($class) || interface_exists($class)) ? $class : null;
+        return PhpDocTypeTranspiler::loadable((new FindClassNameFqcnAction)->execute($scope, $name));
     }
 }

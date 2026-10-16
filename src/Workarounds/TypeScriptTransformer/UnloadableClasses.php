@@ -2,7 +2,6 @@
 
 namespace StrictlyLaravel\Workarounds\TypeScriptTransformer;
 
-use ReflectionException;
 use Spatie\LaravelData\Contracts\BaseData;
 use Spatie\StructureDiscoverer\Data\DiscoveredClass;
 use Spatie\StructureDiscoverer\Data\DiscoveredEnum;
@@ -60,23 +59,30 @@ final class UnloadableClasses
 
         foreach ($structures as $structure) {
             $class = $structure->getFcqn();
+            $error = self::loadError($class);
 
-            try {
-                if (! class_exists($class)) {
-                    // Its file loaded but declares no such class: what ReflectionClass reports for it.
-                    throw new ReflectionException("Class \"{$class}\" does not exist");
-                }
-            } catch (Throwable $e) {
-                if (self::wouldBeTransformed($structure)) {
-                    $relative = str_starts_with($structure->file, $basePath.DIRECTORY_SEPARATOR) ? substr($structure->file, strlen($basePath) + 1) : $structure->file;
-                    $errors[] = str_replace(DIRECTORY_SEPARATOR, '/', $relative).": {$class} can't be loaded: {$e->getMessage()}";
-                }
+            if ($error !== null && self::wouldBeTransformed($structure)) {
+                $relative = str_starts_with($structure->file, $basePath.DIRECTORY_SEPARATOR) ? substr($structure->file, strlen($basePath) + 1) : $structure->file;
+                $errors[] = str_replace(DIRECTORY_SEPARATOR, '/', $relative).": {$class} can't be loaded: {$error}";
             }
         }
 
         sort($errors);
 
         return $errors;
+    }
+
+    /**
+     * Why a class can't be loaded, or null when it can.
+     */
+    private static function loadError(string $class): ?string
+    {
+        try {
+            // A file that loads but declares no such class is reported as ReflectionClass reports it.
+            return class_exists($class) ? null : "Class \"{$class}\" does not exist";
+        } catch (Throwable $e) {
+            return $e->getMessage();
+        }
     }
 
     private static function wouldBeTransformed(DiscoveredClass|DiscoveredEnum $structure): bool
