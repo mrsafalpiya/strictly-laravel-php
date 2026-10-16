@@ -114,10 +114,16 @@ final class RequestHandOffRule implements Rule
         ];
     }
 
-    /** A request: Laravel's (a FormRequest too) or Symfony's, which it extends; nullable or not. */
+    /**
+     * A request: Laravel's (a FormRequest too) or Symfony's, which it extends; nullable or not. A plain `null` isn't
+     * one, though without its null it is `never`, which every type takes.
+     */
     private function isRequest(Type $type): bool
     {
-        return (new ObjectType('Symfony\Component\HttpFoundation\Request'))->isSuperTypeOf(TypeCombinator::removeNull($type))->yes();
+        $type = TypeCombinator::removeNull($type);
+
+        return $type->isObject()->yes()
+            && (new ObjectType('Symfony\Component\HttpFoundation\Request'))->isSuperTypeOf($type)->yes();
     }
 
     /** The method a call runs: the constructor for `new`; null for a function or a method PHPStan can't resolve. */

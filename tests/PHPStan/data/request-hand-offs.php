@@ -142,7 +142,7 @@ final class ProjectController
     {
         return [
             $responder->toResponse($request), Responder::authenticateUsing($request), $locale->handle($request),
-            TwoFactorRequest::fromRequest($request), $this->helper($request),
+            TwoFactorRequest::fromRequest($request), $this->helper($request), new CreateProject(null),
         ];
     }
 
