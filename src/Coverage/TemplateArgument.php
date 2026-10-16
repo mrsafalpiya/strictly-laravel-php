@@ -213,7 +213,7 @@ final readonly class TemplateArgument
             $class = self::className($type->type->name, $scope);
 
             return $class !== null && self::isConcreteData($class)
-                ? self::data($class, $type->genericTypes, $scope, $owner, $arguments, $depth + 1)
+                ? self::data($class, array_values($type->genericTypes), $scope, $owner, $arguments, $depth + 1)
                 : new self((string) $type);
         }
 
@@ -294,6 +294,8 @@ final readonly class TemplateArgument
 
     /**
      * @param  class-string  $class
+     *
+     * @phpstan-assert-if-true class-string<Data> $class
      */
     private static function isConcreteData(string $class): bool
     {
@@ -316,6 +318,6 @@ final readonly class TemplateArgument
     {
         $class = (new FindClassNameFqcnAction)->execute($scope, $name);
 
-        return class_exists($class) || interface_exists($class) ? $class : null;
+        return $class !== null && (class_exists($class) || interface_exists($class)) ? $class : null;
     }
 }

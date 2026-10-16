@@ -36,11 +36,13 @@ final class ViteTypesPlugin
 
     private static function addImport(string $source): string
     {
-        if (preg_match_all('/^import\s[^;]*;[ \t]*\n/m', $source, $imports, PREG_OFFSET_CAPTURE) === 0) {
+        preg_match_all('/^import\s[^;]*;[ \t]*\n/m', $source, $imports, PREG_OFFSET_CAPTURE);
+        $last = end($imports[0]);
+
+        if ($last === false) {
             return self::IMPORT."\n".$source;
         }
 
-        $last = end($imports[0]);
         $end = $last[1] + strlen($last[0]);
 
         return substr($source, 0, $end).self::IMPORT."\n".substr($source, $end);

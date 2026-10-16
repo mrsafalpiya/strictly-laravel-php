@@ -2,7 +2,9 @@
 
 namespace StrictlyLaravel\Testing;
 
+use Illuminate\Broadcasting\Channel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Support\MessageBag;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Http\Events\RequestHandled;
 use Illuminate\Http\JsonResponse;
@@ -12,7 +14,6 @@ use Illuminate\Routing\Route;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\MessageBag;
 use Illuminate\Support\ViewErrorBag;
 use Inertia\Inertia;
 use Inertia\Support\Header;
@@ -32,7 +33,6 @@ use StrictlyLaravel\Routes\RouteInput;
 use StrictlyLaravel\Routes\RouteQuery;
 use StrictlyLaravel\Routes\RouteResponse;
 use StrictlyLaravel\Routes\WayfinderTemplates;
-use Stringable;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -234,7 +234,7 @@ final class ContractRecorder
 
         $broadcast = BroadcastEvents::of($event);
         $channels = array_values(array_filter(array_map(
-            fn (mixed $channel): string => is_string($channel) || $channel instanceof Stringable ? (string) $channel : '',
+            fn (Channel|string $channel): string => (string) $channel,
             Arr::wrap($event->broadcastOn()),
         ), fn (string $channel): bool => $channel !== ''));
 
@@ -477,7 +477,8 @@ final class ContractRecorder
     private static function validationErrors(Request $request, Response $response): ?array
     {
         if ($response->getStatusCode() === 422 && $response instanceof JsonResponse) {
-            $errors = $response->getData(true)['errors'] ?? null;
+            $data = $response->getData(true);
+            $errors = is_array($data) ? $data['errors'] ?? null : null;
 
             return is_array($errors) ? self::firstMessages($errors) : null;
         }
@@ -676,11 +677,10 @@ final class ContractRecorder
             return [];
         }
 
-        return app(DataConfig::class)->getDataClass($class)->properties
+        return array_values(app(DataConfig::class)->getDataClass($class)->properties
             ->reject(fn (DataProperty $property): bool => $property->hidden)
             ->map(fn (DataProperty $property): string => $property->outputMappedName ?? $property->name)
-            ->values()
-            ->all();
+            ->all());
     }
 
     /**
@@ -706,7 +706,8 @@ final class ContractRecorder
 
         // No props at all is encoded as an empty list.
         $props = $page->props ?? null;
-        $sharedKeys = $page->sharedProps ?? array_keys(Inertia::getShared());
+        $shared = Inertia::getShared();
+        $sharedKeys = $page->sharedProps ?? (is_array($shared) ? array_keys($shared) : []);
         $flash = $page->flash ?? null;
 
         return [

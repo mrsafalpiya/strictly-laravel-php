@@ -6,8 +6,10 @@ use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Support\DataConfig;
 use stdClass;
 use StrictlyLaravel\Broadcasting\BroadcastEvent;
+use StrictlyLaravel\Inertia\Flash;
 use StrictlyLaravel\Inertia\GlobalDataClasses;
 use StrictlyLaravel\Inertia\Page;
+use StrictlyLaravel\Inertia\Shared;
 use StrictlyLaravel\Routes\RouteResponse;
 
 /**
@@ -92,9 +94,10 @@ final readonly class ContractCoverage
 
         foreach ($records as $record) {
             $input = $record->input ?? null;
+            $endpoint = $record->endpoint ?? '';
 
             if ($record->kind === 'form' && ($record->accepted ?? null) instanceof stdClass && is_string($input) && is_subclass_of($input, Data::class)) {
-                $accepted[$input][(string) ($record->endpoint ?? '')][] = $record->accepted;
+                $accepted[$input][is_string($endpoint) ? $endpoint : ''][] = $record->accepted;
             }
         }
 
@@ -157,7 +160,7 @@ final readonly class ContractCoverage
             $seen = [];
 
             foreach ($requested as $endpoint) {
-                $seen += $used[$kind][$endpoint];
+                $seen += $used[$kind][$endpoint] ?? [];
             }
 
             foreach ($this->config->getDataClass($payload['class'])->properties as $property) {
@@ -185,7 +188,7 @@ final readonly class ContractCoverage
 
     /**
      * @param  list<stdClass>  $records
-     * @param  class-string|null  $class
+     * @param  class-string<Shared>|null  $class
      * @return list<Gap>
      */
     private function shared(array $records, ?string $class, ShapeCoverage $shapes): array
@@ -218,7 +221,7 @@ final readonly class ContractCoverage
 
     /**
      * @param  list<stdClass>  $records
-     * @param  class-string|null  $class
+     * @param  class-string<Flash>|null  $class
      * @return list<Gap>
      */
     private function flash(array $records, ?string $class, ShapeCoverage $shapes): array
@@ -412,7 +415,9 @@ final readonly class ContractCoverage
                 $payloads[$record->event][] = $record->payload ?? null;
 
                 foreach (is_array($record->patterns ?? null) ? $record->patterns : [] as $pattern) {
-                    $patterns[$record->event][(string) $pattern] = true;
+                    if (is_string($pattern)) {
+                        $patterns[$record->event][$pattern] = true;
+                    }
                 }
             }
         }

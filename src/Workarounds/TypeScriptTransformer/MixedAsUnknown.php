@@ -41,6 +41,9 @@ final class MixedAsUnknown extends VisitorClosure
         );
     }
 
+    /**
+     * @param  array<array-key, mixed>  $metadata
+     */
     public function run(TypeScriptNode $node, array &$metadata): VisitorOperation
     {
         return match (true) {

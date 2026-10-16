@@ -25,12 +25,9 @@ final class MakePageCommand extends Command
 
     public function handle(Filesystem $files): int
     {
-        $argument = $this->argument('component');
-        $segments = is_string($argument)
-            ? array_values(array_filter(preg_split('/[\/\\\\.]+/', $argument) ?: [], fn (string $segment): bool => $segment !== ''))
-            : [];
+        $segments = preg_split('/[\/\\\\.]+/', $this->argument('component'), flags: PREG_SPLIT_NO_EMPTY);
 
-        if ($segments === []) {
+        if ($segments === false || $segments === []) {
             $this->components->error('Name the page component, such as projects/show.');
 
             return self::INVALID;

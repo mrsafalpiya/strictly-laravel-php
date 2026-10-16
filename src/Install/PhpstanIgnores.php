@@ -16,7 +16,7 @@ use StrictlyLaravel\PHPStan\RuleMessages;
 final class PhpstanIgnores
 {
     /** Returns false: it never changes the app. */
-    public static function reject(string $phpstanNeon): bool
+    public static function reject(string $phpstanNeon): false
     {
         if (! is_file($phpstanNeon)) {
             return false;

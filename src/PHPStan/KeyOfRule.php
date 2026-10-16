@@ -116,14 +116,14 @@ final readonly class KeyOfRule implements Rule
             if ($statement instanceof ClassMethod && $statement->name->toLowerString() === '__construct') {
                 foreach ($statement->params as $param) {
                     if ($param->isPromoted() && $param->isPublic() && $param->var instanceof Variable && is_string($param->var->name)) {
-                        $properties[$param->var->name] = [$param->attrGroups, $param->getStartLine()];
+                        $properties[$param->var->name] = [array_values($param->attrGroups), $param->getStartLine()];
                     }
                 }
             }
 
             if ($statement instanceof Property && $statement->isPublic() && ! $statement->isStatic()) {
                 foreach ($statement->props as $property) {
-                    $properties[$property->name->toString()] = [$statement->attrGroups, $property->getStartLine()];
+                    $properties[$property->name->toString()] = [array_values($statement->attrGroups), $property->getStartLine()];
                 }
             }
         }

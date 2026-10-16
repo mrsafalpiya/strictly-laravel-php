@@ -6,6 +6,7 @@ use Closure;
 use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Validation\Factory;
 use Illuminate\Validation\Validator;
+use ReflectionProperty;
 use Stringable;
 
 /**
@@ -24,8 +25,9 @@ final class ValidatedFields
 
     public static function listen(Factory $validation): void
     {
-        /** @var Closure|null $resolver */
-        $resolver = (fn (): ?Closure => $this->resolver)->call($validation);
+        // Read by reflection: the factory's resolver is null until one is set, though its PHPDoc types it as a Closure.
+        $resolver = (new ReflectionProperty($validation, 'resolver'))->getValue($validation);
+        $resolver = $resolver instanceof Closure ? $resolver : null;
 
         $validation->resolver(function (Translator $translator, array $data, array $rules, array $messages, array $attributes) use ($resolver): Validator {
             foreach ($rules as $key => $rule) {

@@ -40,6 +40,9 @@ final class UnmappedClassCheck extends VisitorClosure
         );
     }
 
+    /**
+     * @param  array<array-key, mixed>  $metadata
+     */
     public function run(TypeScriptNode $node, array &$metadata): VisitorOperation
     {
         if ($node instanceof TypeScriptAlias) {

@@ -41,7 +41,7 @@ final readonly class DuplicateTypeNames implements Writer
         foreach ($sources as $name => $from) {
             if (count($from) > 1) {
                 sort($from);
-                $clashes[] = self::clash((string) $name, $from);
+                $clashes[] = self::clash($name, $from);
             }
         }
 

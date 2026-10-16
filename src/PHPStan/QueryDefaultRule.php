@@ -8,6 +8,7 @@ use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\Array_;
 use PhpParser\Node\Expr\ConstFetch;
 use PhpParser\Node\Identifier;
+use PhpParser\Node\IntersectionType;
 use PhpParser\Node\Name;
 use PhpParser\Node\NullableType;
 use PhpParser\Node\Stmt\ClassMethod;
@@ -126,7 +127,7 @@ final readonly class QueryDefaultRule implements Rule
         return match (true) {
             $type === null => ['mixed'],
             $type instanceof NullableType => ['null', ...$this->types($type->type, $scope)],
-            $type instanceof UnionType => array_merge(...array_map(fn (Node $member): array => $member instanceof Identifier || $member instanceof Name || $member instanceof ComplexType ? $this->types($member, $scope) : [], $type->types)),
+            $type instanceof UnionType => array_merge(...array_map(fn (Identifier|Name|IntersectionType $member): array => $this->types($member, $scope), $type->types)),
             $type instanceof Name => [strtolower($scope->resolveName($type))],
             $type instanceof Identifier => [$type->toLowerString()],
             default => [],

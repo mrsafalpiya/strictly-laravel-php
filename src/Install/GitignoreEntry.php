@@ -20,7 +20,8 @@ final class GitignoreEntry
             throw new RuntimeException("Cannot read {$gitignore}");
         }
 
-        $lines = array_map(trim(...), preg_split('/\R/', $original) ?: []);
+        $lines = preg_split('/\R/', $original);
+        $lines = $lines === false ? [] : array_map(trim(...), $lines);
 
         if (in_array($entry, $lines, true)) {
             return false;

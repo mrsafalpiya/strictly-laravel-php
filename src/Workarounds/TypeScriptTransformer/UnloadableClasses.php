@@ -2,7 +2,7 @@
 
 namespace StrictlyLaravel\Workarounds\TypeScriptTransformer;
 
-use ReflectionClass;
+use ReflectionException;
 use Spatie\LaravelData\Contracts\BaseData;
 use Spatie\StructureDiscoverer\Data\DiscoveredClass;
 use Spatie\StructureDiscoverer\Data\DiscoveredEnum;
@@ -62,7 +62,10 @@ final class UnloadableClasses
             $class = $structure->getFcqn();
 
             try {
-                new ReflectionClass($class);
+                if (! class_exists($class)) {
+                    // Its file loaded but declares no such class: what ReflectionClass reports for it.
+                    throw new ReflectionException("Class \"{$class}\" does not exist");
+                }
             } catch (Throwable $e) {
                 if (self::wouldBeTransformed($structure)) {
                     $relative = str_starts_with($structure->file, $basePath.DIRECTORY_SEPARATOR) ? substr($structure->file, strlen($basePath) + 1) : $structure->file;

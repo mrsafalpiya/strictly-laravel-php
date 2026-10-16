@@ -25,6 +25,8 @@ final class DateOnlyCast implements Cast, Transformer
 
     /**
      * @param  array<array-key, mixed>  $properties
+     *
+     * @phpstan-ignore missingType.generics (laravel-data's Cast::cast() takes a raw CreationContext, and no type argument here is contravariant with it)
      */
     public function cast(DataProperty $property, mixed $value, array $properties, CreationContext $context): CarbonInterface
     {

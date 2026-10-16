@@ -28,7 +28,7 @@ final class PhpDocTypeTranspiler extends TranspilePhpStanTypeToTypeScriptNodeAct
                 $type,
                 $phpClassNode,
                 fn (TypeNode $nested): TypeScriptNode => $this->resolve($nested, $phpClassNode),
-                fn (string $class): ?string => $this->resolveClass($class, $phpClassNode),
+                fn (string $class): ?string => self::loadable($this->resolveClass($class, $phpClassNode)),
             );
 
             if ($node !== null) {
@@ -37,5 +37,15 @@ final class PhpDocTypeTranspiler extends TranspilePhpStanTypeToTypeScriptNodeAct
         }
 
         return parent::resolve($type, $phpClassNode);
+    }
+
+    /**
+     * The class, if it can be loaded: what the parent's resolveClass() returns, which types it only as a string.
+     *
+     * @return class-string|null
+     */
+    private static function loadable(?string $class): ?string
+    {
+        return $class !== null && (class_exists($class) || interface_exists($class)) ? $class : null;
     }
 }

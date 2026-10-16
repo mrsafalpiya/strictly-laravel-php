@@ -3,7 +3,6 @@
 namespace StrictlyLaravel\PHPStan;
 
 use PhpParser\Node;
-use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
 use PhpParser\Node\NullableType;
 use PhpParser\Node\Stmt\ClassMethod;
@@ -79,7 +78,7 @@ final readonly class InputDataRule implements Rule
                 }
             }
 
-            $method = $node->name instanceof Identifier ? $node->name->toString() : '';
+            $method = $node->name->toString();
 
             $errors[] = RuleErrorBuilder::message(sprintf(
                 "%s::%s() takes %s, which is validated from the request but doesn't extend %s.",

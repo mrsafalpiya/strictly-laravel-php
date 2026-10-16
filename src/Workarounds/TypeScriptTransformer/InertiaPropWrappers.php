@@ -36,6 +36,9 @@ final class InertiaPropWrappers extends VisitorClosure
         parent::__construct(fn () => null, [TypeScriptGeneric::class], VisitorClosureType::After);
     }
 
+    /**
+     * @param  array<array-key, mixed>  $metadata
+     */
     public function run(TypeScriptNode $node, array &$metadata): VisitorOperation
     {
         if (

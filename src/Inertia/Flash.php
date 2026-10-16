@@ -29,6 +29,7 @@ abstract class Flash extends Data
         /** @var array<string, mixed> $data Data objects always transform to string-keyed arrays. */
         $data = $this->toArray();
 
+        // @phpstan-ignore strictly.inertiaFlash (the one flash the rule sends apps to: the data is this Flash class's, which has a generated type)
         Inertia::flash($data);
     }
 }

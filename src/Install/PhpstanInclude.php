@@ -51,7 +51,9 @@ final class PhpstanInclude
         $removed = [];
         $kept = [];
 
-        for ($i = $key + 1; $i < count($lines) && preg_match('/^(\s+)-\s*(.+?)\s*$/', $lines[$i], $item) === 1; $i++) {
+        $i = $key + 1;
+
+        for (; $i < count($lines) && preg_match('/^(\s+)-\s*(.+?)\s*$/', $lines[$i], $item) === 1; $i++) {
             $indent = $item[1];
             $path = trim($item[2], '\'"');
 

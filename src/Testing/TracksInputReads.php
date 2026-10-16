@@ -4,6 +4,7 @@ namespace StrictlyLaravel\Testing;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route;
+use Symfony\Component\HttpFoundation\InputBag;
 
 /**
  * Reports every input key the app reads by name to InputReads (Problem P-024). It overrides each Request accessor that
@@ -80,11 +81,13 @@ trait TracksInputReads
     }
 
     /**
+     * @template TDefault
+     *
      * @param  string|null  $key
-     * @param  string|array<array-key, mixed>|null  $default
-     * @return string|array<array-key, mixed>|null
+     * @param  TDefault  $default
+     * @return ($key is null ? array<array-key, mixed> : string|array<array-key, mixed>|TDefault)
      */
-    public function query($key = null, $default = null)
+    public function query($key = null, mixed $default = null): mixed
     {
         InputReads::record([$key]);
 
@@ -92,11 +95,13 @@ trait TracksInputReads
     }
 
     /**
+     * @template TDefault
+     *
      * @param  string|null  $key
-     * @param  string|array<array-key, mixed>|null  $default
-     * @return string|array<array-key, mixed>|null
+     * @param  TDefault  $default
+     * @return ($key is null ? array<array-key, mixed> : string|array<array-key, mixed>|TDefault)
      */
-    public function post($key = null, $default = null)
+    public function post($key = null, mixed $default = null): mixed
     {
         InputReads::record([$key]);
 
@@ -115,6 +120,7 @@ trait TracksInputReads
 
     /**
      * @param  string|null  $key
+     * @return ($key is null ? InputBag<string|int|float|bool|null> : mixed)
      */
     public function json($key = null, $default = null): mixed
     {
@@ -123,10 +129,7 @@ trait TracksInputReads
         return parent::json($key, $default);
     }
 
-    /**
-     * @param  string  $offset
-     */
-    public function offsetExists($offset): bool
+    public function offsetExists(mixed $offset): bool
     {
         $this->recordProperty($offset);
 

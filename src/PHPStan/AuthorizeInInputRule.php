@@ -14,6 +14,7 @@ use PhpParser\Node\Scalar\Int_;
 use PhpParser\Node\Stmt\ClassMethod;
 use PhpParser\NodeFinder;
 use PHPStan\Analyser\Scope;
+use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Rules\IdentifierRuleError;
 use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
@@ -36,6 +37,10 @@ final class AuthorizeInInputRule implements Rule
 
     /** The AuthorizesRequests trait's methods that throw when the ability is denied. */
     private const array CONTROLLER_METHODS = ['authorize', 'authorizeforuser'];
+
+    public function __construct(
+        private ReflectionProvider $reflection,
+    ) {}
 
     public function getNodeType(): string
     {
@@ -82,8 +87,10 @@ final class AuthorizeInInputRule implements Rule
         foreach ($method->params as $param) {
             $type = $param->type instanceof NullableType ? $param->type->type : $param->type;
 
-            if ($type instanceof Name && is_subclass_of($scope->resolveName($type), InputData::class)) {
-                return $scope->resolveName($type);
+            $class = $type instanceof Name ? $scope->resolveName($type) : null;
+
+            if ($class !== null && $this->reflection->hasClass($class) && $this->reflection->getClass($class)->isSubclassOf(InputData::class)) {
+                return $class;
             }
         }
 

@@ -220,6 +220,7 @@ final class RouteKeys
      * The model a Data class is built from: the one model its static `from…()` methods take as their first parameter
      * (laravel-data calls them for `::from($project)`). Null when they take none, or more than one model.
      *
+     * @param  class-string  $dataClass
      * @return class-string<Model>|null
      */
     private function modelOf(string $dataClass): ?string
@@ -262,6 +263,10 @@ final class RouteKeys
         $bound = [];
 
         foreach ($route->parameterNames() as $name) {
+            if (! is_string($name)) {
+                continue;
+            }
+
             $bound[$name] = array_find(
                 $signature,
                 fn (ReflectionParameter $parameter): bool => Str::snake($parameter->getName()) === Str::snake($name),

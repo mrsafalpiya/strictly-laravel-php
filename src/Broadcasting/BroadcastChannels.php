@@ -3,6 +3,7 @@
 namespace StrictlyLaravel\Broadcasting;
 
 use Closure;
+use Illuminate\Broadcasting\Broadcasters\Broadcaster;
 use Illuminate\Broadcasting\BroadcastManager;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Model;
@@ -64,11 +65,18 @@ final class BroadcastChannels
         }
 
         try {
-            $channels = $app->make(BroadcastManager::class)->driver()->getChannels()->all();
+            $broadcaster = $app->make(BroadcastManager::class)->driver();
         } catch (Throwable) {
             // A broadcaster that can't be created has no channels registered either.
             return [];
         }
+
+        if (! $broadcaster instanceof Broadcaster) {
+            // Every broadcaster Laravel ships extends Broadcaster, which keeps the channels routes/channels.php registers.
+            return [];
+        }
+
+        $channels = $broadcaster->getChannels()->all();
 
         $definitions = [];
 

@@ -78,6 +78,7 @@ final class ComposerScripts
     {
         $depth = 0;
         $start = null;
+        $indent = '';
 
         for ($i = 0, $length = strlen($json); $i < $length; $i++) {
             $char = $json[$i];
@@ -96,7 +97,6 @@ final class ComposerScripts
 
                     $lineStart = strrpos(substr($json, 0, $i), "\n");
                     $indent = substr($json, $lineStart === false ? 0 : $lineStart + 1, $i - ($lineStart === false ? 0 : $lineStart + 1));
-                    $keyDepth = $depth;
                 }
 
                 $i = $close;
@@ -105,7 +105,7 @@ final class ComposerScripts
             } elseif ($char === '}' || $char === ']') {
                 $depth--;
 
-                if ($start !== null && $depth === $keyDepth) {
+                if ($start !== null && $depth === 1) {
                     return [$start, $i + 1, trim($indent) === '' ? $indent : ''];
                 }
             }

@@ -28,9 +28,7 @@ trait RecordsContracts
         // assets; a test that needs the real tags calls $this->withVite().
         $this->withoutVite();
 
-        ContractRecorder::listen(method_exists($this, 'getPrintableTestCaseMethodName')
-            ? static::getPrintableTestCaseName().' > '.$this->getPrintableTestCaseMethodName()   // Pest
-            : static::class.'::'.$this->name());
+        ContractRecorder::listen($this->recordedTestName());
 
         RouteKeyChecks::listen($this->app);
 
@@ -39,6 +37,22 @@ trait RecordsContracts
         if ((isset($uses[RefreshDatabase::class]) && ! isset($uses[LazilyRefreshDatabase::class])) || isset($uses[DatabaseMigrations::class])) {
             RouteKeyChecks::useDisjointIds();
         }
+    }
+
+    /** The test's name in the Contracts it records: Pest's file and description, or PHPUnit's class and method. */
+    private function recordedTestName(): string
+    {
+        if (method_exists($this, 'getPrintableTestCaseName') && method_exists($this, 'getPrintableTestCaseMethodName')) {
+            $file = $this::getPrintableTestCaseName();
+            $description = $this->getPrintableTestCaseMethodName();
+
+            if (is_string($file) && is_string($description)) {
+                return "{$file} > {$description}";
+            }
+        }
+
+        // @phpstan-ignore method.internal (PHPUnit has no public API for the running test's method name; Laravel's own TestCase reads it the same way)
+        return static::class.'::'.$this->name();
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace StrictlyLaravel\Broadcasting;
 
+use BackedEnum;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use ReflectionClass;
 use ReflectionMethod;
@@ -11,8 +12,7 @@ use Spatie\LaravelData\Data;
 use Spatie\TypeScriptTransformer\Actions\DiscoverTypesAction;
 use StrictlyLaravel\Inertia\Page;
 use Throwable;
-
-use function Illuminate\Support\enum_value;
+use UnitEnum;
 
 /**
  * The app's broadcast events whose payload is a Data class (BroadcastsData, Problem P-052), each by the name Echo
@@ -147,7 +147,12 @@ final class BroadcastEvents
             return $event::class;
         }
 
-        $name = enum_value($event->broadcastAs());
+        $name = $event->broadcastAs();
+        $name = match (true) {
+            $name instanceof BackedEnum => $name->value,
+            $name instanceof UnitEnum => $name->name,
+            default => $name,
+        };
 
         if (! is_string($name) && ! is_int($name)) {
             throw new RuntimeException(sprintf('%s::broadcastAs() returns no string.', $event::class));

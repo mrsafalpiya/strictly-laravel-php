@@ -36,6 +36,7 @@ abstract class Page extends Data
 
     public function render(): Response
     {
+        // @phpstan-ignore strictly.inertiaRender (the one render the rule sends apps to: the props are this Page class, which has a generated type)
         return Inertia::render(static::component(), $this);
     }
 

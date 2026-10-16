@@ -3,6 +3,7 @@
 namespace StrictlyLaravel\PHPStan;
 
 use PhpParser\Node\Arg;
+use PhpParser\Node\ArrayItem;
 use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\Array_;
 use PhpParser\Node\Expr\ArrowFunction;
@@ -114,8 +115,8 @@ final readonly class RouteClosure
         $names = match (true) {
             $methods instanceof String_ => [$methods->value],
             $methods instanceof Array_ => array_map(
-                static fn (?Expr $item): string => $item instanceof String_ ? $item->value : '…',
-                array_map(static fn ($item): ?Expr => $item?->value, $methods->items),
+                static fn (ArrayItem $item): string => $item->value instanceof String_ ? $item->value->value : '…',
+                $methods->items,
             ),
             default => ['…'],
         };

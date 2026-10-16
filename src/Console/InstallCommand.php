@@ -59,7 +59,7 @@ final class InstallCommand extends Command
 
     public function handle(Filesystem $files): int
     {
-        $this->checking = (bool) $this->option('check');
+        $this->checking = $this->option('check');
 
         if (! $this->checking) {
             $this->apply($this->laravel->basePath(), $files);
