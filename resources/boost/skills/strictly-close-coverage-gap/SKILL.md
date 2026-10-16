@@ -50,7 +50,7 @@ Done when `composer ci:check` passes.
 
 A shape no request can produce is a type that says too much: make the property non-nullable, or the list's minimum explicit, in PHP. Shapes are proven per property, so one test may cover several gaps.
 
-Contract Coverage sees only the shapes laravel-data describes: one item type per list or map, and nothing inside a PHPDoc array shape. So PHPStan (`strictly.dataShape`) rejects a Data property that holds an array shape (`list<array{lead: ?string}>`), a list or map of a union (`list<int|string>`, `list<IssueData|MilestoneData>`) or a list or map of lists. Model the item as a Data class (`list<ProjectSummaryData>`, with `public ?string $lead`; for a union of Data classes, a Data class whose one property is the union, its variants told apart by a literal discriminant); its properties' gaps then show up here like any other.
+Contract Coverage sees only the shapes laravel-data describes: one item type per list or map, and nothing inside a PHPDoc array shape. So PHPStan (`strictly.dataShape`) rejects a Data property that holds an array shape (`list<array{lead: ?string}>`), a list or map of a union (`list<int|string>`, `list<IssueData|MilestoneData>`, or a generic Data class whose items are `list<TItem>` used as `ListingData<IssueData|MilestoneData>`) or a list or map of lists. A generic Data class's items are walked as the Data class its type argument names (`ListingData<IssueData>`), so their gaps name that class. Model the item as a Data class (`list<ProjectSummaryData>`, with `public ?string $lead`; for a union of Data classes, a Data class whose one property is the union, its variants told apart by a literal discriminant); its properties' gaps then show up here like any other.
 
 ## When a check fails
 

@@ -3,13 +3,6 @@
 namespace StrictlyLaravel\Workarounds\TypeScriptTransformer;
 
 use BackedEnum;
-use PHPStan\PhpDocParser\Ast\PhpDoc\TemplateTagValueNode;
-use PHPStan\PhpDocParser\Lexer\Lexer;
-use PHPStan\PhpDocParser\Parser\ConstExprParser;
-use PHPStan\PhpDocParser\Parser\PhpDocParser;
-use PHPStan\PhpDocParser\Parser\TokenIterator;
-use PHPStan\PhpDocParser\Parser\TypeParser;
-use PHPStan\PhpDocParser\ParserConfig;
 use ReflectionClass;
 use Spatie\LaravelData\Contracts\BaseData;
 use Spatie\TypeScriptTransformer\Actions\TranspilePhpStanTypeToTypeScriptNodeAction;
@@ -29,6 +22,7 @@ use Spatie\TypeScriptTransformer\TypeScriptNodes\TypeScriptUnion;
 use Spatie\TypeScriptTransformer\TypeScriptNodes\TypeScriptUnknown;
 use Spatie\TypeScriptTransformer\Visitor\Visitor;
 use Spatie\TypeScriptTransformer\Visitor\VisitorOperation;
+use StrictlyLaravel\TypeScript\ClassTemplates;
 
 /**
  * Problem P-062 (docs/problems.md). Upstream: no upstream issue filed (typescript-transformer 3.3's DocTypeResolver
@@ -56,7 +50,7 @@ final class TemplateBounds
             return;
         }
 
-        $templates = self::templates($class);
+        $templates = ClassTemplates::of($class);
         $names = array_keys($templates);
 
         foreach ($alias->identifier->genericTypes as $parameter) {
@@ -70,33 +64,6 @@ final class TemplateBounds
                 $parameter->extends = self::withoutUntypedClasses($transpiler->execute($bound, $class, $names));
             }
         }
-    }
-
-    /**
-     * @return array<string, TemplateTagValueNode>
-     */
-    private static function templates(PhpClassNode $class): array
-    {
-        $docComment = $class->getDocComment();
-
-        if ($docComment === null) {
-            return [];
-        }
-
-        $config = new ParserConfig(usedAttributes: []);
-        $constExprParser = new ConstExprParser($config);
-        $parser = new PhpDocParser($config, new TypeParser($config, $constExprParser), $constExprParser);
-        $doc = $parser->parse(new TokenIterator((new Lexer($config))->tokenize($docComment)));
-
-        $templates = [];
-
-        foreach (['@template', '@template-covariant', '@template-contravariant'] as $tag) {
-            foreach ($doc->getTemplateTagValues($tag) as $template) {
-                $templates[$template->name] = $template;
-            }
-        }
-
-        return $templates;
     }
 
     private static function withoutUntypedClasses(TypeScriptNode $bound): ?TypeScriptNode

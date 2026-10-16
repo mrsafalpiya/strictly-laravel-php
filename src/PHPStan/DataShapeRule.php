@@ -5,14 +5,17 @@ namespace StrictlyLaravel\PHPStan;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Node\ClassPropertyNode;
+use PHPStan\Reflection\ClassReflection;
 use PHPStan\Rules\IdentifierRuleError;
 use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
 use PHPStan\Type\Generic\TemplateType;
 use PHPStan\Type\ObjectType;
 use PHPStan\Type\Type;
+use PHPStan\Type\TypeTraverser;
 use PHPStan\Type\UnionType;
 use PHPStan\Type\VerbosityLevel;
+use ReflectionProperty;
 use Spatie\LaravelData\Attributes\Hidden;
 use Spatie\LaravelData\Contracts\BaseData;
 
@@ -30,7 +33,8 @@ use Spatie\LaravelData\Contracts\BaseData;
  * same shapes are also unvalidated: laravel-data infers only `array` for them. Items of literals of one scalar type
  * (`list<'low'|'high'>`) or of `int|float` stay allowed, since Contract Coverage counts a scalar union's members by
  * their TypeScript type (`string`, `number`) at the top level too, and so do items of a template type with a union
- * bound, which each use of the class decides.
+ * bound, which each use of the class decides: a use's type arguments are checked in the class's template-typed
+ * properties, so `ListingData<IssueData|MilestoneData>` is rejected where `ListingData` has `list<TItem>` (P-185).
  *
  * @implements Rule<ClassPropertyNode>
  */
@@ -60,7 +64,7 @@ final class DataShapeRule implements Rule
             return []; // never sent, so never generated nor covered
         }
 
-        $problem = $this->problem($class->getNativeProperty($name)->getReadableType(), item: false);
+        $problem = $this->problem($class->getNativeProperty($name)->getReadableType(), item: false, scope: $scope);
 
         if ($problem === null) {
             return [];
@@ -96,9 +100,10 @@ final class DataShapeRule implements Rule
      * The first shape Contract Coverage can't see in a type, and the part of the type that is it: an array shape
      * anywhere comes first, then an item that is a union, then an item that is a list or map.
      *
+     * @param  array<string, true>  $resolving  the generic Data classes whose uses are being resolved, by their type
      * @return array{'shape'|'data union'|'union'|'nested', Type}|null
      */
-    private function problem(Type $type, bool $item): ?array
+    private function problem(Type $type, bool $item, Scope $scope, array $resolving = []): ?array
     {
         $shape = $this->shape($type);
 
@@ -116,8 +121,8 @@ final class DataShapeRule implements Rule
             }
 
             $problem = $this->isCollection($member)
-                ? $this->problem($member->getIterableValueType(), item: true)
-                : $this->inGenerics($member);
+                ? $this->problem($member->getIterableValueType(), item: true, scope: $scope, resolving: $resolving)
+                : $this->inGenerics($member, $scope, $resolving);
 
             if ($problem !== null) {
                 return $problem;
@@ -128,21 +133,72 @@ final class DataShapeRule implements Rule
     }
 
     /**
-     * A problem in a wrapper's type arguments (`ScrollProp<…>`, a generic Data class), which are values, not items.
+     * A problem in a wrapper's type arguments (`ScrollProp<…>`, a generic Data class), which are values, not items,
+     * or in what a generic Data class's properties become with them (Problem P-185): `ListingData<IssueData|MilestoneData>`
+     * makes its `list<TItem>` a list of a union, which the class's own declaration leaves to each use.
      *
+     * @param  array<string, true>  $resolving
      * @return array{'shape'|'data union'|'union'|'nested', Type}|null
      */
-    private function inGenerics(Type $type): ?array
+    private function inGenerics(Type $type, Scope $scope, array $resolving): ?array
     {
         foreach ($this->typeArguments($type) as $argument) {
-            $problem = $this->problem($argument, item: false);
+            $problem = $this->problem($argument, item: false, scope: $scope, resolving: $resolving);
 
             if ($problem !== null) {
                 return $problem;
             }
         }
 
+        foreach ($type->getObjectClassReflections() as $class) {
+            $key = $class->getDisplayName();
+
+            if (! $class->implementsInterface(BaseData::class) || $class->getActiveTemplateTypeMap()->isEmpty() || isset($resolving[$key])) {
+                continue;
+            }
+
+            foreach ($this->templateProperties($class) as $name) {
+                $problem = $this->problem($type->getInstanceProperty($name, $scope)->getReadableType(), item: false, scope: $scope, resolving: [...$resolving, $key => true]);
+
+                if ($problem !== null) {
+                    return $problem;
+                }
+            }
+        }
+
         return null;
+    }
+
+    /**
+     * The public properties of a generic class whose declared type names one of its templates, which each use of the
+     * class decides.
+     *
+     * @return list<string>
+     */
+    private function templateProperties(ClassReflection $class): array
+    {
+        $properties = [];
+
+        foreach ($class->getNativeReflection()->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
+            if ($property->isStatic() || $property->getAttributes(Hidden::class) !== []) {
+                continue;
+            }
+
+            $declared = $class->getNativeProperty($property->getName())->getReadableType();
+            $templated = false;
+
+            TypeTraverser::map($declared, function (Type $type, callable $traverse) use (&$templated): Type {
+                $templated = $templated || $type instanceof TemplateType;
+
+                return $traverse($type);
+            });
+
+            if ($templated) {
+                $properties[] = $property->getName();
+            }
+        }
+
+        return $properties;
     }
 
     /** The first array shape at any depth of a type. */
