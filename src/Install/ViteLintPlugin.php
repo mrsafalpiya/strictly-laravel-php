@@ -7,7 +7,8 @@ use RuntimeException;
 /**
  * Edits the Base Kit's Vite+ lint config (the `lint` object in vite.config.ts), only within the `lint: { … }` object
  * (ViteConfig), in two hooks: register() adds the npm package's oxlint plugin to `jsPlugins` and turns each of its rules
- * on as an error, and rejectAssertions() turns on oxlint's own rules against type and non-null assertions. Each adds any
+ * on as an error, and rejectAssertions() turns on oxlint's own rules against type and non-null assertions and against an
+ * `any` reaching typed code, which asserts a type without a cast. Each adds any
  * missing rule to `rules`, creating either key when the app has none. Rules are never turned off (ADR-0007): an app
  * suppresses one with a reasoned comment instead, so each hook throws when the config already sets one of its rules,
  * in `rules` or in a `lint.overrides` entry, to anything but the setting it writes (P-190), and never rewrites it.
@@ -43,6 +44,21 @@ final class ViteLintPlugin
     ];
 
     /**
+     * oxlint's type-aware rules (the Base Kit lints with `typeAware: true`) that reject an `any` from an untyped API
+     * (`JSON.parse()`, `Response.json()`, a third-party function typed as returning `any`) being assigned, returned or
+     * passed as an argument where a type is expected, or having a property read or being called (P-175): TypeScript lets
+     * `any` into every type, so it asserts that type without a cast. App code reads such a value as `unknown` and
+     * narrows it.
+     */
+    public const array UNSAFE_ANY_RULES = [
+        'typescript/no-unsafe-argument' => "'error'",
+        'typescript/no-unsafe-assignment' => "'error'",
+        'typescript/no-unsafe-call' => "'error'",
+        'typescript/no-unsafe-member-access' => "'error'",
+        'typescript/no-unsafe-return' => "'error'",
+    ];
+
+    /**
      * Registers the plugin and turns its rules on. Returns whether the file changed.
      */
     public static function register(string $viteConfig): bool
@@ -75,15 +91,17 @@ final class ViteLintPlugin
     }
 
     /**
-     * Turns on oxlint's rules against type and non-null assertions (ASSERTION_RULES, P-068). Returns whether the file
-     * changed.
+     * Turns on oxlint's rules against type and non-null assertions (ASSERTION_RULES, P-068) and against an `any` reaching
+     * typed code (UNSAFE_ANY_RULES, P-175). Returns whether the file changed.
      */
     public static function rejectAssertions(string $viteConfig): bool
     {
+        $rules = [...self::ASSERTION_RULES, ...self::UNSAFE_ANY_RULES];
+
         return ViteConfig::patch($viteConfig, fn (string $original): string => self::editLintConfig(
             $original,
-            'add '.self::ruleList(self::ASSERTION_RULES).' to the Vite+ lint config\'s rules by hand',
-            fn (string $block, string $indent): array => self::addRules($block, $indent, self::ASSERTION_RULES),
+            'add '.self::ruleList($rules).' to the Vite+ lint config\'s rules by hand',
+            fn (string $block, string $indent): array => self::addRules($block, $indent, $rules),
         ));
     }
 

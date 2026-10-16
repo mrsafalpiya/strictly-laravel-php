@@ -106,12 +106,12 @@ final class InstallCommand extends Command
             'tsconfig.json: strictness flags' => fn () => TsconfigFlags::patch("{$root}/tsconfig.json"),
             'tsconfig.json: narrowed JSX types' => fn () => JsxTypes::patchTsconfig("{$root}/tsconfig.json"),
             'vite.config.ts: Strictly Laravel oxlint plugin' => fn () => ViteLintPlugin::register("{$root}/vite.config.ts"),
-            'vite.config.ts: oxlint rejects type and non-null assertions' => fn () => ViteLintPlugin::rejectAssertions("{$root}/vite.config.ts"),
+            'vite.config.ts: oxlint rejects assertions and unsafe any' => fn () => ViteLintPlugin::rejectAssertions("{$root}/vite.config.ts"),
             'vite.config.ts: Strictly Laravel Vite plugin' => fn () => ViteTypesPlugin::register("{$root}/vite.config.ts"),
             "vite.config.ts: React plugin keeps React's JSX runtime" => fn () => JsxTypes::pinViteReactRuntime("{$root}/vite.config.ts"),
             'Generated TypeScript gitignored' => fn () => GitignoreEntry::ensure("{$root}/.gitignore", '/resources/js/'.TypeGeneration::OUTPUT_DIRECTORY),
             'Recorded Contracts gitignored' => fn () => GitignoreEntry::ensure("{$root}/.gitignore", '/resources/js/'.ContractRecorder::DIRECTORY),
-            'package.json scripts: build and types:check generate first' => fn () => GenerateFirst::ensure("{$root}/package.json"),
+            'package.json scripts: build, check and types:check generate first' => fn () => GenerateFirst::ensure("{$root}/package.json"),
             'Wayfinder QUERY verb workaround' => fn () => WayfinderQueryVerb::patch("{$root}/resources/js/wayfinder/index.ts"),
         ];
     }

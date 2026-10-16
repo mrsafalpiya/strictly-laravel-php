@@ -6,16 +6,18 @@ use JsonException;
 use RuntimeException;
 
 /**
- * Makes the app's package.json `build`, `build:ssr` and `types:check` scripts run `php artisan strictly:generate`
- * first, so they work from a fresh clone, where the gitignored generated TypeScript doesn't exist yet. Only the script
- * values change; the rest of package.json keeps its formatting byte for byte.
+ * Makes the app's package.json `build`, `build:ssr`, `check`, `check:fix` and `types:check` scripts run
+ * `php artisan strictly:generate` first, so they work from a fresh clone, where the gitignored generated TypeScript
+ * doesn't exist yet. `check` lints with type information: without the generated types every value typed by them is an
+ * error type, which the type-aware rules read as `any` (P-193). Only the script values change; the rest of package.json
+ * keeps its formatting byte for byte.
  */
 final class GenerateFirst
 {
     public const string PREFIX = 'php artisan strictly:generate && ';
 
-    /** The scripts that read generated types. `build:ssr` is optional; the others are the Base Kit's. */
-    private const array SCRIPTS = ['build' => true, 'build:ssr' => false, 'types:check' => true];
+    /** The scripts that read generated types. `build:ssr` and `check:fix` are optional; the others are the Base Kit's. */
+    private const array SCRIPTS = ['build' => true, 'build:ssr' => false, 'check' => true, 'check:fix' => false, 'types:check' => true];
 
     /**
      * Returns whether the file changed.

@@ -63,6 +63,35 @@ final class ViteLintPluginTest extends TestCase
     }
 
     #[Test]
+    public function it_rejects_an_unsafe_any_rule_turned_off(): void
+    {
+        $this->lintConfig(['typescript/no-unsafe-assignment' => "'off'"]);
+
+        $this->expectExceptionMessage('vite.config.ts turns `typescript/no-unsafe-assignment` off; Strictly Laravel has no toggles (ADR-0007)');
+
+        ViteLintPlugin::rejectAssertions($this->viteConfig);
+    }
+
+    #[Test]
+    public function it_adds_the_unsafe_any_rules_to_an_app_that_has_only_the_assertion_rules(): void
+    {
+        $this->lintConfig(array_fill_keys(array_keys(ViteLintPlugin::UNSAFE_ANY_RULES), null));
+
+        self::assertTrue(ViteLintPlugin::rejectAssertions($this->viteConfig));
+        self::assertStringContainsString(<<<'TS'
+                    rules: {
+                        'typescript/no-unsafe-argument': 'error',
+                        'typescript/no-unsafe-assignment': 'error',
+                        'typescript/no-unsafe-call': 'error',
+                        'typescript/no-unsafe-member-access': 'error',
+                        'typescript/no-unsafe-return': 'error',
+                        'typescript/consistent-type-assertions': [
+
+            TS, (string) file_get_contents($this->viteConfig));
+        self::assertFalse(ViteLintPlugin::rejectAssertions($this->viteConfig));
+    }
+
+    #[Test]
     public function it_rejects_a_rule_with_other_options(): void
     {
         $this->lintConfig(['typescript/consistent-type-assertions' => "['error', { assertionStyle: 'as' }]"]);
@@ -173,6 +202,7 @@ final class ViteLintPluginTest extends TestCase
     {
         $rules = [
             ...ViteLintPlugin::ASSERTION_RULES,
+            ...ViteLintPlugin::UNSAFE_ANY_RULES,
             ...array_fill_keys(ViteLintPlugin::RULES, "'error'"),
             ...$settings,
         ];
