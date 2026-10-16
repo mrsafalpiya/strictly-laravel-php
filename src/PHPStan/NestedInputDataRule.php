@@ -26,7 +26,7 @@ use StrictlyLaravel\Data\InputData;
  * has #[MergeValidationRules], and it reads the attribute from each nested Data class separately. So a plain Data class
  * with rules() nested in an input (a property of its type, or an item of a list, a map or a DataCollection of it, at
  * any depth) replaces the rules inferred for it: `['title' => ['max:50']]` drops `required|string` for `task.title`.
- * Such a class must extend InputData too, like the input itself (strictly.inputData, InputDataRule), unless it carries
+ * Such a class must extend InputData too, like the input itself (InputDataRule), unless it carries
  * #[MergeValidationRules] itself or through a parent class, which laravel-data reads too.
  *
  * Every input class and query class (InputDataRule::REQUEST_DATA) is checked from its own properties. A nested class
@@ -72,7 +72,7 @@ final readonly class NestedInputDataRule implements Rule
                     $input->getName(), $property, $offender, $through === [] ? '' : ' (through '.implode(', ', $through).')',
                     InputData::class,
                 ))
-                    ->identifier('strictly.inputData')
+                    ->identifier('strictly.nestedInputData')
                     ->line($this->line($node->getOriginalNode(), $property))
                     ->tip(sprintf(
                         'Make %s extend %s: its rules() then merge with the inferred ones, as the input\'s own do.',
