@@ -79,8 +79,7 @@ final class PhpstanIgnores
         return 'ignores '.($named === [] ? '' : implode(', ', $named).' and ').$last.' errors'
             .($byMessage ? ' by their message' : '')
             .($paths === [] ? '' : ' in '.implode(', ', $paths))
-            .'; Strictly Laravel has no toggles (ADR-0007): remove the entry, and suppress single lines with `// @phpstan-ignore '
-            .(count($rules) === 1 ? $rules[0] : 'strictly.<rule>').' (reason)`.';
+            .'; '.NoToggles::message('the entry', '// @phpstan-ignore '.(count($rules) === 1 ? $rules[0] : 'strictly.<rule>').' (reason)');
     }
 
     /**

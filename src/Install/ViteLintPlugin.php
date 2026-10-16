@@ -194,7 +194,7 @@ final class ViteLintPlugin
                     "'off'", '0' => "turns `{$rule}` off{$where}",
                     "'warn'", '1' => "turns `{$rule}` down to a warning{$where}",
                     default => "sets `{$rule}` to `".self::oneLine($value)."`{$where}, not `".self::oneLine($required).'`',
-                }."; Strictly Laravel has no toggles (ADR-0007): remove the setting, and suppress single lines with `// oxlint-disable-next-line {$rule} -- reason`.";
+                }.'; '.NoToggles::message('the setting', "// oxlint-disable-next-line {$rule} -- reason");
             }
         }
 
