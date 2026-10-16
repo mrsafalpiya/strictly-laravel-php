@@ -87,6 +87,60 @@ Route::bind('project', fn (string $value): StatsData => new StatsData(projects: 
 Route::fallback(fn (): WelcomePage => new WelcomePage);
 array_map(fn (StoreProjectData $data): StatsData => new StatsData(projects: 1), []);
 
+namespace App\Models\ClosureRoutes;
+
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Contracts\Support\Jsonable;
+use JsonSerializable;
+
+/**
+ * Arrayable, Jsonable and JsonSerializable, as an Eloquent model is (the root dev environment has no illuminate/database).
+ *
+ * @implements Arrayable<string, mixed>
+ */
+final class Project implements Arrayable, Jsonable, JsonSerializable
+{
+    public function toArray(): array
+    {
+        return [];
+    }
+
+    public function toJson($options = 0): string
+    {
+        return '{}';
+    }
+
+    public function jsonSerialize(): mixed
+    {
+        return [];
+    }
+}
+
+namespace App\ClosureRoutes\Json;
+
+use App\Models\ClosureRoutes\Project;
+use App\Pages\ClosureRoutes\WelcomePage;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Response;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Route;
+
+// Laravel sends these as JSON that no Data class types (P-179).
+Route::get('projects/recent', fn (): array => [])->name('projects.recent');
+Route::get('projects/names', fn () => new Collection(['Launch', 'Roadmap']));
+Route::get('projects/latest', fn (): ?Project => null);
+Route::get('projects/first', fn (): array|RedirectResponse => new RedirectResponse);
+
+// These pass: what Laravel doesn't answer as JSON data, and a JsonResponse, JSON built by hand that stays untyped (P-048).
+Route::get('projects/owner', fn (): JsonResponse => new JsonResponse);
+Route::get('projects/overview', fn () => new WelcomePage);
+Route::post('projects/archive', fn (): RedirectResponse => new RedirectResponse);
+Route::get('projects/export', fn (): Response => new Response);
+Route::get('about', fn (): View => throw new \LogicException);
+Route::get('ping', fn (): string => 'pong');
+
 namespace Tests\Feature\ClosureRoutes;
 
 use App\Data\ClosureRoutes\StatsData;
