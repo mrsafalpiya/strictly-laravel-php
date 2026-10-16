@@ -5,16 +5,12 @@ namespace StrictlyLaravel\PHPStan;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Node\InClassMethodNode;
-use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Rules\IdentifierRuleError;
 use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
-use PHPStan\Type\Type;
 use PHPStan\Type\TypeUtils;
 use PHPStan\Type\VerbosityLevel;
-use Spatie\LaravelData\Data;
-use StrictlyLaravel\Inertia\Page;
 
 /**
  * Problem P-108: a controller action that answers JSON declares one Data class as its return type, which makes it a
@@ -27,7 +23,7 @@ use StrictlyLaravel\Inertia\Page;
  *   a paginator, a model or an API resource (anything Arrayable, Jsonable or JsonSerializable that isn't a Data class:
  *   UntypedJson, which ClosureRouteRule reads closure routes with);
  * - a nullable Data class, or a union that holds one (`?ProjectData`, `ProjectData|RedirectResponse`), which
- *   RouteResponse doesn't read as a response.
+ *   RouteResponse doesn't read as a response (DataResponse, which ClosureRouteRule also reads closure routes with).
  *
  * Responses that aren't JSON data stay allowed: Page classes (on their own, nullable or in a union), redirects,
  * `Response`, downloads and `void`. So does a `JsonResponse`, the explicit way to answer JSON that stays untyped
@@ -79,7 +75,7 @@ final readonly class JsonResponseRule implements Rule
             }
         }
 
-        if (count($members) > 1 && array_any($members, $this->isResponseData(...))) {
+        if (count($members) > 1 && array_any($members, DataResponse::is(...))) {
             return [$this->error(
                 "{$action} returns {$returns}, a nullable or union type, which declares no response: {$consequence}",
                 'Return one Data class on every path: put a value that may be missing in a nullable property (ProjectLookupData with a ?ProjectData property), and refuse a request with abort() or a validation error. See the strictly-add-json-endpoint skill.',
@@ -87,15 +83,6 @@ final readonly class JsonResponseRule implements Rule
         }
 
         return [];
-    }
-
-    /** Whether a type is a Data class that would be a JSON endpoint's response on its own: one that isn't a Page. */
-    private function isResponseData(Type $type): bool
-    {
-        return array_any(
-            $type->getObjectClassReflections(),
-            static fn (ClassReflection $class): bool => $class->is(Data::class) && ! $class->is(Page::class),
-        );
     }
 
     private function error(string $message, string $tip): IdentifierRuleError

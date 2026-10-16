@@ -16,7 +16,6 @@ use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
 use PHPStan\Type\ClosureType;
 use PHPStan\Type\NeverType;
-use PHPStan\Type\ObjectType;
 use PHPStan\Type\Type;
 use PHPStan\Type\TypeCombinator;
 use PHPStan\Type\TypeUtils;
@@ -24,11 +23,11 @@ use PHPStan\Type\VerbosityLevel;
 use Spatie\LaravelData\Contracts\BaseData;
 use StrictlyLaravel\Data\InputData;
 use StrictlyLaravel\Data\QueryData;
-use StrictlyLaravel\Inertia\Page;
 
 /**
  * A closure route takes no input class, query class, other Data class or FormRequest, and returns no Data class but a
- * Page (Problems P-097, P-109, P-151, P-167). Wayfinder types a route function only from the controller action it runs,
+ * Page, on its own, nullable or in a union (DataResponse, as JsonResponseRule reads controller actions with; Problems
+ * P-097, P-109, P-151, P-167, P-202). Wayfinder types a route function only from the controller action it runs,
  * never from a closure, so such a route function has no input, query or response brand: `visit(store())` sends no
  * payload and `useRouteForm(store(), …)` refuses it, `index({ query })` takes no keys, and `useRouteHttp(stats())` types
  * its result `unknown`. Reading the payload or the query string in a closure route is InputReadRule's and
@@ -122,7 +121,7 @@ final readonly class ClosureRouteRule implements Rule
                 ->line($line)
                 ->tip('Move the route to a controller action that returns one Data class holding the value, such as RecentProjectsData with a list<ProjectData> property: it types the route\'s response, and every response a feature test gets is checked against it. See the strictly-add-json-endpoint skill.')
                 ->build();
-        } elseif ((new ObjectType(BaseData::class))->isSuperTypeOf($response)->yes() && (new ObjectType(Page::class))->isSuperTypeOf($response)->no()) {
+        } elseif (array_any(TypeUtils::flattenTypes($response), DataResponse::is(...))) {
             $errors[] = RuleErrorBuilder::message(sprintf(
                 "The closure route %s returns %s, but Wayfinder types a route function's response only from a controller action: useRouteHttp() types its result unknown.",
                 $route->shown, $returns,
