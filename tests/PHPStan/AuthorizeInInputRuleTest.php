@@ -12,7 +12,7 @@ final class AuthorizeInInputRuleTest extends StrictlyRuleTestCase
 {
     protected function getRule(): Rule
     {
-        return new AuthorizeInInputRule;
+        return new AuthorizeInInputRule($this->createReflectionProvider());
     }
 
     public function test_actions_taking_an_input_authorize_in_it_not_in_their_body(): void

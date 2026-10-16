@@ -94,7 +94,7 @@ use Illuminate\Contracts\Support\Jsonable;
 use JsonSerializable;
 
 /**
- * Arrayable, Jsonable and JsonSerializable, as an Eloquent model is (the root dev environment has no illuminate/database).
+ * Arrayable, Jsonable and JsonSerializable, as an Eloquent model is.
  *
  * @implements Arrayable<string, mixed>
  */

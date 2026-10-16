@@ -1,17 +1,5 @@
 <?php
 
-namespace Illuminate\Database\Eloquent;
-
-// The root dev environment has no illuminate/database or illuminate/validation: just enough of each for the rule.
-abstract class Model
-{
-    protected $primaryKey = 'id';
-}
-
-namespace Illuminate\Validation\Rules;
-
-class Exists {}
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;

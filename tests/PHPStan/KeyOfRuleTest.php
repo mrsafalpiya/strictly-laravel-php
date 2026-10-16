@@ -22,16 +22,16 @@ final class KeyOfRuleTest extends StrictlyRuleTestCase
         $tip = "Declare the model it is a key of: #[KeyOf(User::class)] (StrictlyLaravel\\Data\\KeyOf) for its primary key, #[KeyOf(Issue::class, 'number')] for another field. A value that is no model's key, such as another service's id, takes @phpstan-ignore strictly.keyOf (the reason).";
 
         $this->analyse([__DIR__.'/data/model-keys.php'], [
-            [$named('TicketData::$reporter_id'), 40, $tip],
-            [$named('TicketData::$project_id'), 47, $tip],
-            [$named('TicketData::$watcherIds'), 53, $tip],
-            [$named('TicketData::$label_ids'), 55, $tip],
-            [$validated('StoreTicketData::$ids'), 71, $tip],
-            [$validated('StoreTicketData::$parent'), 72, $tip],
-            [$validated('StoreTicketData::$reviewer'), 73, $tip],
-            [$validated('StoreTicketData::$tags'), 76, $tip],
-            [$named('StoreTicketData::$assigneeId'), 81, $tip],
-            [$named('TicketFiltersData::$assigneeId'), 109, $tip],
+            [$named('TicketData::$reporter_id'), 28, $tip],
+            [$named('TicketData::$project_id'), 35, $tip],
+            [$named('TicketData::$watcherIds'), 41, $tip],
+            [$named('TicketData::$label_ids'), 43, $tip],
+            [$validated('StoreTicketData::$ids'), 59, $tip],
+            [$validated('StoreTicketData::$parent'), 60, $tip],
+            [$validated('StoreTicketData::$reviewer'), 61, $tip],
+            [$validated('StoreTicketData::$tags'), 64, $tip],
+            [$named('StoreTicketData::$assigneeId'), 69, $tip],
+            [$named('TicketFiltersData::$assigneeId'), 97, $tip],
         ]);
     }
 }
