@@ -36,7 +36,9 @@ final readonly class QueryReadRule implements Rule
      */
     public function processNode(Node $node, Scope $scope): array
     {
-        if (RequestRead::of($node, $scope)?->accessor !== 'query') {
+        $read = RequestRead::of($node, $scope);
+
+        if ($read?->accessor !== 'query') {
             return [];
         }
 
@@ -44,7 +46,10 @@ final readonly class QueryReadRule implements Rule
 
         if ($controller === null) {
             return RouteClosure::encloses($scope) ? [
-                RuleErrorBuilder::message('A closure route reads the query string from the request, where nothing types it: a route function sends only the keys of a controller action\'s query class.')
+                RuleErrorBuilder::message(sprintf(
+                    'A closure route reads the query string from the request with %s, where nothing types it: a route function sends only the keys of a controller action\'s query class.',
+                    $read->shown,
+                ))
                     ->identifier('strictly.queryRead')
                     ->tip(sprintf(
                         'Move the route to a controller action that takes a query class (a final Data class extending %s) and read the key from it: Wayfinder types a route function\'s query option with the query class of the controller action it runs, never with a closure\'s.',
@@ -56,8 +61,8 @@ final readonly class QueryReadRule implements Rule
 
         return [
             RuleErrorBuilder::message(sprintf(
-                '%s::%s() reads the query string from the request, where nothing types it: a route function sends only the keys of its action\'s query class.',
-                $controller->getName(), $scope->getFunctionName() ?? '{closure}',
+                '%s::%s() reads the query string from the request with %s, where nothing types it: a route function sends only the keys of its action\'s query class.',
+                $controller->getName(), $scope->getFunctionName() ?? '{closure}', $read->shown,
             ))
                 ->identifier('strictly.queryRead')
                 ->tip(sprintf(
