@@ -31,6 +31,7 @@ final class StoreProjectData extends InputData
   ```tsx
   <Select onValueChange={(value) => form.setData('assigneeId', selectedKey(members.map((member) => member.id), value))}>
   ```
+- A field typed by a backed enum takes one of its values; a select of them reads its value back with the same lookup among `enumValues` (`@/generated`): `selectedKey(enumValues.IssueStatus, value)`, typed as the enum and `null` for any other value. Never `value as IssueStatus`, which lint rejects, or `Number(value)` for an int-backed enum, which `tsc` does.
 - Authorize in the input class, which runs before validation: `public static function authorize(Request $request): bool`.
 - `authorize()` and `rules()` receive the route's bound models: name a model parameter after the route's (`authorize(Project $project)` for `{project}`, `rules(Label $label)` to `->ignore($label->id)`). Don't read `$request->route('project')`. A model parameter with a contextual attribute comes from the container instead (`#[CurrentUser] User $user` is the signed-in user, whatever the route's `{user}`). Only an input class gets the route's models; a query class's or a plain Data class's model parameter would be a new, empty model.
 

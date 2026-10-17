@@ -40,13 +40,13 @@ final class ProjectData extends Data
 
 ## 3. Declare the props on the Page class
 
-The constructor's promoted properties are the page's props. Give an array its item type:
+The constructor's promoted properties are the page's props. Declare a list as a `list<…>` of its item type, never `array<int, …>`, which PHP sends as a JSON object once a `filter()` leaves a gap in its keys:
 
 ```php title="app/Pages/Projects/IndexPage.php"
 final class IndexPage extends Page
 {
     /**
-     * @param  array<int, ProjectData>  $projects
+     * @param  list<ProjectData>  $projects
      */
     public function __construct(
         public array $projects,
@@ -128,6 +128,7 @@ Done when `composer ci:check` passes.
 
 ## When a check fails
 
+- `ci:check:test` fails with `App\Pages\Labels\IndexPage::$labels is typed array<int, LabelData>,`: declare it `list<LabelData>`. A query's `->get()->map(…)->all()` is a list; after `filter()`, `unique()` or `sortBy()`, end with `->values()->all()`.
 - `ci:check:test` fails with `Inertia::render() renders a page whose props have no generated type.`: return the Page class instead (`Route::inertia()` and `inertia('…')` read the same).
 - `ci:check:tsc` fails with `error TS2344: Type '"projects/index"' does not satisfy the constraint 'keyof InertiaPages'.`: a file under `resources/js/pages` has no Page class. Add one, or run `php artisan make:page`.
 - `ci:check:tsc` fails with `error TS2344: Type '{ unsentProps: "owner"; }' does not satisfy the constraint '(props: ProjectsShowPage) => unknown'.`: the component reads a prop the Page class doesn't send. Add it to the Page class.
