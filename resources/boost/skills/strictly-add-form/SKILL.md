@@ -94,7 +94,7 @@ A component that forwards `name` to a control declares it `name?: FieldName` (ty
 
 ## 4. Submit it in feature tests
 
-Submit it valid (each nullable field both `null` and set across the tests) and invalid, or `ci:check:coverage` fails:
+Submit it valid and invalid. Between them, the accepted (valid) requests must send each nullable field both `null` and set, and each `Optional` field of an update both sent and left out, since the client may send any of them, or `ci:check:coverage` fails:
 
 ```php title="tests/Feature/Projects/CreateProjectTest.php"
 test('a project is created from the form', function () {
@@ -147,4 +147,6 @@ Done when `composer ci:check` passes.
 - `ci:check:test` fails with `App\Data\TeamFiltersData::rules() takes App\Models\User $user`: only an input class's `authorize()` and `rules()` receive the route's models (`strictly.routeModelParameter`).
 - `ci:check:tsc` fails with `error TS2353: Object literal may only specify known properties, and '"project"' does not exist in type 'Partial<Record<"name" | "description" | "estimate"`: the server returned an error key that isn't an input field. Make it a field, or flash a toast instead.
 - `ci:check:tsc` fails with `error TS2322: Type '"notify"' is not assignable to type '"name" | "public"'.`: the action read a request key the input doesn't declare. Add it to the input class and read it from `$data`.
+- `ci:check:coverage` fails with `✗ StoreProjectData.description is only ever null (at POST /projects › description): add a feature test that submits to POST /projects with description not null.`: no accepted request sent it set. Submit one that does; only a request the server accepts counts.
+- `ci:check:coverage` fails with `✗ UpdateProjectData.name is never left out (at PATCH /projects/{project} › name): add a feature test that submits to PATCH /projects/{project} without name.`: submit an update that leaves the field out.
 - `ci:check:coverage` fails with `✗ POST /projects: no feature test submits to this form endpoint: add a feature test that sends App\Data\StoreProjectData to POST /projects.`: add the step 4 tests.

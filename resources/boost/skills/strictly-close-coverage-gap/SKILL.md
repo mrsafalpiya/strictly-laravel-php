@@ -41,9 +41,10 @@ Done when `composer ci:check` passes.
 | `no feature test submits to this form endpoint` | sends its input class's fields to the route. |
 | `no feature test calls this JSON endpoint` | calls the route and gets a successful response. |
 | `no feature test broadcasts this event` | makes the event broadcast, without `Event::fake()` (spy with `Event::listen()`). |
-| `is only ever null` | sends the value set. |
+| `is only ever null` | sends the value set (for an input class, submits it set in a request the server accepts). |
 | `is only ever empty` | sends the list with at least one item. |
-| `is only ever absent` | sends the optional prop or flash key. |
+| `is only ever absent` | sends the optional prop, flash key or `Optional` input field. |
+| `is never left out` | submits a request the server accepts without that `Optional` input field. |
 | `is never seen as PriorityChangedData` | sends that union variant. |
 | `is never seen as int` | sends that member of the scalar union. |
 | `is declared for a vendor action that never uses it` | submits that field to the vendor route, or remove it from `config/strictly.php`. |

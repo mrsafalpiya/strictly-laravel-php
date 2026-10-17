@@ -437,7 +437,7 @@ final class ContractRecorder
                 '// Every input key the action read: the typed form never sends a key the input type lacks.',
                 sprintf('export const read = %s satisfies InputKey<%s>[];', self::json($read), $type),
             ],
-        ], $meta);
+        ], $meta, $meta['accepted'] === null ? '' : self::json($meta['accepted']));
     }
 
     /**
@@ -736,15 +736,20 @@ final class ContractRecorder
     }
 
     /**
+     * A record is named by its Contract (or by its sidecar alone, when it has none), so a request that records the same
+     * Contract as another replaces it. `$identity` is what else tells such records apart and must all be kept, such as
+     * the payload a form endpoint accepted (Problem P-209): two requests to one URL in one test record the same
+     * Contract, and Contract Coverage reads each one's payload.
+     *
      * @param  list<string>  $lines
      * @param  array<string, mixed>  $meta
      */
-    private static function write(string $directory, array $lines, array $meta): void
+    private static function write(string $directory, array $lines, array $meta, string $identity = ''): void
     {
         // A record with no Contract to check (no lines) is a sidecar alone.
         $source = $lines === [] ? null : implode("\n", $lines)."\n";
         $sidecar = self::json($meta)."\n";
-        $path = self::directory().'/'.$directory.'/'.substr(sha1($source ?? $sidecar), 0, 12);
+        $path = self::directory().'/'.$directory.'/'.substr(sha1(($source ?? $sidecar).$identity), 0, 12);
 
         // Parallel test processes create the same directories: losing that race is fine.
         if (! File::isDirectory(dirname($path))) {

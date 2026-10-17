@@ -2,7 +2,9 @@
 
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
+use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
 use Laravel\Fortify\Features;
+use PragmaRX\Google2FA\Google2FA;
 
 /*
  * The behaviour tests leave some shapes empty (no status message, no passkeys), and a page's Contract proves its type
@@ -77,6 +79,47 @@ test('the two-factor challenge takes a recovery code', function () {
         ->assertRedirect(route('dashboard', absolute: false));
 
     $this->assertAuthenticatedAs($user);
+});
+
+test('the two-factor challenge takes a code from the authenticator app', function () {
+    $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
+
+    $secret = app(TwoFactorAuthenticationProvider::class)->generateSecretKey();
+    $user = User::factory()->withTwoFactor()->create(['two_factor_secret' => encrypt($secret)]);
+
+    $this->post(route('login.store'), ['email' => $user->email, 'password' => 'password'])
+        ->assertRedirect(route('two-factor.login'));
+
+    $this->post(route('two-factor.login.store'), ['code' => app(Google2FA::class)->getCurrentOtp($secret)])
+        ->assertRedirect(route('dashboard', absolute: false));
+
+    $this->assertAuthenticatedAs($user);
+});
+
+test('a new user can ask to be remembered when they register', function () {
+    $this->skipUnlessFortifyHas(Features::registration());
+
+    $this->post(route('register.store'), [
+        'name' => 'Test User',
+        'email' => 'remembered@example.com',
+        'password' => 'password',
+        'password_confirmation' => 'password',
+        'remember' => true,
+    ])->assertRedirect(route('dashboard', absolute: false));
+
+    $this->assertAuthenticated();
+    expect(auth()->user()?->getRememberToken())->not->toBeNull();
+});
+
+test('two-factor authentication can be enabled again with a new secret', function () {
+    $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
+
+    $user = User::factory()->withTwoFactor()->create();
+    $this->actingAs($user)->withSession(['auth.password_confirmed_at' => time()]);
+
+    $this->post(route('two-factor.enable'), ['force' => true])->assertRedirect();
+
+    expect(decrypt((string) $user->fresh()?->two_factor_secret))->not->toBe('secret');
 });
 
 test('two-factor authentication is enabled and set up with its JSON endpoints', function () {

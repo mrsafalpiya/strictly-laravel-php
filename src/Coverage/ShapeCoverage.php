@@ -21,6 +21,10 @@ use StrictlyLaravel\TypeScript\LiteralValues;
  * - a union of Data classes never sent as one of them;
  * - a union of scalars (`int|string`) never sent as one of its members.
  *
+ * An input class's states are read from what its form endpoints accepted (Problem P-209): its type is what the client
+ * may send, so each state is one the server must be shown to accept, the other way round from a page prop. An Optional
+ * field must also be left out once, since the client may leave it out.
+ *
  * Shapes are kept per Data class property, where the type lives and is fixed: a state counts as seen once any value
  * anywhere showed it. So a Data class used on two pages needs its non-null value on just one of them.
  *
@@ -30,7 +34,7 @@ use StrictlyLaravel\TypeScript\LiteralValues;
 final class ShapeCoverage
 {
     /**
-     * A shape is reported only when some observe() required it; observeAccepted() can only mark one seen.
+     * A shape is reported when an observe() or an observeAccepted() required it and no value showed it.
      *
      * @var array<string, array{what: string, at: list<string>, fix: string, seen: bool, required: bool}>
      */
@@ -59,11 +63,12 @@ final class ShapeCoverage
     }
 
     /**
-     * Requests a form endpoint accepted (validated without errors), keyed by input name, for its input class. Problem
-     * P-125: an input class is also a page's form defaults, which a create page sends empty by design, so no page can
-     * show its nullable fields filled in. The same type is what the form sends back, so a value the server accepted
-     * shows that state too. These values only mark states as seen: a field the tests never submit is no gap of its
-     * own, since a form endpoint's whole input is checked by its `form` Contracts.
+     * Requests a form endpoint accepted (validated without errors), keyed by input name, for its input class. Each
+     * state of the input's type is one the client may send, so the server must be shown to accept it (Problem P-209):
+     * a nullable field both `null` and set, an Optional one both sent and left out, a list with an item, each member of
+     * a union. A nullable field the request leaves out, or sends as `''` (which Laravel's ConvertEmptyStringsToNull
+     * middleware reads as `null`), is `null`. An input class is also a page's form defaults, which a create page sends
+     * empty by design (Problem P-125), so a state an accepted request showed also closes that page's gap.
      *
      * @param  class-string<Data>  $class
      * @param  list<mixed>  $values
@@ -125,12 +130,20 @@ final class ShapeCoverage
 
             foreach ($objects as $object) {
                 if (property_exists($object, $name)) {
-                    $present[] = $object->{$name};
+                    // The server reads an empty string as null (ConvertEmptyStringsToNull).
+                    $present[] = $this->accepted && $object->{$name} === '' ? null : $object->{$name};
+                } elseif ($this->accepted && $property->type->isNullable && ! $property->type->isOptional) {
+                    // A nullable field the request leaves out is null to the server, as the client's `null` is.
+                    $present[] = null;
                 }
             }
 
             if (($property->type->isOptional || $property->type->lazyType !== null) && ! in_array($name, $absenceReported, true)) {
                 $this->shape($class, $property, 'is only ever absent', $origin, $path, 'sent', seen: $present !== []);
+            }
+
+            if ($this->accepted && $property->type->isOptional) {
+                $this->shape($class, $property, 'is never left out', $origin, $path, '', seen: count($present) < count($objects), fix: "add a feature test that {$origin->action} without {$path}");
             }
 
             $nonNull = array_values(array_filter($present, fn (mixed $value): bool => $value !== null));
@@ -405,7 +418,7 @@ final class ShapeCoverage
         if ($fix === null) {
             $fix = sprintf('add a feature test that %s with %s', $origin->action, $fixIsComplete ? $wanted : "{$path} {$wanted}");
 
-            if (is_subclass_of($class, InputData::class)) {
+            if (! $this->accepted && is_subclass_of($class, InputData::class)) {
                 // observeAccepted(): a submission the server accepted shows the state as well.
                 $field = $property->inputMappedName ?? $property->name;
                 $fix .= sprintf(', or one whose request a form endpoint accepts with %s\'s %s %s', class_basename($class), $field, $fixIsComplete ? 'not empty' : $wanted);
@@ -414,10 +427,6 @@ final class ShapeCoverage
 
         $this->shapes[$key] ??= ['what' => $what, 'at' => [], 'fix' => $fix, 'seen' => false, 'required' => false];
         $this->shapes[$key]['seen'] = $this->shapes[$key]['seen'] || $seen;
-
-        if ($this->accepted) {
-            return;
-        }
 
         if (! $this->shapes[$key]['required']) {
             $this->shapes[$key]['required'] = true;

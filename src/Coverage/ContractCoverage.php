@@ -28,6 +28,7 @@ use StrictlyLaravel\Routes\RouteResponse;
  *   against the flash Data class, so a key no test flashes is a gap.
  * - form endpoints: some test must send a request to every route whose action takes an input Data class (`form`
  *   records), or the validation errors it can return were never checked against the input's fields.
+ *   What they accepted is observed against the input class, whose every state the server must be shown to accept.
  *
  * - JSON endpoints: some test must get a successful response from every route whose action returns a Data class, or
  *   whose vendor action has a declared response (`json` records), and the responses' shapes are observed against a
@@ -83,8 +84,9 @@ final readonly class ContractCoverage
     }
 
     /**
-     * Problem P-125: what form endpoints accepted (`form` records' `accepted`) shows the states of their input
-     * classes, which pages also send as a form's defaults, empty on a create page by design.
+     * What form endpoints accepted (`form` records' `accepted`), observed against their input classes: every state of an
+     * input's type is one the client may send (Problem P-209). It also shows the states of a page's form defaults, empty
+     * on a create page by design (Problem P-125).
      *
      * @param  list<stdClass>  $records
      */
