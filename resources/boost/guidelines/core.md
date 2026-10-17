@@ -33,7 +33,7 @@ Activate the matching skill before you start; each one is a worked example that 
 - A route parameter bound to a model type-hints the model (`Project $project`); it takes the model's key by the field the route binds it by, `Key<'Project', 'id', number>` in TypeScript (`RouteKey<'Project', number>` names it too).
 - A Data property that holds a model's key declares the model, in input, query and output classes alike: `#[KeyOf(User::class)] public ?int $assigneeId` (`StrictlyLaravel\Data\KeyOf`; `#[KeyOf(Issue::class, 'number')]` for another field than the primary key). It is then `Key<'User', 'id', number>` in TypeScript, so it takes a member's `id` but not an issue's. A Data class built from a model brands its own `id` by itself. A property named `…Id`, `…Ids`, `…_id` or `…_ids`, or validated by an `exists` rule, must declare it (`strictly.keyOf`).
 - A setting or feature flag React needs is a property of `SharedProps`, read with `config()->boolean()`, `config()->string()` and friends. A build-time value is a `VITE_*` variable listed in `.env.example`.
-- Backed enums anywhere in `app/` become string or number unions; their values in case order are `enumValues.ProjectStatus` from `@/generated`.
+- Backed enums anywhere in `app/` become string or number unions; their values in case order are `enumValues.ProjectStatus` from `@/generated`. Read a select's value back as one with `selectedKey(enumValues.ProjectStatus, value)` (`@mrsafalpiya/strictly-laravel/routes`; `null` for any other value), never `value as ProjectStatus` or `Number(value)`.
 
 ## React
 
