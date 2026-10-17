@@ -107,7 +107,7 @@ export default function Index({ projects, filters }: Props) {
 }
 ```
 
-`mergeQuery` keeps the current URL's other keys: `index({ mergeQuery: { sort } })`. Wayfinder leaves `null` and `[]` out of the URL, which the server reads back as the default.
+`mergeQuery` keeps the current URL's other keys: `index({ mergeQuery: { sort } })`. A `<select>` of sort orders reads its value back as a `ProjectSort` with `selectedKey(enumValues.ProjectSort, value)` (`@mrsafalpiya/strictly-laravel/routes`), never a cast. Wayfinder leaves `null` and `[]` out of the URL, which the server reads back as the default.
 
 A route whose action takes no query class takes no query string: its `query` and `mergeQuery` accept nothing, so a link can't send a key no query class declares. On the server, read keys only from the query class, never with `$request->query()` (`strictly.queryRead`) or `$request->input()` (`strictly.inputRead`), which skip its fallback to the default, and take it in a controller action: a closure route that takes a query class or reads the query string fails `strictly.closureRoute` or `strictly.queryRead`, since Wayfinder types a route function only from a controller action. Pagination needs no query class: `<Pagination>` follows the paginator's own links, and `<InfiniteScroll>` asks for the next page itself.
 
