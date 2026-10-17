@@ -53,7 +53,8 @@ parameters:
 # model's key declares the model with #[KeyOf] (P-128). A controller action that answers JSON declares one Data class
 # as its return type, never a list, a collection or a nullable or union type (P-108). A Data property holds no array
 # shape, list of a union or list of lists, which Contract Coverage can't see inside, but a Data class for the item
-# (P-084).
+# (P-084). An array a Data class sends that TypeScript reads as a list is declared one, since PHP sends an array whose
+# keys have a gap as a JSON object (P-206).
 rules:
     - StrictlyLaravel\PHPStan\DataClassFinalRule
     - StrictlyLaravel\PHPStan\DataNamespaceRule
@@ -76,7 +77,18 @@ rules:
     - StrictlyLaravel\PHPStan\TranslationRule
     - StrictlyLaravel\PHPStan\KeyOfRule
     - StrictlyLaravel\PHPStan\DataShapeRule
+    - StrictlyLaravel\PHPStan\DataListRule
 
 services:
     # The messages TranslationRule checks translation calls against, read once per run (P-137).
     - StrictlyLaravel\PHPStan\TranslationCatalog
+
+    # Collection types Laravel declares less precisely than they are: `all()` is a list at the end of a chain that keeps
+    # one (a query's `get()`, `values()`, then `map()`…, P-206), and `countBy()` is keyed by what its callback returns
+    # (P-207).
+    -
+        class: StrictlyLaravel\Workarounds\Laravel\CollectionAllIsList
+        tags: [phpstan.broker.dynamicMethodReturnTypeExtension]
+    -
+        class: StrictlyLaravel\Workarounds\Laravel\CollectionCountByKeys
+        tags: [phpstan.broker.dynamicMethodReturnTypeExtension]

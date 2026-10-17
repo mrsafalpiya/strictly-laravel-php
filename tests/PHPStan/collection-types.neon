@@ -1,0 +1,9 @@
+# Only the Composer package's collection types (P-206, P-207), for CollectionTypesTest: PHPStan reads Laravel's own
+# collection generics, without Larastan.
+services:
+    -
+        class: StrictlyLaravel\Workarounds\Laravel\CollectionAllIsList
+        tags: [phpstan.broker.dynamicMethodReturnTypeExtension]
+    -
+        class: StrictlyLaravel\Workarounds\Laravel\CollectionCountByKeys
+        tags: [phpstan.broker.dynamicMethodReturnTypeExtension]

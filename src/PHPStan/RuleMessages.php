@@ -35,6 +35,9 @@ final class RuleMessages
         'strictly.dataNamespace' => [
             '%s %s is in the %s namespace but is not a Data class.',
         ],
+        'strictly.dataList' => [
+            '%s is typed %s, which TypeScript reads as an array, but PHP sends an array whose keys have a gap as a JSON object.',
+        ],
         'strictly.dataShape' => [
             "%s has an array shape (%s) in its type, inside which Contract Coverage can't see.",
             "%s holds items of a union type (%s), whose members Contract Coverage can't tell apart.",

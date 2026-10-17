@@ -15,7 +15,7 @@ final class SecurityPage extends Page
         public bool|Optional $twoFactorEnabled,
         public bool|Optional $requiresConfirmation,
         public bool $canManagePasskeys,
-        /** @var array<int, PasskeyData> */
+        /** @var list<PasskeyData> */
         public array $passkeys,
     ) {}
 }
