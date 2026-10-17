@@ -48,7 +48,7 @@ Activate the matching skill before you start; each one is a worked example that 
 
 ## Tests
 
-Every page, deferred prop, form endpoint, JSON endpoint and broadcast event needs a feature test that exercises it, and between them the tests must send every shape its type permits: each nullable value both `null` and set, each list non-empty, each union variant, each optional prop sent. A form endpoint's input is the other way round: its accepted requests must show every shape the client may send, each nullable field both `null` and set and each `Optional` field both sent and left out. Feature tests record Contracts on their own; nothing to call. Ids in tests are not `1` (each table has its own id range): assert against the model's own `id`.
+Every page, deferred prop, form endpoint, JSON endpoint and broadcast event needs a feature test that exercises it, and between them the tests must send every shape its type permits: each nullable value both `null` and set, each list non-empty, each union variant, each optional prop sent. A form endpoint's input is the other way round: its accepted requests must show every shape the client may send, each nullable field both `null` and set and each `Optional` field both sent and left out. A shape is proven per Data class, wherever it is sent: its type is one definition. Feature tests record Contracts on their own; nothing to call. Ids in tests are not `1` (each table has its own id range): assert against the model's own `id`.
 
 ## What checks what
 
