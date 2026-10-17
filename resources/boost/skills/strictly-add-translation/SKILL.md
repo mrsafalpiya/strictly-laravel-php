@@ -68,6 +68,7 @@ Nothing to run: `composer dev` regenerates the keys when a lang file is saved. D
 ## When a check fails
 
 - `ci:check:tsc` fails with `resources/js/components/throttle-notice.tsx(4,18): error TS2345: Argument of type '"auth.throtle"' is not assignable to parameter of type 'keyof TranslationKeys'.`: the key isn't in the default locale's lang files. Add it there, or fix the spelling.
+- `ci:check:tsc` fails with `Type '"auth.locked"' is not assignable to type 'keyof TranslationKeys'.`: a template-literal key has a member the lang files don't define, such as an enum case added without its message. Add the message.
 - `ci:check:tsc` fails with `resources/js/components/throttle-notice.tsx(4,37): error TS2561: Object literal may only specify known properties, but 'second' does not exist in type 'TranslationParams<"seconds">'. Did you mean to write 'seconds'?`: pass the message's own `:params`.
 - `ci:check:tsc` fails with `resources/js/components/throttle-notice.tsx(4,16): error TS2554: Expected 2 arguments, but got 1.`: the message has params; pass them.
 - `ci:check:tsc` fails with ``resources/js/components/issue-count.tsx(4,18): error TS2345: Argument of type '"issues.count"' is not assignable to parameter of type '"issues.count is a plural message: use choice()"'.``: the message is pluralised; render it with `choice('issues.count', count)`.
