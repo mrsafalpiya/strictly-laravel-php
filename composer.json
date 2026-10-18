@@ -3,7 +3,12 @@
     "description": "Strictly Laravel: end-to-end type safety for Laravel + Inertia + React, applied as an Overlay on the official React starter kit.",
     "type": "library",
     "license": "MIT",
-    "version": "0.1.0",
+    "version": "0.2.0",
+    "homepage": "https://github.com/mrsafalpiya/strictly-laravel",
+    "support": {
+        "issues": "https://github.com/mrsafalpiya/strictly-laravel/issues",
+        "source": "https://github.com/mrsafalpiya/strictly-laravel/tree/main/packages/laravel"
+    },
     "require": {
         "php": "^8.4",
         "illuminate/console": "^13.0",
