@@ -62,8 +62,6 @@ final class StrictlyServiceProvider extends ServiceProvider
             return;
         }
 
-        $this->publishes([self::CONFIG_STUB => config_path('strictly.php')], 'strictly-config');
-
         $this->commands([CoverageCommand::class, GenerateCommand::class, InstallCommand::class, MakePageCommand::class]);
 
         Event::listen(CommandFinished::class, WayfinderQueryVerb::afterCommand(...));

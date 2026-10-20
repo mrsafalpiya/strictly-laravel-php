@@ -8,10 +8,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+// @feature registration
 import { register } from '@/routes';
+// @end-feature
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
+// @feature passkeys
 import PasskeyVerify from '@/components/passkey-verify';
+// @end-feature
 import type { PageProps } from '@/generated';
 
 export default function Login({
@@ -22,8 +26,10 @@ export default function Login({
         <>
             <Head title="Log in" />
 
+            {/* @feature passkeys */}
             <PasskeyVerify />
 
+            {/* @end-feature */}
             <TypedForm
                 {...store.form()}
                 resetOnSuccess={['password']}
@@ -91,6 +97,7 @@ export default function Login({
                                 Log in
                             </Button>
                         </div>
+                        {/* @feature registration */}
 
                         <div className="text-center text-sm text-muted-foreground">
                             Don't have an account?{' '}
@@ -98,6 +105,7 @@ export default function Login({
                                 Sign up
                             </TextLink>
                         </div>
+                        {/* @end-feature */}
                     </>
                 )}
             </TypedForm>

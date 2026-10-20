@@ -12,6 +12,8 @@ use StrictlyLaravel\Install\GenerateFirst;
 use StrictlyLaravel\Install\GitignoreEntry;
 use StrictlyLaravel\Install\JsxTypes;
 use StrictlyLaravel\Install\KitConversion;
+use StrictlyLaravel\Install\KitFeatures;
+use StrictlyLaravel\Install\KitTemplate;
 use StrictlyLaravel\Install\PackageManager;
 use StrictlyLaravel\Install\PestContractsHook;
 use StrictlyLaravel\Install\PhpstanIgnores;
@@ -100,7 +102,7 @@ final class InstallCommand extends Command
         $packageManager = PackageManager::detect($root);
 
         return [
-            'config/strictly.php' => fn () => $this->publish($files, StrictlyServiceProvider::CONFIG_STUB, "{$root}/config/strictly.php"),
+            'config/strictly.php' => fn () => $this->publish($files, StrictlyServiceProvider::CONFIG_STUB, "{$root}/config/strictly.php", KitFeatures::detect($root)),
             'tests/Feature/LocaleParityTest.php' => fn () => $this->publish($files, StrictlyServiceProvider::LOCALE_PARITY_TEST_STUB, "{$root}/tests/Feature/LocaleParityTest.php"),
             "Composer scripts: ci:check and its steps (using {$packageManager->value})" => fn () => $this->writeCiCheck("{$root}/composer.json", $packageManager),
             'composer.json: laravel/boost a dev dependency' => fn () => BoostDevDependency::check("{$root}/composer.json"),
@@ -217,7 +219,7 @@ final class InstallCommand extends Command
             }
 
             if ($outcome === ConversionOutcome::Unknown) {
-                $adds = KitConversion::addedBy($path);
+                $adds = KitConversion::addedBy($path, $root);
                 $skipped[] = "{$path} (sha256 ".KitConversion::hash("{$root}/{$path}").')'
                     .($adds === [] ? '' : ' and the files its conversion adds ('.implode(', ', $adds).')');
             }
@@ -243,15 +245,20 @@ final class InstallCommand extends Command
         return $result['changed'];
     }
 
-    /** Write a file the app owns from then on, unless it exists: the installer never overwrites it. */
-    private function publish(Filesystem $files, string $stub, string $target): bool
+    /**
+     * Write a file the app owns from then on, unless it exists: the installer never overwrites it. A stub with feature
+     * sections (KitTemplate) is written as its version for the app's starter kit $features.
+     *
+     * @param  list<string>  $features
+     */
+    private function publish(Filesystem $files, string $stub, string $target, array $features = []): bool
     {
         if ($files->exists($target)) {
             return false;
         }
 
         $files->ensureDirectoryExists(dirname($target));
-        $files->copy($stub, $target);
+        $files->put($target, KitTemplate::render($files->get($stub), $features));
 
         return true;
     }

@@ -6,6 +6,7 @@
         "earlierConversions": []
     },
     "app/Actions/Fortify/CreateNewUser.php": {
+        "requires": "registration",
         "upstream": [
             "caaaa98a8867c44ddaa45a1f58fd388f3b46f781d22cd9f8af67e292d3b82e60"
         ],
@@ -27,9 +28,24 @@
         ]
     },
     "app/Http/Controllers/Settings/SecurityController.php": {
-        "upstream": [
-            "11d528a214cba42084a3eddf1d0d85608ef2bd7d3fe12fb2c99dd30e0946a78a"
+        "variesWith": [
+            "2fa",
+            "passkeys"
         ],
+        "upstream": {
+            "none": [
+                "c139ca41b71f3a5c24b374f44110b0f5d0a35c44e4af3194487d42eb8a8216f1"
+            ],
+            "2fa": [
+                "25b9b2ceb0e55ce37240ce73d75f28c15e272e29c75563326495effd749cf415"
+            ],
+            "passkeys": [
+                "9cdec4813b98f4549e762e28dfd8570739e33e4861cea925f5b530754e6e653d"
+            ],
+            "2fa,passkeys": [
+                "11d528a214cba42084a3eddf1d0d85608ef2bd7d3fe12fb2c99dd30e0946a78a"
+            ]
+        },
         "earlierConversions": [
             "55f5333025a5ab4c54df393a4d084258345adab54f7b473534e0c0662aca98c9",
             "058b4c419c090076dcda55cc03ad7c2bb6cd844ee4d33ceea9eaaecb9850f0a6",
@@ -38,9 +54,13 @@
         ],
         "adds": [
             "app/Pages/Settings/SecurityPage.php",
-            "app/Data/PasskeyData.php",
             "app/Data/PasswordUpdateData.php"
-        ]
+        ],
+        "addsWith": {
+            "passkeys": [
+                "app/Data/PasskeyData.php"
+            ]
+        }
     },
     "app/Http/Requests/Settings/ProfileUpdateRequest.php": {
         "upstream": [
@@ -49,26 +69,167 @@
         "earlierConversions": []
     },
     "app/Providers/FortifyServiceProvider.php": {
-        "upstream": [
-            "635a2513215ec6c0e7520eb1da31ab8a246db9adb0913199940475d9a9ec32ee"
+        "variesWith": [
+            "email-verification",
+            "registration",
+            "2fa",
+            "passkeys",
+            "password-confirmation"
         ],
+        "upstream": {
+            "none": [
+                "3a12bb6c5797c7b7546f005bc82a4a43e09505cecca6e164c8aeeecffc510ab2"
+            ],
+            "email-verification": [
+                "0e9ac838b493fbda5f05448295b414570ef1d0584eb9d355e10f5caeba01a902"
+            ],
+            "registration": [
+                "4ce717e293c1f81f46e191d499e84c7dacd699621a9db231c2ab6608d2156e48"
+            ],
+            "2fa": [
+                "a41ce1838c24996eec5e38c9c16db4c6a43723ca113b6890e0f392e8a4ca6fec"
+            ],
+            "passkeys": [
+                "125e59343146b98b74ece103fe7b4333eaf5004b49c87a04b48360d28adebdec"
+            ],
+            "password-confirmation": [
+                "d29a2c17332f6537ec4f74d0e5c1e324a4b0877ba1f8f50b873fd29efebf5240"
+            ],
+            "email-verification,registration": [
+                "87ae5678b4a1a5e7e8638d5f06ed1d7eb219bd0a434007d2a2575567d49f1415"
+            ],
+            "email-verification,2fa": [
+                "1b6e9a3e44eb7bb41be24ae4321432043f27d922b59bf86e02d018abb54dfb16"
+            ],
+            "email-verification,passkeys": [
+                "2d97b695964f01b49a817dc583edbf43718bcd77ae2df6a82bc6206bd3c63bc5"
+            ],
+            "email-verification,password-confirmation": [
+                "6bbe0407fbc572f93adbc4dd2b46e2e38bd4b6fcbdc2874652c0cd1937bc852c"
+            ],
+            "registration,2fa": [
+                "81befcc894f537cf861bd8d1d9703d88400b0cdf151369df056f07c159a4d1d6"
+            ],
+            "registration,passkeys": [
+                "83e00a2001ab3521de877ecfc3f8b525e5b8ed939397876d6d9c41d9408769ec"
+            ],
+            "registration,password-confirmation": [
+                "9a1d3654e38d70197b088d2fa842857af1fe9d4f978a875d9eff7b8543fd916e"
+            ],
+            "2fa,passkeys": [
+                "70ba2aa18e40dc069b8fc9f6092652d9330b0cf3248d62cb4a80057bce279db8"
+            ],
+            "2fa,password-confirmation": [
+                "bd0b57f695e08540b90dc2d5517504e716e0ae15ac7a24cffd3925cbd9672d05"
+            ],
+            "passkeys,password-confirmation": [
+                "a1515719a2cda35e09b93507f061098cb095c3f49a9ca8eb583aa80fa349ae1f"
+            ],
+            "email-verification,registration,2fa": [
+                "cc62b027834644cfe032caf49f1d09803e01edfca13153ad0ccfabbb1ed1716c"
+            ],
+            "email-verification,registration,passkeys": [
+                "2a925261e102599e8a93484ef6f785cfa0916a30d7583916755db14a1d647494"
+            ],
+            "email-verification,registration,password-confirmation": [
+                "0e5b4a5ca983b309e6c4ea81c72fcad9388376b94e8b84ce0dd6759e859b0ef1"
+            ],
+            "email-verification,2fa,passkeys": [
+                "9d4917f74d9027162496a1ed2a9bd8bdd52476b13ebb435ceb3f4b58f2724f1b"
+            ],
+            "email-verification,2fa,password-confirmation": [
+                "0afeb4eda147f33510f6d43feae1dbafec2e85a5c6ec6c54690d5deddf8ea424"
+            ],
+            "email-verification,passkeys,password-confirmation": [
+                "01d8a875c0bb2e3d318bbf609cc6b07194040cd0635aae10dad4980b18c87335"
+            ],
+            "registration,2fa,passkeys": [
+                "3cdae94db028681c88e1a1e10307cd905ba963b6c358a3f148e393f580241529"
+            ],
+            "registration,2fa,password-confirmation": [
+                "9989e736eaf9920a052348a048a21170e1c63a5bb314f1ef5974aa728336c324"
+            ],
+            "registration,passkeys,password-confirmation": [
+                "d39fa53ce84a9895dfee9299e1d3ce4011ece7ebe492721b6eebeb380a0dd8d1"
+            ],
+            "2fa,passkeys,password-confirmation": [
+                "bed77481ab06c041768546dc292e49632f96b004835d43729c7d72b4344f63d4"
+            ],
+            "email-verification,registration,2fa,passkeys": [
+                "67d97a232a65f4998e14fefaadb4853d107ba2dfc094f864291cc810e4dcb347"
+            ],
+            "email-verification,registration,2fa,password-confirmation": [
+                "780df271130b980ba39b5e6be70d3daf2f94df0cbadea6efbab0bd0be44f76b8"
+            ],
+            "email-verification,registration,passkeys,password-confirmation": [
+                "1eda9592e9b74920e65e4fae5251b5eaaa6d49e75da5103c4144afc3a503c5c6"
+            ],
+            "email-verification,2fa,passkeys,password-confirmation": [
+                "7af97f36548f4bac8a32681c3e4f986eb24b8c2c4f9a2d077d8fe4d5c53b9bc6"
+            ],
+            "registration,2fa,passkeys,password-confirmation": [
+                "11631a7c7b4b532e12558c9bca276ad18f7ff858eb03d42ac868b4cef1abca90"
+            ],
+            "email-verification,registration,2fa,passkeys,password-confirmation": [
+                "635a2513215ec6c0e7520eb1da31ab8a246db9adb0913199940475d9a9ec32ee"
+            ]
+        },
         "earlierConversions": [
             "cf7752564f162198bddacc636d0e81bd28193752d339df2e3ce8e118deb7a347"
         ],
         "adds": [
             "app/Pages/Auth/LoginPage.php",
             "app/Pages/Auth/ResetPasswordPage.php",
-            "app/Pages/Auth/ForgotPasswordPage.php",
-            "app/Pages/Auth/VerifyEmailPage.php",
-            "app/Pages/Auth/RegisterPage.php",
-            "app/Pages/Auth/TwoFactorChallengePage.php",
-            "app/Pages/Auth/ConfirmPasswordPage.php"
-        ]
+            "app/Pages/Auth/ForgotPasswordPage.php"
+        ],
+        "addsWith": {
+            "email-verification": [
+                "app/Pages/Auth/VerifyEmailPage.php"
+            ],
+            "registration": [
+                "app/Pages/Auth/RegisterPage.php"
+            ],
+            "2fa": [
+                "app/Pages/Auth/TwoFactorChallengePage.php"
+            ],
+            "password-confirmation": [
+                "app/Pages/Auth/ConfirmPasswordPage.php"
+            ]
+        }
+    },
+    "database/factories/UserFactory.php": {
+        "variesWith": [
+            "2fa"
+        ],
+        "upstream": {
+            "none": [
+                "69cf3d29deb604527a1a2d77be267b218d84e84b0535926d3ef0d9892b8a58de"
+            ],
+            "2fa": [
+                "2d8452fff4ba936046c7a86db0ae590642c6dc3d4be5f980ccf0486080df6d49"
+            ]
+        },
+        "earlierConversions": []
     },
     "routes/settings.php": {
-        "upstream": [
-            "f2b35475c66dc2f48d5234536d8584c4cc9f1e5a907b566689b5fec8a25f5a4e"
+        "variesWith": [
+            "passkeys",
+            "password-confirmation"
         ],
+        "upstream": {
+            "none": [
+                "08d5d3872174342a04fd9fc4b3c6a6572e0120c52abcdca4693358fd87784781"
+            ],
+            "passkeys": [
+                "ecd40205ad9447e6d484b8a0743b9cbc1a61c8deb1829ed26dd25998c8b97d03"
+            ],
+            "password-confirmation": [
+                "02b566ea17f89a730109873dd7de319ac96dafe1c1c2bb7b4cfd0d08c1aff53b"
+            ],
+            "passkeys,password-confirmation": [
+                "f2b35475c66dc2f48d5234536d8584c4cc9f1e5a907b566689b5fec8a25f5a4e"
+            ]
+        },
         "earlierConversions": [
             "6eb47cf3b83c3cbb21aeed1ff2ef8f4141061f0ac2940a438b1401a19dac44b6"
         ],
@@ -89,6 +250,7 @@
         ]
     },
     "tests/Feature/Auth/EmailVerificationTest.php": {
+        "requires": "email-verification",
         "upstream": [
             "aea0c08a056689a27f0b3f0ad77b2380992ede1958445bb5e06743805eeca1df"
         ],
@@ -118,12 +280,14 @@
         "earlierConversions": []
     },
     "resources/js/components/passkey-verify.tsx": {
+        "requires": "passkeys",
         "upstream": [
             "9aa88f6787107dac23873713f29559bf5369784dbd822a762f7b51c51d54ed1b"
         ],
         "earlierConversions": []
     },
     "resources/js/components/manage-passkeys.tsx": {
+        "requires": "passkeys",
         "upstream": [
             "03c333a929f641eaf98a52088fffe30994c294c82bce064af2af86bdc2aa4737"
         ],
@@ -133,6 +297,7 @@
         ]
     },
     "resources/js/components/manage-two-factor.tsx": {
+        "requires": "2fa",
         "upstream": [
             "0a8b33930fe6e438b6a9b66e2be7be71e8283180acb11ab339044bebcaf11c03"
         ],
@@ -144,6 +309,7 @@
         ]
     },
     "resources/js/components/passkey-item.tsx": {
+        "requires": "passkeys",
         "upstream": [
             "b09a9db3c8f8ee697e5f8e31cb5990b882a5271535999cdc6544afdb59cf4089"
         ],
@@ -152,14 +318,30 @@
         ]
     },
     "resources/js/types/auth.ts": {
-        "upstream": [
-            "e66fe2acd3d4cfd40e2ea196296f459501d694414b25ac270c3c32d49147b17b"
+        "variesWith": [
+            "2fa",
+            "passkeys"
         ],
+        "upstream": {
+            "none": [
+                "3c5c64c65dda7b698b92ca44f10980106a583fae5d60137a1f1e83b9ccefa3fa"
+            ],
+            "2fa": [
+                "9f26d34b19b65efda76eb51e7940ca4f299da544fcafd7ad1042b0c5c191be6d"
+            ],
+            "passkeys": [
+                "e96d3b718115ad45142160e3705862c35ffa04d25ce730f456aca65fc4e231e9"
+            ],
+            "2fa,passkeys": [
+                "e66fe2acd3d4cfd40e2ea196296f459501d694414b25ac270c3c32d49147b17b"
+            ]
+        },
         "earlierConversions": [
             "9f26d34b19b65efda76eb51e7940ca4f299da544fcafd7ad1042b0c5c191be6d"
         ]
     },
     "resources/js/components/ui/input-otp.tsx": {
+        "requires": "2fa",
         "upstream": [
             "59dc19f93bd031e8320c7df571cd9509e8c1ceb6337506ef380d11b2e10e2550"
         ],
@@ -186,6 +368,7 @@
         "earlierConversions": []
     },
     "resources/js/hooks/use-two-factor-auth.ts": {
+        "requires": "2fa",
         "upstream": [
             "b13bca63e1e259c67300a31f3c76f05419bf70c9efe31163317c3c3a9372046d"
         ],
@@ -197,9 +380,24 @@
         ]
     },
     "resources/js/pages/auth/login.tsx": {
-        "upstream": [
-            "c82a6db34b9a2deb47d2d8eb553d16d12619a43dbd313aa618e038cda8bbc22e"
+        "variesWith": [
+            "registration",
+            "passkeys"
         ],
+        "upstream": {
+            "none": [
+                "a1ddda8767463759973ffe507a665825840d3fc017d7adc8e5e3ab7bc3ca9470"
+            ],
+            "registration": [
+                "caac7db15cac67f03780f20a76f57362cb738fc7300bcb14345992fa7652c165"
+            ],
+            "passkeys": [
+                "41fabe14afd3b8ef524fa15931ac6fbd81b63744a032c23c3a52f40bcd064e23"
+            ],
+            "registration,passkeys": [
+                "c82a6db34b9a2deb47d2d8eb553d16d12619a43dbd313aa618e038cda8bbc22e"
+            ]
+        },
         "earlierConversions": [
             "14c3fb863c2b9f76056fb1bd39e1bc935165244aea72ded2ba1cb63f27f5e956",
             "55f9ed4c6131b3dee6eff02cb64167f139d4ecf24864a1df7d12e3d50a23dcb9"
@@ -222,6 +420,7 @@
         ]
     },
     "resources/js/pages/auth/register.tsx": {
+        "requires": "registration",
         "upstream": [
             "b2444e4b06861e32667d2ec4066a6fe6451ef8fe80ba961ee87c8094dd750d4f"
         ],
@@ -234,6 +433,7 @@
         ]
     },
     "resources/js/pages/auth/verify-email.tsx": {
+        "requires": "email-verification",
         "upstream": [
             "38d763f949717537a7547f2e875e760b9805a8af697427f433fc0056fe8091e2"
         ],
@@ -254,9 +454,17 @@
         ]
     },
     "resources/js/pages/settings/profile.tsx": {
-        "upstream": [
-            "64191fb3cc6c6e885f5d8e2201349fddfa83dd376bb493e3c79cb01d8dbbc6ea"
+        "variesWith": [
+            "email-verification"
         ],
+        "upstream": {
+            "none": [
+                "204385f546de1f4841d76f6d98f6c48e8af99ed310ffd9a9491b2b7ab90a6a3c"
+            ],
+            "email-verification": [
+                "64191fb3cc6c6e885f5d8e2201349fddfa83dd376bb493e3c79cb01d8dbbc6ea"
+            ]
+        },
         "earlierConversions": [
             "d3309f2243796755815dca001d37f640ff8b49a9c6ecf829281ff350ffa3b6eb",
             "eabfec8779a7e8c28d73250d22e6f825a8ada9ed12d971f5fdf6eca2b9e8d95d"
@@ -266,9 +474,24 @@
         ]
     },
     "resources/js/pages/settings/security.tsx": {
-        "upstream": [
-            "f5abb5a1e900200e06326816e59b32f8961cb4db01a8a5d0faefe5eee3783cb1"
+        "variesWith": [
+            "2fa",
+            "passkeys"
         ],
+        "upstream": {
+            "none": [
+                "07d8f46f0e66bc3d3216851ef655ed86b365223995e203e932c209e757c9915d"
+            ],
+            "2fa": [
+                "004a23a938fd5aa5772ac61a4cb9efb039534ab38079f09b064965f6c64cad4d"
+            ],
+            "passkeys": [
+                "5b293868b6728988d21b455722553d7dee0c81b9dc5f494792442b5e6ef13c7b"
+            ],
+            "2fa,passkeys": [
+                "f5abb5a1e900200e06326816e59b32f8961cb4db01a8a5d0faefe5eee3783cb1"
+            ]
+        },
         "earlierConversions": [
             "6a263acb89bfebadf19f713df9d7476e8d0d49ef39ba3a68e4d203dd9ec4ea21"
         ]
@@ -360,6 +583,7 @@
         "earlierConversions": []
     },
     "resources/js/components/two-factor-setup-modal.tsx": {
+        "requires": "2fa",
         "upstream": [
             "566ead7dd75c5461c2795f312c06286a5df1286f7e52b4783ffb187d4a0a126b"
         ],
@@ -377,12 +601,14 @@
         "earlierConversions": []
     },
     "resources/js/components/two-factor-recovery-codes.tsx": {
+        "requires": "2fa",
         "upstream": [
             "e30719941b17ca7ded18ac5fa2ccebb653b4ac05f107d41e6891f8a0b7bafdea"
         ],
         "earlierConversions": []
     },
     "resources/js/pages/auth/two-factor-challenge.tsx": {
+        "requires": "2fa",
         "upstream": [
             "3bb751cb822bd690f3ba1e6fd2b95480b2c38a0acc3d097275ec28c5ea85d843"
         ],
@@ -394,9 +620,18 @@
         ]
     },
     "resources/js/pages/auth/confirm-password.tsx": {
-        "upstream": [
-            "e5790b3dfd69b8fe8a37e58d93d73a780bc4718129cd9f15541f22593399a791"
+        "requires": "password-confirmation",
+        "variesWith": [
+            "passkeys"
         ],
+        "upstream": {
+            "none": [
+                "34ccf274a97ed7d7dcaf486f2b6b2717cf2566d607ddd407fdd6efbd0e0c6dbc"
+            ],
+            "passkeys": [
+                "e5790b3dfd69b8fe8a37e58d93d73a780bc4718129cd9f15541f22593399a791"
+            ]
+        },
         "earlierConversions": [
             "4734c651a64a36d03e2c69594ca21c23a0a561a63d4a5d65232b595b2f877419"
         ],

@@ -1,26 +1,44 @@
 <?php
 
+// @feature password-confirmation
 use App\Data\Auth\ConfirmPasswordData;
+// @end-feature
+// @feature 2fa
 use App\Data\Auth\EnableTwoFactorData;
+// @end-feature
 use App\Data\Auth\ForgotPasswordData;
 use App\Data\Auth\LoginData;
+// @feature registration
 use App\Data\Auth\RegisterData;
+// @end-feature
 use App\Data\Auth\ResetPasswordData;
 use App\Data\Auth\ResetPasswordQueryData;
+// @feature 2fa
 use App\Data\Auth\TwoFactorChallengeData;
 use App\Data\Auth\TwoFactorCodeData;
 use App\Data\Auth\TwoFactorSecretKeyData;
+// @end-feature
 use Laravel\Fortify\Http\Controllers\AuthenticatedSessionController;
+// @feature password-confirmation
 use Laravel\Fortify\Http\Controllers\ConfirmablePasswordController;
+// @end-feature
+// @feature 2fa
 use Laravel\Fortify\Http\Controllers\ConfirmedTwoFactorAuthenticationController;
+// @end-feature
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
 use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
+// @feature 2fa
 use Laravel\Fortify\Http\Controllers\RecoveryCodeController;
+// @end-feature
+// @feature registration
 use Laravel\Fortify\Http\Controllers\RegisteredUserController;
+// @end-feature
+// @feature 2fa
 use Laravel\Fortify\Http\Controllers\TwoFactorAuthenticatedSessionController;
 use Laravel\Fortify\Http\Controllers\TwoFactorAuthenticationController;
 use Laravel\Fortify\Http\Controllers\TwoFactorQrCodeController;
 use Laravel\Fortify\Http\Controllers\TwoFactorSecretKeyController;
+// @end-feature
 
 /*
 |--------------------------------------------------------------------------
@@ -52,13 +70,19 @@ return [
 
     'vendor_inputs' => [
         AuthenticatedSessionController::class.'@store' => LoginData::class,
+        // @feature registration
         RegisteredUserController::class.'@store' => RegisterData::class,
+        // @end-feature
         PasswordResetLinkController::class.'@store' => ForgotPasswordData::class,
         NewPasswordController::class.'@store' => ResetPasswordData::class,
+        // @feature password-confirmation
         ConfirmablePasswordController::class.'@store' => ConfirmPasswordData::class,
+        // @end-feature
+        // @feature 2fa
         TwoFactorAuthenticatedSessionController::class.'@store' => TwoFactorChallengeData::class,
         TwoFactorAuthenticationController::class.'@store' => EnableTwoFactorData::class,
         ConfirmedTwoFactorAuthenticationController::class.'@store' => TwoFactorCodeData::class,
+        // @end-feature
     ],
 
     /*
@@ -79,9 +103,11 @@ return [
     */
 
     'vendor_responses' => [
+        // @feature 2fa
         TwoFactorQrCodeController::class.'@show' => '{ svg: string; url: string } | []',
         TwoFactorSecretKeyController::class.'@show' => TwoFactorSecretKeyData::class,
         RecoveryCodeController::class.'@index' => 'string[]',
+        // @end-feature
     ],
 
     /*

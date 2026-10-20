@@ -1,6 +1,8 @@
 import { Head } from '@inertiajs/react';
 import { TypedForm } from '@mrsafalpiya/strictly-laravel/react';
+// @feature email-verification
 import { Link } from '@inertiajs/react';
+// @end-feature
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import DeleteUser from '@/components/delete-user';
 import Heading from '@/components/heading';
@@ -10,13 +12,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useUser } from '@/hooks/use-user';
 import { edit } from '@/routes/profile';
+// @feature email-verification
 import { send } from '@/routes/verification';
 import type { PageProps } from '@/generated';
+// @end-feature
 
+// @feature email-verification
 export default function Profile({
     mustVerifyEmail,
     status,
 }: PageProps<'settings/profile'>) {
+// @end-feature
+// @feature !email-verification
+export default function Profile() {
+// @end-feature
     const user = useUser();
 
     return (
@@ -79,6 +88,7 @@ export default function Profile({
                                     message={errors.email}
                                 />
                             </div>
+                            {/* @feature email-verification */}
 
                             {mustVerifyEmail &&
                                 user.email_verified_at === null && (
@@ -104,6 +114,7 @@ export default function Profile({
                                         )}
                                     </div>
                                 )}
+                            {/* @end-feature */}
 
                             <div className="flex items-center gap-4">
                                 <Button

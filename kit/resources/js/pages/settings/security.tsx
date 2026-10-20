@@ -8,8 +8,12 @@ import PasswordInput from '@/components/password-input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { edit } from '@/routes/security';
+// @feature passkeys
 import ManagePasskeys from '@/components/manage-passkeys';
+// @end-feature
+// @feature 2fa
 import ManageTwoFactor from '@/components/manage-two-factor';
+// @end-feature
 import type { PageProps } from '@/generated';
 
 export default function Security(props: PageProps<'settings/security'>) {
@@ -117,17 +121,21 @@ export default function Security(props: PageProps<'settings/security'>) {
                     )}
                 </TypedForm>
             </div>
+            {/* @feature 2fa */}
 
             <ManageTwoFactor
                 canManageTwoFactor={props.canManageTwoFactor}
                 requiresConfirmation={props.requiresConfirmation}
                 twoFactorEnabled={props.twoFactorEnabled}
             />
+            {/* @end-feature */}
+            {/* @feature passkeys */}
 
             <ManagePasskeys
                 canManagePasskeys={props.canManagePasskeys}
                 passkeys={props.passkeys}
             />
+            {/* @end-feature */}
         </>
     );
 }

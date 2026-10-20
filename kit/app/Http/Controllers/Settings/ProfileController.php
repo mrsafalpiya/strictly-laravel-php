@@ -10,7 +10,9 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Pages\Settings\ProfilePage;
 use Illuminate\Container\Attributes\CurrentUser;
+// @feature email-verification
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+// @end-feature
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -20,6 +22,7 @@ class ProfileController extends Controller
     /**
      * Show the user's profile settings page.
      */
+    // @feature email-verification
     public function edit(Request $request): ProfilePage
     {
         $status = $request->session()->get('status');
@@ -29,6 +32,13 @@ class ProfileController extends Controller
             status: is_string($status) ? $status : null,
         );
     }
+    // @end-feature
+    // @feature !email-verification
+    public function edit(): ProfilePage
+    {
+        return new ProfilePage;
+    }
+    // @end-feature
 
     /**
      * Update the user's profile information.

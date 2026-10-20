@@ -18,7 +18,7 @@ php artisan strictly:install
 composer ci:check
 ```
 
-`strictly:install` edits the app's tooling and converts the starter kit's own pages, controllers and types. It prints one row per change and never overwrites a file it doesn't recognise.
+`strictly:install` edits the app's tooling and converts the starter kit's own pages, controllers and types, for whichever of the kit's auth features the app kept. It prints one row per change and never overwrites a file it doesn't recognise.
 
 To update, follow [`UPGRADE.md`](https://github.com/mrsafalpiya/strictly-laravel/blob/main/packages/laravel/UPGRADE.md).
 

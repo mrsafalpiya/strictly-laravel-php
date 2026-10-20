@@ -2,9 +2,13 @@
 
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
+// @feature 2fa
 use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
+// @end-feature
 use Laravel\Fortify\Features;
+// @feature 2fa
 use PragmaRX\Google2FA\Google2FA;
+// @end-feature
 
 /*
  * The behaviour tests leave some shapes empty (no status message, no passkeys), and a page's Contract proves its type
@@ -20,6 +24,7 @@ test('the auth and settings pages show a status message', function () {
     $this->withSession(['status' => 'Your password has been reset.'])
         ->get(route('login'))
         ->assertInertia(fn (Assert $page) => $page->where('status', 'Your password has been reset.'));
+    // @feature email-verification
 
     $this->actingAs(User::factory()->unverified()->create())
         ->withSession(['status' => 'verification-link-sent'])
@@ -30,8 +35,20 @@ test('the auth and settings pages show a status message', function () {
         ->withSession(['status' => 'verification-link-sent'])
         ->get(route('profile.edit'))
         ->assertInertia(fn (Assert $page) => $page->where('status', 'verification-link-sent'));
+    // @end-feature
 });
 
+// @feature !2fa
+test('the security page is displayed', function () {
+    $this->actingAs(User::factory()->create())
+        ->withSession(['auth.password_confirmed_at' => time()])
+        ->get(route('security.edit'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->component('settings/security'));
+});
+
+// @end-feature
+// @feature passkeys
 test('the security page lists passkeys', function () {
     $this->skipUnlessFortifyHas(Features::passkeys());
 
@@ -54,12 +71,14 @@ test('the security page lists passkeys', function () {
         ->assertInertia(fn (Assert $page) => $page->has('passkeys', 2));
 });
 
+// @end-feature
 /*
  * Fortify's routes are typed by what config/strictly.php declares for them. Each one a test submits to or calls is
  * checked against its declaration: every key Fortify validates, reads or reports an error for must be a field of it,
  * and every response must match it. These tests reach the ones the behaviour tests don't.
  */
 
+// @feature password-confirmation
 test('the password can be confirmed', function () {
     $this->actingAs(User::factory()->create())
         ->post(route('password.confirm.store'), ['password' => 'password'])
@@ -67,6 +86,8 @@ test('the password can be confirmed', function () {
         ->assertRedirect();
 });
 
+// @end-feature
+// @feature 2fa
 test('the two-factor challenge takes a recovery code', function () {
     $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
 
@@ -81,6 +102,8 @@ test('the two-factor challenge takes a recovery code', function () {
     $this->assertAuthenticatedAs($user);
 });
 
+// @end-feature
+// @feature 2fa
 test('the two-factor challenge takes a code from the authenticator app', function () {
     $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
 
@@ -96,6 +119,8 @@ test('the two-factor challenge takes a code from the authenticator app', functio
     $this->assertAuthenticatedAs($user);
 });
 
+// @end-feature
+// @feature registration
 test('a new user can ask to be remembered when they register', function () {
     $this->skipUnlessFortifyHas(Features::registration());
 
@@ -111,6 +136,8 @@ test('a new user can ask to be remembered when they register', function () {
     expect(auth()->user()?->getRememberToken())->not->toBeNull();
 });
 
+// @end-feature
+// @feature 2fa
 test('two-factor authentication can be enabled again with a new secret', function () {
     $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
 
@@ -122,6 +149,8 @@ test('two-factor authentication can be enabled again with a new secret', functio
     expect(decrypt((string) $user->fresh()?->two_factor_secret))->not->toBe('secret');
 });
 
+// @end-feature
+// @feature 2fa
 test('two-factor authentication is enabled and set up with its JSON endpoints', function () {
     $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
 
@@ -139,6 +168,7 @@ test('two-factor authentication is enabled and set up with its JSON endpoints', 
         ->assertSessionHasErrors('code', errorBag: 'confirmTwoFactorAuthentication');
 });
 
+// @end-feature
 test('the password reset page reads the email from its link', function () {
     $this->skipUnlessFortifyHas(Features::resetPasswords());
 
