@@ -19,7 +19,7 @@ Running `strictly:install` on an app that is fully up to date changes nothing: e
 
 Newest first. Each entry lists the app-side changes the release needs. Each change says how to apply it and which check fails until it is applied.
 
-### Unreleased
+### 0.3.0
 
 - **Kit Conversion follows the auth features the app kept from the starter kit (Problem P-211).** An app generated with only some of the kit's auth features (email verification, registration, two-factor authentication, passkeys, password confirmation) used to be left half-converted: Kit Conversion skipped every file the kit had cut down, and the published `config/strictly.php` declared the vendor routes of every feature. Full-featured apps need nothing. In an app that kept only some features, `strictly:install` now converts the files it skipped and adds what they need. It doesn't rewrite your `config/strictly.php`, so remove from it the declarations of the features your app doesn't have; if you never edited it, delete it and run `strictly:install` again, which publishes one for your features. **Check:** `ci:check:install` fails with `<file> (not converted)` for each file the installer would still convert, and `ci:check:generate` fails with ``config/strictly.php declares what doesn't exist`` for each declaration of a missing feature.
 
